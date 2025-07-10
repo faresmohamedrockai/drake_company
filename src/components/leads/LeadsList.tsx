@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Search, Plus, Eye } from 'lucide-react';
+import { Search, Plus, Eye, Calendar as CalendarIcon } from 'lucide-react';
 import LeadModal from './LeadModal';
 import AddLeadModal from './AddLeadModal';
 
@@ -26,6 +26,36 @@ const LeadsList: React.FC = () => {
     lastCallDate: '',
     lastVisitDate: '',
   });
+
+  // KPI calculations
+  const allLeadsCount = leads.length;
+  // Duplicate: same phone or email (excluding empty values)
+  const duplicateLeadsCount = leads.filter((lead, idx, arr) =>
+    arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx
+  ).length;
+  const freshLeadsCount = leads.filter(lead => lead.status === 'Fresh Lead').length;
+  const coldCallsCount = leads.filter(lead => lead.source === 'Cold Call').length;
+
+  // Previous values for percentage (from localStorage)
+  const prevLeadsStats = JSON.parse(localStorage.getItem('leads_kpi_stats') || '{}');
+  function getChange(current: number, previous: number) {
+    if (previous === undefined || previous === 0) return current > 0 ? 100 : 0;
+    return Math.round(((current - previous) / previous) * 100 * 10) / 10;
+  }
+  const allLeadsChange = getChange(allLeadsCount, prevLeadsStats.allLeadsCount);
+  const duplicateLeadsChange = getChange(duplicateLeadsCount, prevLeadsStats.duplicateLeadsCount);
+  const freshLeadsChange = getChange(freshLeadsCount, prevLeadsStats.freshLeadsCount);
+  const coldCallsChange = getChange(coldCallsCount, prevLeadsStats.coldCallsCount);
+
+  // Save current values for next time
+  React.useEffect(() => {
+    localStorage.setItem('leads_kpi_stats', JSON.stringify({
+      allLeadsCount,
+      duplicateLeadsCount,
+      freshLeadsCount,
+      coldCallsCount
+    }));
+  }, [allLeadsCount, duplicateLeadsCount, freshLeadsCount, coldCallsCount]);
 
   // Filter leads based on user role
   const getFilteredLeads = () => {
@@ -88,27 +118,133 @@ const LeadsList: React.FC = () => {
         <p className="text-gray-600">Manage and track your prospects and leads</p>
       </div>
 
-      {/* Search and Actions */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
+          <span className="text-gray-700 text-base font-medium mb-2">All Leads</span>
+          <span className="text-3xl font-bold text-gray-900 mb-1">{allLeadsCount}</span>
+          <span className={`text-sm font-medium ${allLeadsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{allLeadsChange >= 0 ? '↑' : '↓'}{Math.abs(allLeadsChange)}%</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
+          <span className="text-gray-700 text-base font-medium mb-2">Duplicate Leads</span>
+          <span className="text-3xl font-bold text-gray-900 mb-1">{duplicateLeadsCount}</span>
+          <span className={`text-sm font-medium ${duplicateLeadsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{duplicateLeadsChange >= 0 ? '↑' : '↓'}{Math.abs(duplicateLeadsChange)}%</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
+          <span className="text-gray-700 text-base font-medium mb-2">Fresh Leads</span>
+          <span className="text-3xl font-bold text-gray-900 mb-1">{freshLeadsCount}</span>
+          <span className={`text-sm font-medium ${freshLeadsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{freshLeadsChange >= 0 ? '↑' : '↓'}{Math.abs(freshLeadsChange)}%</span>
+        </div>
+        <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
+          <span className="text-gray-700 text-base font-medium mb-2">Cold Calls</span>
+          <span className="text-3xl font-bold text-gray-900 mb-1">{coldCallsCount}</span>
+          <span className={`text-sm font-medium ${coldCallsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{coldCallsChange >= 0 ? '↑' : '↓'}{Math.abs(coldCallsChange)}%</span>
+        </div>
+      </div>
+
+      {/* Search and Actions + Filters */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex flex-row gap-2 flex-1 overflow-x-auto pb-2">
+          <div className="relative flex flex-col items-start max-w-xs">
+            <label className="text-xs text-gray-500 mb-1 flex items-center"><Search className="h-4 w-4 mr-1" />Search Leads</label>
             <input
               type="text"
               placeholder="Search leads..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
             />
           </div>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+          <input
+            type="text"
+            value={filters.name}
+            onChange={e => setFilters(f => ({ ...f, name: e.target.value }))}
+            placeholder="Name"
+            className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
+          />
+          <input
+            type="text"
+            value={filters.phone}
+            onChange={e => setFilters(f => ({ ...f, phone: e.target.value }))}
+            placeholder="Phone"
+            className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
+          />
+          <select
+            value={filters.budget}
+            onChange={e => setFilters(f => ({ ...f, budget: e.target.value }))}
+            className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
           >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Lead
-          </button>
+            <option value="">All Budgets</option>
+            <option value="EGP100,000-300,000">EGP 100,000-300,000</option>
+            <option value="EGP300,000-500,000">EGP 300,000-500,000</option>
+            <option value="EGP500,000-1,000,000">EGP 500,000-1,000,000</option>
+            <option value="EGP1,000,000-2,000,000">EGP 1,000,000-2,000,000</option>
+            <option value="EGP2,000,000+">EGP 2,000,000+</option>
+          </select>
+          <select
+            value={filters.inventoryInterest}
+            onChange={e => setFilters(f => ({ ...f, inventoryInterest: e.target.value }))}
+            className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
+          >
+            <option value="">All Interests</option>
+            <option value="1B Apartment">1B Apartment</option>
+            <option value="2B Apartment">2B Apartment</option>
+            <option value="3B Apartment">3B Apartment</option>
+            <option value="Villa">Villa</option>
+            <option value="Townhouse">Townhouse</option>
+            <option value="Commercial">Commercial</option>
+          </select>
+          <select
+            value={filters.source}
+            onChange={e => setFilters(f => ({ ...f, source: e.target.value }))}
+            className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
+          >
+            <option value="">All Sources</option>
+            <option value="Social Media">Social Media</option>
+            <option value="Website">Website</option>
+            <option value="Referral">Referral</option>
+            <option value="Cold Call">Cold Call</option>
+            <option value="Walk-in">Walk-in</option>
+            <option value="Advertisement">Advertisement</option>
+          </select>
+          <select
+            value={filters.status}
+            onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
+            className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
+          >
+            <option value="">All Statuses</option>
+            <option value="Fresh Lead">Fresh Lead</option>
+            <option value="Follow Up">Follow Up</option>
+            <option value="Scheduled Visit">Scheduled Visit</option>
+            <option value="Open Deal">Open Deal</option>
+            <option value="Cancellation">Cancellation</option>
+          </select>
+          <div className="flex flex-col items-start max-w-xs">
+            <label className="text-xs text-gray-500 mb-1 flex items-center"><CalendarIcon className="h-4 w-4 mr-1" />Last Call Date</label>
+            <input
+              type="date"
+              value={filters.lastCallDate}
+              onChange={e => setFilters(f => ({ ...f, lastCallDate: e.target.value }))}
+              className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
+            />
+          </div>
+          <div className="flex flex-col items-start max-w-xs">
+            <label className="text-xs text-gray-500 mb-1 flex items-center"><CalendarIcon className="h-4 w-4 mr-1" />Last Visit Date</label>
+            <input
+              type="date"
+              value={filters.lastVisitDate}
+              onChange={e => setFilters(f => ({ ...f, lastVisitDate: e.target.value }))}
+              className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
+            />
+          </div>
         </div>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Add Lead
+        </button>
       </div>
 
       {/* Leads Table */}
@@ -126,104 +262,6 @@ const LeadsList: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Call Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-              </tr>
-              <tr>
-                {/* Filters row */}
-                <th className="px-6 py-2">
-                  <input
-                    type="text"
-                    value={filters.name}
-                    onChange={e => setFilters(f => ({ ...f, name: e.target.value }))}
-                    placeholder="Filter"
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  />
-                </th>
-                <th className="px-6 py-2">
-                  <input
-                    type="text"
-                    value={filters.phone}
-                    onChange={e => setFilters(f => ({ ...f, phone: e.target.value }))}
-                    placeholder="Filter"
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  />
-                </th>
-                <th className="px-6 py-2">
-                  <select
-                    value={filters.budget}
-                    onChange={e => setFilters(f => ({ ...f, budget: e.target.value }))}
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  >
-                    <option value="">All</option>
-                    <option value="EGP100,000-300,000">EGP 100,000-300,000</option>
-                    <option value="EGP300,000-500,000">EGP 300 ,000-500,000</option>
-                    <option value="EGP500,000-1,000,000">EGP 500,000-1,000,000</option>
-                    <option value="EGP1,000,000-2,000,000">EGP 1,000,000-2,000,000</option>
-                    <option value="EGP2,000,000+">EGP 2,000,000+</option>
-                  </select>
-                </th>
-                <th className="px-6 py-2">
-                  <select
-                    value={filters.inventoryInterest}
-                    onChange={e => setFilters(f => ({ ...f, inventoryInterest: e.target.value }))}
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  >
-                    <option value="">All</option>
-                    <option value="1B Apartment">1B Apartment</option>
-                    <option value="2B Apartment">2B Apartment</option>
-                    <option value="3B Apartment">3B Apartment</option>
-                    <option value="Villa">Villa</option>
-                    <option value="Townhouse">Townhouse</option>
-                    <option value="Commercial">Commercial</option>
-                  </select>
-                </th>
-                <th className="px-6 py-2">
-                  <select
-                    value={filters.source}
-                    onChange={e => setFilters(f => ({ ...f, source: e.target.value }))}
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  >
-                    <option value="">All</option>
-                    <option value="Social Media">Social Media</option>
-                    <option value="Website">Website</option>
-                    <option value="Referral">Referral</option>
-                    <option value="Cold Call">Cold Call</option>
-                    <option value="Walk-in">Walk-in</option>
-                    <option value="Advertisement">Advertisement</option>
-                  </select>
-                </th>
-                <th className="px-6 py-2">
-                  <select
-                    value={filters.status}
-                    onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  >
-                    <option value="">All</option>
-                    <option value="Fresh Lead">Fresh Lead</option>
-                    <option value="Follow Up">Follow Up</option>
-                    <option value="Scheduled Visit">Scheduled Visit</option>
-                    <option value="Open Deal">Open Deal</option>
-                    <option value="Cancellation">Cancellation</option>
-                  </select>
-                </th>
-                <th className="px-6 py-2">
-                  <input
-                    type="text"
-                    value={filters.lastCallDate}
-                    onChange={e => setFilters(f => ({ ...f, lastCallDate: e.target.value }))}
-                    placeholder="Filter"
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  />
-                </th>
-                <th className="px-6 py-2">
-                  <input
-                    type="text"
-                    value={filters.lastVisitDate}
-                    onChange={e => setFilters(f => ({ ...f, lastVisitDate: e.target.value }))}
-                    placeholder="Filter"
-                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
-                  />
-                </th>
-                <th></th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
