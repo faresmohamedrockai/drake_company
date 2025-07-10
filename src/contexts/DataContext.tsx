@@ -173,7 +173,7 @@ const initialProperties: Property[] = [
     id: '1',
     title: 'Apartment in Nasr City',
     type: 'Apartment',
-    price: 'EGP 2,200,000',
+    price: 2200000,
     location: 'Nasr City, Cairo',
     area: '180',
     bedrooms: '3',
@@ -189,7 +189,7 @@ const initialProperties: Property[] = [
     id: '2',
     title: 'Villa in 6th of October',
     type: 'Villa',
-    price: 'EGP 5,500,000',
+    price: 5500000,
     location: '6th of October, Giza',
     area: '350',
     bedrooms: '5',
@@ -213,9 +213,13 @@ const initialProjects: Project[] = [
     paymentPlans: [
       {
         downPayment: 10,
-        installments: 80,
         delivery: 10,
-        schedule: '7 years installment plan'
+        schedule: '7 years monthly installments',
+        payYears: 7,
+        installmentPeriod: 'monthly',
+        installmentMonthsCount: 1,
+        firstInstallmentDate: '2025-10-08',
+        deliveryDate: '2032-10-08'
       }
     ],
     createdAt: new Date().toISOString(),
@@ -230,9 +234,13 @@ const initialProjects: Project[] = [
     paymentPlans: [
       {
         downPayment: 15,
-        installments: 75,
         delivery: 10,
-        schedule: '8 years installment plan'
+        schedule: '8 years quarterly installments',
+        payYears: 8,
+        installmentPeriod: 'quarterly',
+        installmentMonthsCount: 3,
+        firstInstallmentDate: '2025-11-01',
+        deliveryDate: '2033-11-01'
       }
     ],
     createdAt: '2025-01-01',

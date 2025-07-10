@@ -63,13 +63,13 @@ export interface Property {
   id: string;
   title: string;
   type: string;
-  price: string;
+  price: number;
   location: string;
   area: string;
   bedrooms: string;
   bathrooms: string;
   parking: string;
-  amenities: string;
+  amenities: string[];
   project: string;
   status: 'Available' | 'Rented' | 'Sold';
   latitude?: number;
@@ -79,6 +79,13 @@ export interface Property {
   zoneId?: string;
   projectId?: string;
   developerId?: string;
+  // Payment plan fields
+  downPayment?: number; // EGP
+  payYears?: number; // total years to pay
+  installmentPeriod?: string; // 'monthly' | 'quarterly' | 'yearly' | 'custom'
+  installmentMonthsCount?: number; // for custom period
+  firstInstallmentDate?: string; // ISO date
+  deliveryDate?: string; // ISO date
 }
 
 export interface Project {
@@ -89,9 +96,13 @@ export interface Project {
   type: string;
   paymentPlans: {
     downPayment: number;
-    installments: number;
     delivery: number;
-    schedule: string;
+    schedule?: string;
+    payYears: number;
+    installmentPeriod: string;
+    installmentMonthsCount: number;
+    firstInstallmentDate: string;
+    deliveryDate: string;
   }[];
   createdAt: string;
   createdBy: string;

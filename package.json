@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/leaflet": "^1.9.19",
     "framer-motion": "^12.23.0",
+    "html2pdf.js": "^0.10.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.344.0",
     "papaparse": "^5.5.3",

@@ -17,6 +17,88 @@ interface Project {
   };
 }
 
+// Utility: Generate payment schedule for a property price and payment plan
+/**
+ * Generate payment schedule for a property
+ * @param {number} totalPrice - The total price of the property (EGP)
+ * @param {object} plan - The payment plan object from the project
+ * @returns {Array<{no: number, dueDate: string, amount: number, label?: string}>}
+ */
+export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{no: number, dueDate: string, amount: number, label?: string}> {
+  if (!plan || !totalPrice) return [];
+  const downPaymentAmount = (plan.downPayment / 100) * totalPrice;
+  const deliveryAmount = (plan.delivery / 100) * totalPrice;
+  let periods = 0;
+  let intervalMonths = 1;
+  if (plan.installmentPeriod === 'monthly') {
+    periods = plan.payYears * 12;
+    intervalMonths = 1;
+  } else if (plan.installmentPeriod === 'quarterly') {
+    periods = plan.payYears * 4;
+    intervalMonths = 3;
+  } else if (plan.installmentPeriod === 'yearly') {
+    periods = plan.payYears;
+    intervalMonths = 12;
+  } else if (plan.installmentPeriod === 'custom') {
+    periods = Math.floor((plan.payYears * 12) / plan.installmentMonthsCount);
+    intervalMonths = plan.installmentMonthsCount;
+  }
+  if (!periods || !plan.firstInstallmentDate) return [];
+
+  // Calculate installment amount based on new equation
+  const installmentTotal = totalPrice - downPaymentAmount - deliveryAmount;
+  const installmentAmount = Math.round(installmentTotal / periods);
+
+  // Down Payment row
+  const schedule: Array<{no: number, dueDate: string, amount: number, label?: string}> = [
+    { no: 0, dueDate: plan.firstInstallmentDate, amount: downPaymentAmount, label: `Down Payment (${plan.downPayment}%)` }
+  ];
+
+  // Generate Installments (start 1 month after down payment)
+  let currentDate = new Date(plan.firstInstallmentDate);
+  currentDate.setMonth(currentDate.getMonth() + intervalMonths); // Start after down payment
+  for (let i = 1; i <= periods; i++) {
+    schedule.push({
+      no: i,
+      dueDate: currentDate.toISOString().slice(0, 10),
+      amount: installmentAmount,
+      label: `Installment ${i}`
+    });
+    currentDate.setMonth(currentDate.getMonth() + intervalMonths);
+  }
+
+  // Delivery row
+  let deliveryRow = null;
+  if (plan.deliveryDate && plan.delivery) {
+    deliveryRow = {
+      no: schedule.length,
+      dueDate: plan.deliveryDate,
+      amount: deliveryAmount,
+      label: `Delivery (${plan.delivery}%)`
+    };
+  }
+
+  // Merge delivery with installment if dates match
+  if (deliveryRow) {
+    const idx = schedule.findIndex(row => row.dueDate === deliveryRow!.dueDate);
+    if (idx !== -1) {
+      // Merge amounts and labels
+      schedule[idx] = {
+        ...schedule[idx],
+        amount: schedule[idx].amount + deliveryRow.amount,
+        label: `${schedule[idx].label} + Delivery (${plan.delivery}%)`
+      };
+    } else {
+      schedule.push(deliveryRow);
+    }
+  }
+
+  // Sort by dueDate
+  schedule.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+  return schedule;
+}
+
 const ProjectsTab: React.FC = () => {
   const { projects, addProject, updateProject, deleteProject, zones, developers, properties } = useData();
   const { user } = useAuth();
@@ -34,7 +116,12 @@ const ProjectsTab: React.FC = () => {
         downPayment: 0,
         installments: 0,
         delivery: 0,
-        schedule: ''
+        schedule: '',
+        payYears: 1,
+        installmentPeriod: 'monthly',
+        installmentMonthsCount: 1,
+        firstInstallmentDate: '',
+        deliveryDate: ''
       }
     ],
     propertyIds: [] as string[],
@@ -50,7 +137,12 @@ const ProjectsTab: React.FC = () => {
         downPayment: 0,
         installments: 0,
         delivery: 0,
-        schedule: ''
+        schedule: '',
+        payYears: 1,
+        installmentPeriod: 'monthly',
+        installmentMonthsCount: 1,
+        firstInstallmentDate: '',
+        deliveryDate: ''
       }
     ],
     propertyIds: [] as string[],
@@ -69,7 +161,7 @@ const ProjectsTab: React.FC = () => {
         ...prev,
         paymentPlans: [
           ...prev.paymentPlans,
-          { downPayment: 0, installments: 0, delivery: 0, schedule: '' }
+          { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
         ]
       }));
     } else {
@@ -77,7 +169,7 @@ const ProjectsTab: React.FC = () => {
         ...prev,
         paymentPlans: [
           ...prev.paymentPlans,
-          { downPayment: 0, installments: 0, delivery: 0, schedule: '' }
+          { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
         ]
       }));
     }
@@ -100,8 +192,14 @@ const ProjectsTab: React.FC = () => {
     e.preventDefault();
     const developerName = developers.find(d => d.id === newProject.developerId)?.name || '';
     const zoneName = zones.find(z => z.id === newProject.zoneId)?.name || '';
+    // Calculate installments for each plan
+    const paymentPlans = newProject.paymentPlans.map(plan => ({
+      ...plan,
+      installments: 100 - (plan.downPayment || 0) - (plan.delivery || 0)
+    }));
     addProject({
       ...newProject,
+      paymentPlans,
       developer: developerName,
       zone: zoneName,
       createdBy: user?.name || 'System'
@@ -113,7 +211,7 @@ const ProjectsTab: React.FC = () => {
       zoneId: '',
       type: '',
       paymentPlans: [
-        { downPayment: 0, installments: 0, delivery: 0, schedule: '' }
+        { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
       ],
       propertyIds: [],
       createdBy: user?.name || 'System'
@@ -128,7 +226,7 @@ const ProjectsTab: React.FC = () => {
       zoneId: zones.find(z => z.name === project.zone)?.id || '',
       type: project.type,
       paymentPlans: project.paymentPlans || [
-        { downPayment: 0, installments: 0, delivery: 0, schedule: '' }
+        { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
       ],
       propertyIds: project.propertyIds || [],
       createdBy: project.createdBy || user?.name || 'System'
@@ -141,8 +239,14 @@ const ProjectsTab: React.FC = () => {
     if (editId) {
       const developerName = developers.find(d => d.id === editProject.developerId)?.name || '';
       const zoneName = zones.find(z => z.id === editProject.zoneId)?.name || '';
+      // Calculate installments for each plan
+      const paymentPlans = editProject.paymentPlans.map(plan => ({
+        ...plan,
+        installments: 100 - (plan.downPayment || 0) - (plan.delivery || 0)
+      }));
       updateProject(editId, {
         ...editProject,
+        paymentPlans,
         developer: developerName,
         zone: zoneName,
         createdBy: user?.name || 'System'
@@ -212,27 +316,29 @@ const ProjectsTab: React.FC = () => {
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-700 mb-2">Payment Plans</h4>
               {project.paymentPlans && project.paymentPlans.length > 0 ? (
-                project.paymentPlans.map((plan, idx) => (
-                  <div key={idx} className="mb-2 p-2 rounded bg-gray-50 border border-gray-100">
-                    <div className="grid grid-cols-3 gap-2 text-xs">
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-blue-600">{plan.downPayment}%</div>
-                        <div className="text-gray-600">Down Payment</div>
+                project.paymentPlans.map((plan, idx) => {
+                  // For demo, use a sample price (e.g., 1,000,000 EGP)
+                  const samplePrice = 1000000;
+                  const schedule = generatePaymentSchedule(samplePrice, plan);
+                  return (
+                    <div key={idx} className="mb-4 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-200 shadow-sm">
+                      <div className="flex flex-wrap gap-3 mb-2">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>Down Payment: {plan.downPayment}%</span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" /></svg>Installments: {100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span>
+                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-orange-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12,2 22,22 2,22" /></svg>Delivery: {plan.delivery}%</span>
                       </div>
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-green-600">{plan.installments}%</div>
-                        <div className="text-gray-600">Installments</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-lg font-semibold text-orange-600">{plan.delivery}%</div>
-                        <div className="text-gray-600">Delivery</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-700 mb-2">
+                        <div><span className="font-semibold">Years to Pay:</span> {(plan as any).payYears ?? '-'}</div>
+                        <div><span className="font-semibold">Installment Period:</span> {(plan as any).installmentPeriod ?? '-'}{(plan as any).installmentPeriod === 'custom' && ` (${(plan as any).installmentMonthsCount ?? '-'} months)`}</div>
+                        <div><span className="font-semibold">First Installment Date:</span> {(plan as any).firstInstallmentDate ?? '-'}</div>
+                        <div><span className="font-semibold">Delivery Date:</span> {(plan as any).deliveryDate ?? '-'}</div>
+                        {(plan as any).schedule && (
+                          <div className="col-span-2"><span className="font-semibold">Schedule Description:</span> {(plan as any).schedule}</div>
+                        )}
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-600">
-                      {plan.schedule}
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="text-xs text-gray-400">No payment plans available.</div>
               )}
@@ -298,16 +404,6 @@ const ProjectsTab: React.FC = () => {
                         }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Installments (%)</label>
-                        <input type="number" value={plan.installments} onChange={e => {
-                          const val = Number(e.target.value);
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installments: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">Delivery (%)</label>
                         <input type="number" value={plan.delivery} onChange={e => {
                           const val = Number(e.target.value);
@@ -318,12 +414,69 @@ const ProjectsTab: React.FC = () => {
                         }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Schedule</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Schedule Description</label>
                         <input type="text" value={plan.schedule} onChange={e => {
                           const val = e.target.value;
                           setNewProject(prev => ({
                             ...prev,
                             paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, schedule: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Years to Pay</label>
+                        <input type="number" value={plan.payYears} onChange={e => {
+                          const val = Number(e.target.value);
+                          setNewProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Installment Period</label>
+                        <select value={plan.installmentPeriod} onChange={e => {
+                          const val = e.target.value;
+                          setNewProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Yearly</option>
+                          <option value="custom">Custom</option>
+                        </select>
+                      </div>
+                      {plan.installmentPeriod === 'custom' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Installment Every (Months)</label>
+                          <input type="number" value={plan.installmentMonthsCount} onChange={e => {
+                            const val = Number(e.target.value);
+                            setNewProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentMonthsCount: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">First Installment Date</label>
+                        <input type="date" value={plan.firstInstallmentDate} onChange={e => {
+                          const val = e.target.value;
+                          setNewProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, firstInstallmentDate: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Delivery Date</label>
+                        <input type="date" value={plan.deliveryDate} onChange={e => {
+                          const val = e.target.value;
+                          setNewProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, deliveryDate: val } : p)
                           }));
                         }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                       </div>
@@ -392,16 +545,6 @@ const ProjectsTab: React.FC = () => {
                         }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Installments (%)</label>
-                        <input type="number" value={plan.installments} onChange={e => {
-                          const val = Number(e.target.value);
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installments: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">Delivery (%)</label>
                         <input type="number" value={plan.delivery} onChange={e => {
                           const val = Number(e.target.value);
@@ -412,12 +555,69 @@ const ProjectsTab: React.FC = () => {
                         }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Schedule</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Schedule Description</label>
                         <input type="text" value={plan.schedule} onChange={e => {
                           const val = e.target.value;
                           setEditProject(prev => ({
                             ...prev,
                             paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, schedule: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Years to Pay</label>
+                        <input type="number" value={plan.payYears} onChange={e => {
+                          const val = Number(e.target.value);
+                          setEditProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Installment Period</label>
+                        <select value={plan.installmentPeriod} onChange={e => {
+                          const val = e.target.value;
+                          setEditProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                          <option value="monthly">Monthly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Yearly</option>
+                          <option value="custom">Custom</option>
+                        </select>
+                      </div>
+                      {plan.installmentPeriod === 'custom' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Installment Every (Months)</label>
+                          <input type="number" value={plan.installmentMonthsCount} onChange={e => {
+                            const val = Number(e.target.value);
+                            setEditProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentMonthsCount: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">First Installment Date</label>
+                        <input type="date" value={plan.firstInstallmentDate} onChange={e => {
+                          const val = e.target.value;
+                          setEditProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, firstInstallmentDate: val } : p)
+                          }));
+                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Delivery Date</label>
+                        <input type="date" value={plan.deliveryDate} onChange={e => {
+                          const val = e.target.value;
+                          setEditProject(prev => ({
+                            ...prev,
+                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, deliveryDate: val } : p)
                           }));
                         }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                       </div>

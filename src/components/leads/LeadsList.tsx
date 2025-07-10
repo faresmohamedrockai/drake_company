@@ -237,14 +237,14 @@ const LeadsList: React.FC = () => {
               className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs max-w-xs"
             />
           </div>
-        </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add Lead
-        </button>
+          </div>
+          <button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add Lead
+          </button>
       </div>
 
       {/* Leads Table */}
