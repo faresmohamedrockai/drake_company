@@ -13,6 +13,8 @@ interface Meeting {
   type: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';
   assignedTo: string;
+  locationType?: string;
+  location?: string;
 }
 
 const MeetingsManagement: React.FC = () => {
@@ -31,7 +33,9 @@ const MeetingsManagement: React.FC = () => {
     status: 'Scheduled',
     assignedTo: '',
     notes: '',
-    createdBy: user?.name || 'System'
+    createdBy: user?.name || 'System',
+    locationType: 'Online',
+    location: '',
   });
 
   const openAddForm = () => {
@@ -46,7 +50,9 @@ const MeetingsManagement: React.FC = () => {
       status: 'Scheduled',
       assignedTo: '',
       notes: '',
-      createdBy: user?.name || 'System'
+      createdBy: user?.name || 'System',
+      locationType: 'Online',
+      location: '',
     });
     setShowForm(true);
   };
@@ -142,6 +148,7 @@ const MeetingsManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
@@ -180,6 +187,9 @@ const MeetingsManagement: React.FC = () => {
                       {meeting.status}
                     </span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {(meeting as any).locationType === 'Offline' ? (meeting as any).location : (meeting as any).locationType || 'Online'}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <button className="text-blue-600 hover:text-blue-800 mr-3" onClick={() => openEditForm(meeting)}>
                       <Edit className="h-4 w-4" />
@@ -198,9 +208,12 @@ const MeetingsManagement: React.FC = () => {
       {/* Add/Edit Meeting Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">{editId ? 'Edit Meeting' : 'Schedule Meeting'}</h3>
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+          <div className="bg-white rounded-lg p-8 w-full max-w-2xl">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">{editId ? 'Edit Meeting' : 'Schedule Meeting'}</h3>
+            <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="md:col-span-2 mb-2">
+                <h4 className="text-lg font-semibold text-gray-700 mb-2">Meeting Details</h4>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
                 <input type="text" name="title" value={form.title} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
@@ -209,15 +222,13 @@ const MeetingsManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
                 <input type="text" name="client" value={form.client} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                  <input type="date" name="date" value={form.date} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                  <input type="time" name="time" value={form.time} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input type="date" name="date" value={form.date} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                <input type="time" name="time" value={form.time} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
@@ -241,6 +252,35 @@ const MeetingsManagement: React.FC = () => {
                 </select>
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Location Type</label>
+                <select
+                  name="locationType"
+                  value={form.locationType}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="Online">Online</option>
+                  <option value="Offline">Offline</option>
+                </select>
+              </div>
+              {form.locationType === 'Offline' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={form.location}
+                    onChange={handleFormChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required={form.locationType === 'Offline'}
+                  />
+                </div>
+              )}
+              <div className="md:col-span-2 mt-2">
+                <h4 className="text-lg font-semibold text-gray-700 mb-2">Assignment</h4>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
                 <select name="assignedTo" value={form.assignedTo} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">Select User</option>
@@ -249,11 +289,11 @@ const MeetingsManagement: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div>
+              <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
                 <textarea name="notes" value={form.notes} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />
               </div>
-              <div className="flex justify-end space-x-3">
+              <div className="md:col-span-2 flex justify-end space-x-3 mt-4">
                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editId ? 'Update' : 'Schedule'} Meeting</button>
               </div>

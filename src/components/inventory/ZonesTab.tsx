@@ -42,9 +42,9 @@ const ZonesTab: React.FC = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
         {/* Map Placeholder */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 lg:col-span-5">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Zone Map</h3>
           <MapComponent 
             showAddZoneModal={showAddModal}
@@ -54,7 +54,7 @@ const ZonesTab: React.FC = () => {
         </div>
 
         {/* Zones List */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div className="bg-white border border-gray-200 rounded-lg p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Zones List</h3>
           <div className="space-y-4 max-h-96 overflow-y-auto">
             {filteredZones.map((zone) => (

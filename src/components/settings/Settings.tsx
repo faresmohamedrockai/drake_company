@@ -4,14 +4,16 @@ import { Users, Shield, Settings as SettingsIcon, Database } from 'lucide-react'
 import UserManagement from './UserManagement';
 import { useData } from '../../contexts/DataContext';
 import Papa from 'papaparse'; 
+import { useSettings } from '../../contexts/SettingsContext'; // <-- to be implemented
 
 const SYSTEM_SETTINGS_KEY = 'propai_system_settings';
 const BACKUP_DATE_KEY = 'propai_last_backup_date';
 
 const defaultSettings = {
   companyName: 'Propai Real Estate',
-  currency: 'USD',
+  currency: 'EGP',
   timeZone: 'UTC',
+  language: 'en',
   notifications: {
     email: true,
     meeting: true,
@@ -23,6 +25,7 @@ const Settings: React.FC = () => {
   const { leads, properties, contracts, addLead, users, projects, developers, meetings, zones } = useData();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('users');
+  const { setGlobalSettings } = useSettings(); // <-- to be implemented
 
   // System Settings State
   const [settings, setSettings] = useState(() => {
@@ -68,6 +71,7 @@ const Settings: React.FC = () => {
     localStorage.setItem(SYSTEM_SETTINGS_KEY, JSON.stringify(settings));
     setSaveSuccess(true);
     setSettingsChanged(false);
+    setGlobalSettings(settings); // <-- update global context
     setTimeout(() => setSaveSuccess(false), 2000);
   };
 
@@ -222,10 +226,8 @@ const Settings: React.FC = () => {
                       onChange={e => handleSettingsChange('currency', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="GBP">GBP (£)</option>
                       <option value="EGP">EGP (ج.م)</option>
+                      <option value="USD">USD ($)</option>
                     </select>
                   </div>
                   <div>
@@ -239,6 +241,17 @@ const Settings: React.FC = () => {
                       <option value="Africa/Cairo">Africa/Cairo</option>
                       <option value="EST">Eastern Time</option>
                       <option value="PST">Pacific Time</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
+                    <select
+                      value={settings.language}
+                      onChange={e => handleSettingsChange('language', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="en">English</option>
+                      <option value="ar">العربية</option>
                     </select>
                   </div>
                 </div>

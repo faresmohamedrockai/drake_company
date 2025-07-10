@@ -42,13 +42,6 @@ const Dashboard: React.FC = () => {
       icon: Calendar,
       description: 'Click to view all meetings',
       info: true
-    },
-    {
-      title: 'Revenue This Month',
-      value: `$${stats.monthlyRevenue.toLocaleString()}`,
-      change: getChangeForStat(stats.monthlyRevenue, prevStats.monthlyRevenue),
-      icon: DollarSign,
-      description: 'From closed deals'
     }
   ];
 
@@ -112,7 +105,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {kpiCards.map((card, index) => {
           let changeType = 'neutral';
           if (typeof card.change === 'number') {
@@ -205,17 +198,29 @@ const Dashboard: React.FC = () => {
                 if (metric.change > 0) changeType = 'increase';
                 else if (metric.change < 0) changeType = 'decrease';
               }
+              // Extract numeric value for progress bar
+              const percent = parseInt(metric.value.replace(/[^0-9]/g, ''));
               return (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">{metric.label}</span>
-                  <div className="flex items-center">
-                    <span className="text-sm font-bold text-gray-900 mr-2">{metric.value}</span>
-                    <span className={`text-xs font-medium ${
-                      changeType === 'increase' ? 'text-green-600' : 
-                      changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                      {metric.change > 0 && '+'}{metric.change}%
-                    </span>
+                <div key={index} className="mb-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-gray-700">{metric.label}</span>
+                    <div className="flex items-center">
+                      <span className="text-sm font-bold text-gray-900 mr-2">{metric.value}</span>
+                      <span className={`text-xs font-medium ${
+                        changeType === 'increase' ? 'text-green-600' : 
+                        changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
+                      }`}>
+                        {metric.change > 0 && '+'}{metric.change}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: percent + '%' }}
+                      transition={{ duration: 1, delay: 0.2 + index * 0.15, ease: 'easeOut' }}
+                      className="h-3 bg-blue-500 rounded-full"
+                    />
                   </div>
                 </div>
               );

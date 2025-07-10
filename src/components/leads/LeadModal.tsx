@@ -3,6 +3,8 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { X, Phone, Calendar, MessageSquare, Plus } from 'lucide-react';
 import { Lead, CallLog, VisitLog, Note } from '../../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { RotateCw } from 'lucide-react';
 
 interface LeadModalProps {
   lead: Lead;
@@ -11,7 +13,7 @@ interface LeadModalProps {
 }
 
 const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
-  const { updateLead, addCallLog, addVisitLog, addNote, projects } = useData();
+  const { updateLead, addCallLog, addVisitLog, addNote, projects, leads } = useData();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('details');
   const [newNote, setNewNote] = useState('');
@@ -31,31 +33,51 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     objections: '',
     notes: ''
   });
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [currentLead, setCurrentLead] = useState(lead);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Sync currentLead with prop lead and refreshKey
+  React.useEffect(() => {
+    setCurrentLead(lead);
+  }, [lead]);
+  React.useEffect(() => {
+    // On refresh, get the latest lead data by ID
+    const latest = leads.find(l => l.id === currentLead.id);
+    if (latest) setCurrentLead(latest);
+    setIsUpdating(false);
+  }, [refreshKey]);
 
   const canEdit = user?.role === 'Admin' || user?.role === 'Sales Admin' || 
                   user?.role === 'Team Leader' || 
-                  (user?.role === 'Sales Rep' && lead.assignedTo === user.name);
+                  (user?.role === 'Sales Rep' && currentLead.assignedTo === user.name);
 
-  // Dynamic stages based on status order
+  // Dynamic stages based on status order (remove Cancellation)
   const statusStages = [
     { id: 'fresh', label: 'Fresh Lead', value: 'Fresh Lead' },
     { id: 'follow', label: 'Follow Up', value: 'Follow Up' },
     { id: 'visit', label: 'Scheduled Visit', value: 'Scheduled Visit' },
     { id: 'open', label: 'Open Deal', value: 'Open Deal' },
-    { id: 'closed', label: 'Closed Deal', value: 'Closed Deal' },
-    { id: 'cancel', label: 'Cancellation', value: 'Cancellation' }
+    { id: 'closed', label: 'Closed Deal', value: 'Closed Deal' }
   ];
-  const currentStatusIndex = statusStages.findIndex(s => s.value === lead.status);
+  const isCancelled = currentLead.status === 'Cancellation';
+  const currentStatusIndex = isCancelled ? -1 : statusStages.findIndex(s => s.value === currentLead.status);
 
   const handleStatusUpdate = (newStatus: Lead['status']) => {
     if (canEdit) {
-      updateLead(lead.id, { status: newStatus });
+      updateLead(currentLead.id, { status: newStatus });
     }
+  };
+
+  // After add actions, refresh currentLead from leads array
+  const refreshCurrentLead = () => {
+    const latest = leads.find(l => l.id === currentLead.id);
+    if (latest) setCurrentLead(latest);
   };
 
   const handleAddCall = (e: React.FormEvent) => {
     e.preventDefault();
-    addCallLog(lead.id, {
+    addCallLog(currentLead.id, {
       ...callForm,
       createdBy: user?.name || ''
     });
@@ -67,11 +89,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       notes: ''
     });
     setShowCallForm(false);
+    setTimeout(refreshCurrentLead, 100); // Ensure state updates after add
   };
 
   const handleAddVisit = (e: React.FormEvent) => {
     e.preventDefault();
-    addVisitLog(lead.id, {
+    addVisitLog(currentLead.id, {
       ...visitForm,
       createdBy: user?.name || ''
     });
@@ -83,17 +106,25 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       notes: ''
     });
     setShowVisitForm(false);
+    setTimeout(refreshCurrentLead, 100);
   };
 
   const handleAddNote = () => {
     if (newNote.trim()) {
-      addNote(lead.id, {
+      addNote(currentLead.id, {
         content: newNote,
         createdAt: new Date().toISOString(),
         createdBy: user?.name || ''
       });
       setNewNote('');
+      setTimeout(refreshCurrentLead, 100);
     }
+  };
+
+  // Add update button handler
+  const handleRefresh = () => {
+    setIsUpdating(true);
+    setTimeout(() => setRefreshKey(k => k + 1), 600); // Simulate loading
   };
 
   if (!isOpen) return null;
@@ -102,16 +133,29 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">{lead.name}</h2>
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <h2 className="text-2xl font-bold text-gray-900">{currentLead.name}</h2>
             <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={handleRefresh}
+              className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow font-semibold flex items-center space-x-2 text-base transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+              style={{ minWidth: 120 }}
+              disabled={isUpdating}
             >
-              <X className="h-6 w-6" />
+              {isUpdating ? (
+                <RotateCw className="h-5 w-5 animate-spin mr-2" />
+              ) : (
+                <RotateCw className="h-5 w-5 mr-2" />
+              )}
+              <span>{isUpdating ? 'Updating...' : 'Update'}</span>
             </button>
           </div>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
         </div>
 
         {/* Lead Details */}
@@ -119,38 +163,69 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <p className="text-sm text-gray-900">{lead.phone}</p>
+              <p className="text-sm text-gray-900">{currentLead.phone}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
-              <p className="text-sm text-gray-900">{lead.budget}</p>
+              <p className="text-sm text-gray-900">{currentLead.budget}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Inventory Interest</label>
-              <p className="text-sm text-gray-900">{lead.inventoryInterest}</p>
+              <p className="text-sm text-gray-900">{currentLead.inventoryInterest}</p>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-4">Deal Progress</label>
-            <div className="flex items-center space-x-4">
-              {statusStages.map((stage, index) => (
-                <div key={stage.id} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                    index <= currentStatusIndex ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {index + 1}
-                  </div>
-                  <div className="ml-2 text-sm text-gray-700">{stage.label}</div>
-                  {index < statusStages.length - 1 && (
-                    <div className={`w-8 h-0.5 ml-4 ${
-                      index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'
-                    }`} />
-                  )}
-                </div>
-              ))}
+          {/* Animated Deal Progress Bar */}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">Deal Progress</label>
+            <div className="flex items-center justify-center space-x-0 md:space-x-3 overflow-x-auto py-2 w-full">
+              {statusStages.map((stage, index) => {
+                const isCompleted = !isCancelled && index < currentStatusIndex;
+                const isActive = !isCancelled && index === currentStatusIndex;
+                return (
+                  <React.Fragment key={stage.id}>
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0.5 }}
+                      animate={{ scale: isActive ? 1.1 : 1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      className={`flex flex-col items-center relative`}
+                    >
+                      <div
+                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
+                          ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
+                            isCompleted ? 'bg-green-500 border-green-500 text-white' :
+                            isActive ? 'bg-blue-600 border-blue-600 text-white' :
+                            'bg-gray-200 border-gray-300 text-gray-600'}
+                        `}
+                      >
+                        {index + 1}
+                      </div>
+                      <span className={`mt-2 text-xs font-medium text-center w-20
+                        ${isCancelled ? 'text-red-500' :
+                          isCompleted ? 'text-green-600' :
+                          isActive ? 'text-blue-600' :
+                          'text-gray-500'}
+                      `}>{stage.label}</span>
+                    </motion.div>
+                    {index < statusStages.length - 1 && (
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: 40 }}
+                        transition={{ duration: 0.5, delay: 0.1 * index }}
+                        className={`h-1 mx-1 md:mx-2 rounded-full transition-colors duration-300
+                          ${isCancelled ? 'bg-red-500' :
+                            index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
+                        `}
+                        style={{ minWidth: 24, maxWidth: 40 }}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
+            {isCancelled && (
+              <div className="mt-1 text-xs text-red-600 font-semibold text-center">Deal Cancelled</div>
+            )}
           </div>
 
           {/* Quick Actions */}
@@ -171,7 +246,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
             </button>
             {canEdit && (
               <select
-                value={lead.status}
+                value={currentLead.status}
                 onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -214,15 +289,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Name</label>
-                    <p className="text-sm text-gray-900">{lead.name}</p>
+                    <p className="text-sm text-gray-900">{currentLead.name}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Phone</label>
-                    <p className="text-sm text-gray-900">{lead.phone}</p>
+                    <p className="text-sm text-gray-900">{currentLead.phone}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Source</label>
-                    <p className="text-sm text-gray-900">{lead.source}</p>
+                    <p className="text-sm text-gray-900">{currentLead.source}</p>
                   </div>
                 </div>
               </div>
@@ -231,15 +306,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Status</label>
-                    <p className="text-sm text-gray-900">{lead.status}</p>
+                    <p className="text-sm text-gray-900">{currentLead.status}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Budget</label>
-                    <p className="text-sm text-gray-900">{lead.budget}</p>
+                    <p className="text-sm text-gray-900">{currentLead.budget}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Inventory Interest</label>
-                    <p className="text-sm text-gray-900">{lead.inventoryInterest}</p>
+                    <p className="text-sm text-gray-900">{currentLead.inventoryInterest}</p>
                   </div>
                 </div>
               </div>
@@ -259,7 +334,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 </button>
               </div>
               <div className="space-y-4">
-                {lead.calls.map((call) => (
+                {currentLead.calls.map((call) => (
                   <div key={call.id} className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-900">{call.date}</span>
@@ -278,7 +353,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     <p className="text-sm text-gray-700">{call.notes}</p>
                   </div>
                 ))}
-                {lead.calls.length === 0 && (
+                {currentLead.calls.length === 0 && (
                   <p className="text-gray-500 text-center py-4">No calls logged yet</p>
                 )}
               </div>
@@ -298,7 +373,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 </button>
               </div>
               <div className="space-y-4">
-                {lead.visits.map((visit) => (
+                {currentLead.visits.map((visit) => (
                   <div key={visit.id} className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-gray-900">{visit.date}</span>
@@ -317,7 +392,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     <p className="text-sm text-gray-700">{visit.notes}</p>
                   </div>
                 ))}
-                {lead.visits.length === 0 && (
+                {currentLead.visits.length === 0 && (
                   <p className="text-gray-500 text-center py-4">No visits logged yet</p>
                 )}
               </div>
@@ -345,7 +420,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 </div>
               </div>
               <div className="space-y-4">
-                {lead.notes.map((note) => (
+                {currentLead.notes.map((note) => (
                   <div key={note.id} className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-900 mb-2">{note.content}</p>
                     <div className="flex items-center justify-between text-xs text-gray-500">
@@ -354,7 +429,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     </div>
                   </div>
                 ))}
-                {lead.notes.length === 0 && (
+                {currentLead.notes.length === 0 && (
                   <p className="text-gray-500 text-center py-4">No notes added yet</p>
                 )}
               </div>

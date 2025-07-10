@@ -78,7 +78,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
   const defaultCenter: [number, number] = [31.221169, 29.938073]; // sidi gaber - Alexandria
 
   return (
-    <div className={`flex flex-col md:flex-row gap-6 w-full`}>
+    <div className="flex flex-col md:flex-row gap-6 w-full">
+      {/* Map Section */}
       <div className={showAddZoneModal && selectedLocation ? 'md:w-2/3 w-full' : 'w-full'}>
         <MapContainer
           center={defaultCenter}
@@ -103,76 +104,69 @@ const MapComponent: React.FC<MapComponentProps> = ({
               </Popup>
             </Marker>
           ))}
-          {/* Selected location for new zone */}
-          {selectedLocation && (
-            <Marker position={[selectedLocation.lat, selectedLocation.lng]}>
-              <Popup>
-                <div>
-                  <p className="text-sm">New zone location</p>
-                  <p className="text-xs text-gray-500">
-                    {selectedLocation.lat.toFixed(4)}, {selectedLocation.lng.toFixed(4)}
-                  </p>
-                </div>
-              </Popup>
-            </Marker>
+          {/* Pin for new zone location (no popup) */}
+          {showAddZoneModal && selectedLocation && (
+            <Marker position={[selectedLocation.lat, selectedLocation.lng]} />
           )}
         </MapContainer>
       </div>
+      {/* Side Panel Form */}
       {showAddZoneModal && selectedLocation && (
-        <div className="md:w-1/3 w-full bg-white rounded-lg p-6 shadow-lg self-start">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Zone</h3>
-          {successMsg && <div className="mb-2 text-green-600 text-sm font-medium">{successMsg}</div>}
-          <form onSubmit={handleAddZone} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Zone Name</label>
-              <input
-                type="text"
-                value={zoneForm.name}
-                onChange={(e) => setZoneForm({ ...zoneForm, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter zone name"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                value={zoneForm.description}
-                onChange={(e) => setZoneForm({ ...zoneForm, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Enter zone description"
-                required
-              />
-            </div>
-            <div className="bg-gray-50 p-3 rounded">
-              <p className="text-sm text-gray-600">Location:</p>
-              <p className="text-sm font-mono">
-                {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
-              </p>
-            </div>
-            <div className="flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedLocation(null);
-                  if (setShowAddZoneModal) {
-                    setShowAddZoneModal(false);
-                  }
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                disabled={!(zoneForm.name.trim() && zoneForm.description.trim())}
-              >
-                Add Zone
-              </button>
-            </div>
-          </form>
+        <div className="md:w-1/3 w-full bg-white rounded-2xl shadow-2xl border border-blue-200 self-start mt-2 mb-2 flex flex-col animate-fadeIn">
+          <div className="bg-blue-600 rounded-t-2xl px-6 py-3 mb-0 flex items-center">
+            <h3 className="text-lg font-bold text-white flex-1">Add New Zone</h3>
+          </div>
+          <div className="p-6">
+            {successMsg && <div className="mb-2 text-green-600 text-sm font-medium">{successMsg}</div>}
+            <form onSubmit={handleAddZone} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                  value={zoneForm.name}
+                  onChange={e => setZoneForm({ ...zoneForm, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea
+                  name="description"
+                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                  value={zoneForm.description}
+                  onChange={e => setZoneForm({ ...zoneForm, description: e.target.value })}
+                />
+              </div>
+              <div className="bg-gray-50 p-2 rounded-lg border border-gray-200 text-xs">
+                <span className="text-gray-600">Location: </span>
+                <span className="font-mono">{selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}</span>
+              </div>
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLocation(null);
+                    if (setShowAddZoneModal) {
+                      setShowAddZoneModal(false);
+                    }
+                  }}
+                  className="px-4 py-1 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors text-sm"
+                  disabled={!(zoneForm.name.trim() && zoneForm.description.trim())}
+                >
+                  Add Zone
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

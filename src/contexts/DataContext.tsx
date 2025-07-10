@@ -210,12 +210,14 @@ const initialProjects: Project[] = [
     developer: 'Talaat Moustafa Group',
     zone: 'New Cairo',
     type: 'Residential',
-    paymentPlan: {
-      downPayment: 10,
-      installments: 80,
-      delivery: 10,
-      schedule: '7 years installment plan'
-    },
+    paymentPlans: [
+      {
+        downPayment: 10,
+        installments: 80,
+        delivery: 10,
+        schedule: '7 years installment plan'
+      }
+    ],
     createdAt: new Date().toISOString(),
     createdBy: 'System'
   },
@@ -225,12 +227,14 @@ const initialProjects: Project[] = [
     developer: 'Mountain View Egypt',
     zone: '6th of October',
     type: 'Residential',
-    paymentPlan: {
-      downPayment: 15,
-      installments: 75,
-      delivery: 10,
-      schedule: '8 years installment plan'
-    },
+    paymentPlans: [
+      {
+        downPayment: 15,
+        installments: 75,
+        delivery: 10,
+        schedule: '8 years installment plan'
+      }
+    ],
     createdAt: '2025-01-01',
     createdBy: 'Abdullah Sobhy'
   }
@@ -246,7 +250,8 @@ const initialDevelopers: Developer[] = [
     established: '1974',
     location: 'Cairo',
     createdAt: '2025-01-01',
-    createdBy: 'fadel'
+    createdBy: 'fadel',
+    image: ''
   },
   {
     id: '2',
@@ -257,7 +262,8 @@ const initialDevelopers: Developer[] = [
     established: '2005',
     location: 'Giza',
     createdAt: '2025-01-01',
-    createdBy: 'Abdullah Sobhy'
+    createdBy: 'Abdullah Sobhy',
+    image: ''
   }
 ];
 
@@ -502,6 +508,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createdAt: new Date().toISOString()
     };
     setProperties(prev => [...prev, newProperty]);
+    // Sync with zone
+    if (newProperty.zoneId) {
+      setZones(prev => prev.map(zone =>
+        zone.id === newProperty.zoneId
+          ? { ...zone, propertyIds: [...(zone.propertyIds || []), newProperty.id] }
+          : zone
+      ));
+    }
+    // Sync with project
+    if (newProperty.projectId) {
+      setProjects(prev => prev.map(project =>
+        project.id === newProperty.projectId
+          ? { ...project, propertyIds: [...(project.propertyIds || []), newProperty.id] }
+          : project
+      ));
+    }
     addActivity({
       user: property.createdBy,
       action: `New property ${property.title} added to inventory`,
@@ -513,6 +535,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateProperty = (id: string, updates: Partial<Property>) => {
     setProperties(prev => prev.map(property => property.id === id ? { ...property, ...updates } : property));
+    // Sync with zone
+    if (updates.zoneId) {
+      setZones(prev => prev.map(zone =>
+        zone.id === updates.zoneId
+          ? { ...zone, propertyIds: [...(zone.propertyIds || []), id] }
+          : zone
+      ));
+    }
+    // Sync with project
+    if (updates.projectId) {
+      setProjects(prev => prev.map(project =>
+        project.id === updates.projectId
+          ? { ...project, propertyIds: [...(project.propertyIds || []), id] }
+          : project
+      ));
+    }
     updateDashboardStats();
   };
 
@@ -529,6 +567,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createdAt: new Date().toISOString()
     };
     setProjects(prev => [...prev, newProject]);
+    // Sync with zone
+    if (newProject.zoneId) {
+      setZones(prev => prev.map(zone =>
+        zone.id === newProject.zoneId
+          ? { ...zone, projectIds: [...(zone.projectIds || []), newProject.id] }
+          : zone
+      ));
+    }
+    // Sync with developer
+    if (newProject.developerId) {
+      setDevelopers(prev => prev.map(dev =>
+        dev.id === newProject.developerId
+          ? { ...dev, projectIds: [...(dev.projectIds || []), newProject.id] }
+          : dev
+      ));
+    }
     addActivity({
       user: project.createdBy,
       action: `New project ${project.name} added to system`,
@@ -540,6 +594,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateProject = (id: string, updates: Partial<Project>) => {
     setProjects(prev => prev.map(project => project.id === id ? { ...project, ...updates } : project));
+    // Sync with zone
+    if (updates.zoneId) {
+      setZones(prev => prev.map(zone =>
+        zone.id === updates.zoneId
+          ? { ...zone, projectIds: [...(zone.projectIds || []), id] }
+          : zone
+      ));
+    }
+    // Sync with developer
+    if (updates.developerId) {
+      setDevelopers(prev => prev.map(dev =>
+        dev.id === updates.developerId
+          ? { ...dev, projectIds: [...(dev.projectIds || []), id] }
+          : dev
+      ));
+    }
     updateDashboardStats();
   };
 
@@ -554,9 +624,18 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       ...zone,
       id: generateId(),
       createdAt: new Date().toISOString(),
-      properties: 0
+      properties: 0,
+      propertyIds: zone.propertyIds || []
     };
     setZones(prev => [...prev, newZone]);
+    // Sync properties
+    if (newZone.propertyIds && newZone.propertyIds.length > 0) {
+      setProperties(prev => prev.map(property =>
+        newZone.propertyIds!.includes(property.id)
+          ? { ...property, zoneId: newZone.id }
+          : property
+      ));
+    }
     addActivity({
       user: zone.createdBy,
       action: `New zone ${zone.name} added to system`,
@@ -568,6 +647,16 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateZone = (id: string, updates: Partial<Zone>) => {
     setZones(prev => prev.map(zone => zone.id === id ? { ...zone, ...updates } : zone));
+    // Sync properties
+    if (updates.propertyIds) {
+      setProperties(prev => prev.map(property =>
+        updates.propertyIds!.includes(property.id)
+          ? { ...property, zoneId: id }
+          : property.zoneId === id && !updates.propertyIds!.includes(property.id)
+          ? { ...property, zoneId: undefined }
+          : property
+      ));
+    }
     updateDashboardStats();
   };
 

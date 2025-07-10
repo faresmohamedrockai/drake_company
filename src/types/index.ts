@@ -76,6 +76,9 @@ export interface Property {
   longitude?: number;
   createdAt: string;
   createdBy: string;
+  zoneId?: string;
+  projectId?: string;
+  developerId?: string;
 }
 
 export interface Project {
@@ -84,14 +87,17 @@ export interface Project {
   developer: string;
   zone: string;
   type: string;
-  paymentPlan: {
+  paymentPlans: {
     downPayment: number;
     installments: number;
     delivery: number;
     schedule: string;
-  };
+  }[];
   createdAt: string;
   createdBy: string;
+  zoneId?: string;
+  developerId?: string;
+  propertyIds?: string[];
 }
 
 export interface Zone {
@@ -103,6 +109,8 @@ export interface Zone {
   properties: number;
   createdAt: string;
   createdBy: string;
+  propertyIds?: string[];
+  projectIds?: string[];
 }
 
 export interface Developer {
@@ -115,6 +123,8 @@ export interface Developer {
   location: string;
   createdAt: string;
   createdBy: string;
+  image?: string; // 
+  projectIds?: string[];
 }
 
 export interface Meeting {

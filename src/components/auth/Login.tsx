@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Building2, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { Building2, User, Lock, Eye, EyeOff, Calendar, Briefcase } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -30,8 +30,8 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding */}
-      <div className="flex-1 bg-gradient-to-br from-blue-600 to-purple-700 p-12 flex flex-col justify-center text-white">
-        <div className="max-w-md">
+      <div className="flex-1 bg-gradient-to-br from-blue-600 to-purple-700 p-12 flex flex-col justify-center items-center text-white">
+        <div className="max-w-md w-full flex flex-col items-center">
           <div className="flex items-center mb-8">
             <Building2 className="h-8 w-8 mr-3" />
             <h1 className="text-2xl font-bold">Propai</h1>
@@ -49,11 +49,20 @@ const Login: React.FC = () => {
               <h3 className="text-lg font-semibold mb-2">Lead Management</h3>
               <p className="text-sm text-blue-100">Track and nurture leads through your sales pipeline</p>
             </div>
-            
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
               <Building2 className="h-8 w-8 mb-4 text-blue-200" />
               <h3 className="text-lg font-semibold mb-2">Inventory Control</h3>
               <p className="text-sm text-blue-100">Manage properties, projects, and zones efficiently</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+              <Calendar className="h-8 w-8 mb-4 text-blue-200" />
+              <h3 className="text-lg font-semibold mb-2">Meeting Scheduler</h3>
+              <p className="text-sm text-blue-100">Schedule and track property visits and meetings</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
+              <Briefcase className="h-8 w-8 mb-4 text-blue-200" />
+              <h3 className="text-lg font-semibold mb-2">Deal Tracker</h3>
+              <p className="text-sm text-blue-100">Track, update, and manage your deals through every stage</p>
             </div>
           </div>
         </div>
