@@ -22,7 +22,7 @@ const AppContent: React.FC = () => {
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard setCurrentView={setCurrentView} />;
       case 'leads':
         return <LeadsList />;
       case 'inventory':

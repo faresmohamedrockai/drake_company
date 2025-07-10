@@ -13,12 +13,21 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { motion } from 'framer-motion';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+  setCurrentView?: (view: string) => void;
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { user } = useAuth();
   const { getStatistics, getPreviousStats, getChangeForStat, activities } = useData();
   
   const stats = getStatistics();
   const prevStats = getPreviousStats() || stats; // fallback to current if none
+
+  // Get real number of follow up leads
+  const followUpLeads = typeof stats.totalProspects === 'number' && stats.totalProspects > 0
+    ? Math.round((stats.conversionRates.leadsToFollowUp / 100) * stats.totalProspects)
+    : 0;
 
   const kpiCards = [
     {
@@ -40,8 +49,15 @@ const Dashboard: React.FC = () => {
       value: stats.todayMeetings.toString(),
       change: getChangeForStat(stats.todayMeetings, prevStats.todayMeetings),
       icon: Calendar,
-      description: 'Click to view all meetings',
+      description: 'go to view all meetings ',
       info: true
+    },
+    {
+      title: 'Follow Up Leads',
+      value: followUpLeads.toString(),
+      change: getChangeForStat(followUpLeads, Math.round((prevStats.conversionRates.leadsToFollowUp / 100) * prevStats.totalProspects)),
+      icon: CheckCircle,
+      description: 'Leads currently in follow up status'
     }
   ];
 
@@ -105,7 +121,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {kpiCards.map((card, index) => {
           let changeType = 'neutral';
           if (typeof card.change === 'number') {
@@ -118,27 +134,28 @@ const Dashboard: React.FC = () => {
                 <div className={`p-3 rounded-full ${
                   index === 0 ? 'bg-blue-100' : 
                   index === 1 ? 'bg-purple-100' : 
-                  index === 2 ? 'bg-orange-100' : 'bg-green-100'
+                  index === 2 ? 'bg-orange-100' : 
+                  index === 3 ? 'bg-green-100' : 'bg-gray-100'
                 }`}>
                   <card.icon className={`h-6 w-6 ${
                     index === 0 ? 'text-blue-600' : 
                     index === 1 ? 'text-purple-600' : 
-                    index === 2 ? 'text-orange-600' : 'text-green-600'
+                    index === 2 ? 'text-orange-600' : 
+                    index === 3 ? 'text-green-600' : 'text-gray-600'
                   }`} />
                 </div>
                 {card.info ? (
                   <a
                     href="#"
-                    className="text-xs text-blue-600 underline hover:text-blue-800"
+                    className="text-xs text-blue-600 underline hover:text-blue-800 cursor-pointer"
                     onClick={e => {
                       e.preventDefault();
-                      if (typeof window !== "undefined") {
-                        const sidebarBtn = document.querySelector('[data-view="meetings"]');
-                        if (sidebarBtn) (sidebarBtn as HTMLElement).click();
+                      if (setCurrentView) {
+                        setCurrentView('meetings');
                       }
                     }}
                   >
-                    Go to Meetings Management
+                    go to view all meetings
                   </a>
                 ) : (
                   <span className={`text-sm font-medium ${
