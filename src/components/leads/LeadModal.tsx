@@ -66,6 +66,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const handleStatusUpdate = (newStatus: Lead['status']) => {
     if (canEdit) {
       updateLead(currentLead.id, { status: newStatus });
+      setCurrentLead({ ...currentLead, status: newStatus }); // Update local state immediately
     }
   };
 
@@ -77,9 +78,16 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   const handleAddCall = (e: React.FormEvent) => {
     e.preventDefault();
-    addCallLog(currentLead.id, {
+    const newCall = {
       ...callForm,
-      createdBy: user?.name || ''
+      createdBy: user?.name || '',
+      id: Date.now().toString(), // generate a temporary id
+      leadId: currentLead.id // add required leadId
+    };
+    addCallLog(currentLead.id, newCall);
+    setCurrentLead({
+      ...currentLead,
+      calls: [...currentLead.calls, newCall]
     });
     setCallForm({
       date: new Date().toISOString().split('T')[0],
@@ -89,14 +97,21 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       notes: ''
     });
     setShowCallForm(false);
-    setTimeout(refreshCurrentLead, 100); // Ensure state updates after add
+    // setTimeout(refreshCurrentLead, 100); // No longer needed for instant update
   };
 
   const handleAddVisit = (e: React.FormEvent) => {
     e.preventDefault();
-    addVisitLog(currentLead.id, {
+    const newVisit = {
       ...visitForm,
-      createdBy: user?.name || ''
+      createdBy: user?.name || '',
+      id: Date.now().toString(), // generate a temporary id
+      leadId: currentLead.id // add required leadId
+    };
+    addVisitLog(currentLead.id, newVisit);
+    setCurrentLead({
+      ...currentLead,
+      visits: [...currentLead.visits, newVisit]
     });
     setVisitForm({
       date: new Date().toISOString().split('T')[0],
@@ -106,7 +121,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       notes: ''
     });
     setShowVisitForm(false);
-    setTimeout(refreshCurrentLead, 100);
+    // setTimeout(refreshCurrentLead, 100); // No longer needed for instant update
   };
 
   const handleAddNote = () => {

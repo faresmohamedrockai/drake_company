@@ -208,9 +208,28 @@ const MeetingsManagement: React.FC = () => {
       {/* Add/Edit Meeting Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 w-full max-w-2xl">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">{editId ? 'Edit Meeting' : 'Schedule Meeting'}</h3>
-            <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 sm:mx-8 relative flex flex-col max-h-[90vh]">
+            {/* Sticky Header */}
+            <div className="sticky top-0 z-10 bg-white rounded-t-2xl flex items-center justify-between px-6 py-4 border-b">
+              <h3 className="text-2xl font-bold text-gray-900">{editId ? 'Edit Meeting' : 'Schedule Meeting'}</h3>
+              <button
+                type="button"
+                aria-label="Close"
+                onClick={() => setShowForm(false)}
+                className="text-gray-400 hover:text-gray-700 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <span className="sr-only">Close</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {/* Scrollable Form Content */}
+            <form
+              onSubmit={handleFormSubmit}
+              className="overflow-y-auto px-6 py-6 flex-1 grid grid-cols-1 md:grid-cols-2 gap-6"
+              style={{ maxHeight: 'calc(90vh - 72px)' }}
+            >
               <div className="md:col-span-2 mb-2">
                 <h4 className="text-lg font-semibold text-gray-700 mb-2">Meeting Details</h4>
               </div>
