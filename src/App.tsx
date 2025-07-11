@@ -41,7 +41,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto md:ml-64 transition-all">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentView}

@@ -19,7 +19,8 @@ const UserManagement: React.FC = () => {
     password: '',
     role: 'Sales Rep' as UserType['role'],
     teamId: '',
-    isActive: true
+    isActive: true,
+    avatar: '', // <-- add avatar field
   });
 
   const canManageUsers = currentUser?.role === 'Admin';
@@ -48,7 +49,8 @@ const UserManagement: React.FC = () => {
       password: '',
       role: 'Sales Rep',
       teamId: '',
-      isActive: true
+      isActive: true,
+      avatar: '', // <-- add avatar field
     });
     setShowAddModal(false);
   };
@@ -62,7 +64,8 @@ const UserManagement: React.FC = () => {
       password: user.password,
       role: user.role,
       teamId: user.teamId || '',
-      isActive: user.isActive
+      isActive: user.isActive,
+      avatar: user.avatar || '', // <-- add avatar field
     });
     setShowAddModal(true);
   };
@@ -112,7 +115,8 @@ const UserManagement: React.FC = () => {
               password: '',
               role: 'Sales Rep',
               teamId: '',
-              isActive: true
+              isActive: true,
+              avatar: '', // <-- add avatar field
             });
             setShowAddModal(true);
           }}
@@ -157,8 +161,12 @@ const UserManagement: React.FC = () => {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold mr-3">
-                        {user.name.charAt(0)}
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center mr-3 bg-blue-600 text-white font-semibold overflow-hidden border-2 border-blue-200">
+                        {user.avatar ? (
+                          <img src={user.avatar} alt="avatar" className="object-cover w-full h-full" />
+                        ) : (
+                          user.name.charAt(0)
+                        )}
                       </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">{user.name}</div>
@@ -217,6 +225,36 @@ const UserManagement: React.FC = () => {
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex flex-col items-center">
+                <label htmlFor="avatar-upload" className="cursor-pointer group relative">
+                  <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-4 border-blue-200 shadow-md">
+                    {formData.avatar ? (
+                      <img src={formData.avatar} alt="avatar" className="object-cover w-full h-full" />
+                    ) : (
+                      <span className="text-2xl text-blue-600 font-bold">{formData.name.charAt(0)}</span>
+                    )}
+                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
+                      <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                    </div>
+                  </div>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setFormData(prev => ({ ...prev, avatar: reader.result as string }));
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                 <input

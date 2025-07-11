@@ -40,6 +40,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  // Listen for changes to the current user's data in DataContext or localStorage
+  useEffect(() => {
+    if (!user || !dataContext) return;
+    // Find the latest user data by id
+    const updatedUser = dataContext.users.find(u => u.id === user.id);
+    if (updatedUser) {
+      setUser(prev => {
+        // Only update if something actually changed
+        if (JSON.stringify(prev) !== JSON.stringify(updatedUser)) {
+          localStorage.setItem('propai_user', JSON.stringify(updatedUser));
+          return updatedUser;
+        }
+        return prev;
+      });
+    }
+  }, [dataContext?.users, user]);
+
   const login = async (email: string, password: string): Promise<boolean> => {
     // Check against users from DataContext
     const foundUser = dataContext?.users.find(u => 

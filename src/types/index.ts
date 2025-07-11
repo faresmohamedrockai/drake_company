@@ -8,6 +8,7 @@ export interface User {
   teamId?: string;
   createdAt: string;
   isActive: boolean;
+  avatar?: string; // base64 or URL for profile image
 }
 
 export interface Lead {
