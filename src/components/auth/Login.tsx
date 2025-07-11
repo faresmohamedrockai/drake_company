@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { Building2, User, Lock, Eye, EyeOff, Calendar, Briefcase } from 'lucide-react';
 
 const Login: React.FC = () => {
@@ -9,6 +10,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const { login } = useAuth();
+  const { settings } = useSettings();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,13 +48,13 @@ const Login: React.FC = () => {
         <div className="relative z-10 max-w-md w-full flex flex-col items-center text-center">
           <div className="flex items-center mb-6 lg:mb-8">
             <Building2 className="h-6 w-6 lg:h-8 lg:w-8 mr-2 lg:mr-3" />
-            <h1 className="text-xl lg:text-2xl font-bold">Propai</h1>
+            <h1 className="text-xl lg:text-2xl font-bold">{settings?.companyName || 'Propai'}</h1>
           </div>
           
           <h2 className="text-2xl lg:text-4xl font-bold mb-4 lg:mb-6">The Complete Real Estate Solution</h2>
           <p className="text-base lg:text-xl mb-6 lg:mb-8 text-blue-100 px-4">
             Manage your leads, inventory, meetings, and contracts all in one place. 
-            Propai helps you close more deals and grow your real estate business.
+            {settings?.companyName || 'Propai'} helps you close more deals and grow your real estate business.
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 w-full max-w-lg">

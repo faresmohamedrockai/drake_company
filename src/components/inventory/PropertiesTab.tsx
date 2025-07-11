@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Search, Plus, Edit, Trash2, MapPin, FileText } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -56,6 +57,7 @@ type FormState = {
 const PropertiesTab: React.FC = () => {
   const { properties, addProperty, updateProperty, deleteProperty, projects, zones, developers, leads } = useData();
   const { user } = useAuth();
+  const { settings } = useSettings(); // Add settings context
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -774,11 +776,24 @@ const PropertiesTab: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center mb-4 border-b pb-2 justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Propai Real Estate</h2>
-                    <div className="text-xs text-gray-500">www.propai.com | info@propai.com</div>
+                    <h2 className="text-2xl font-bold text-gray-900">{settings?.companyName || 'Propai Real Estate'}</h2>
+                    <div className="text-xs text-gray-500">
+                      {settings?.companyWebsite || 'www.propai.com'} | {settings?.companyEmail || 'info@propai.com'}
+                    </div>
+                    {settings?.companyAddress && (
+                      <div className="text-xs text-gray-500 mt-1">{settings.companyAddress}</div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <img src="src\RockaidevLogo.jpg" alt="Company Logo" className="h-12 w-12 rounded-lg ml-2" style={{borderRadius: '12px'}} onError={e => (e.currentTarget.style.display='none')} />
+                    <img 
+                      src={settings?.companyImage || "/src/RockaidevLogo.jpg"} 
+                      alt="Company Logo" 
+                      className="h-12 w-12 rounded-lg ml-2" 
+                      style={{borderRadius: '12px'}} 
+                      onError={e => {
+                        e.currentTarget.src = "/src/RockaidevLogo.jpg";
+                      }} 
+                    />
                   </div>
                 </div>
                 {/* Client Info */}
@@ -928,8 +943,8 @@ const PropertiesTab: React.FC = () => {
                 )}
                 {/* Footer */}
                 <div className="mt-6 pt-4 border-t text-xs text-gray-500">
-                  <div>Propai Real Estate | www.propai.com | info@propai.com</div>
-                  <div>123 Main St, Alexandria, Egypt</div>
+                  <div>{settings?.companyName || 'Propai Real Estate'} | {settings?.companyWebsite || 'www.propai.com'} | {settings?.companyEmail || 'info@propai.com'}</div>
+                  {settings?.companyAddress && <div>{settings.companyAddress}</div>}
                   <div className="mt-1">This report is confidential and intended for the recipient only.</div>
                 </div>
                 {/* Export Buttons (restored to original position) */}

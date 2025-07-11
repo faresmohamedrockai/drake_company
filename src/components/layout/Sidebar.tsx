@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { 
   Home, 
   Users, 
@@ -21,6 +22,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
   const { user, logout } = useAuth();
+  const { settings } = useSettings();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
@@ -39,8 +41,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
       {/* Logo */}
       <div className="p-6 border-b">
         <div className="flex items-center">
-          <Building className="h-8 w-8 text-blue-600 mr-3" />
-          <h1 className="text-xl font-bold text-gray-900">Propai</h1>
+          {settings?.companyImage ? (
+            <img 
+              src={settings.companyImage} 
+              alt="Company Logo" 
+              className="h-8 w-8 rounded-lg mr-3 object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          <Building className={`h-8 w-8 text-blue-600 mr-3 ${settings?.companyImage ? 'hidden' : ''}`} />
+          <h1 className="text-xl font-bold text-gray-900">{settings?.companyName || 'Propai'}</h1>
         </div>
       </div>
 

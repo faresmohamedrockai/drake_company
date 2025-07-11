@@ -23,6 +23,9 @@ const UserManagement: React.FC = () => {
     avatar: '', // <-- add avatar field
   });
 
+  // Get all team leaders for the dropdown
+  const teamLeaders = users.filter(user => user.role === 'Team Leader' && user.isActive);
+
   const canManageUsers = currentUser?.role === 'Admin';
   const canDeleteUsers = currentUser?.role === 'Admin';
 
@@ -260,7 +263,17 @@ const UserManagement: React.FC = () => {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    const newName = e.target.value;
+                    let newTeamId = formData.teamId;
+                    
+                    // Auto-update team ID for Team Leaders when name changes
+                    if (formData.role === 'Team Leader') {
+                      newTeamId = newName;
+                    }
+                    
+                    setFormData({ ...formData, name: newName, teamId: newTeamId });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
@@ -312,7 +325,20 @@ const UserManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as UserType['role'] })}
+                  onChange={(e) => {
+                    const newRole = e.target.value as UserType['role'];
+                    let newTeamId = formData.teamId;
+                    
+                    // Auto-set team ID to user's name for Team Leaders
+                    if (newRole === 'Team Leader') {
+                      newTeamId = formData.name;
+                    } else if (newRole === 'Sales Rep') {
+                      // Clear team ID for Sales Reps (they'll select from dropdown)
+                      newTeamId = '';
+                    }
+                    
+                    setFormData({ ...formData, role: newRole, teamId: newTeamId });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="Sales Rep">Sales Rep</option>
@@ -322,16 +348,43 @@ const UserManagement: React.FC = () => {
                 </select>
               </div>
 
-              {(formData.role === 'Team Leader' || formData.role === 'Sales Rep') && (
+              {formData.role === 'Team Leader' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Team ID</label>
                   <input
                     type="text"
                     value={formData.teamId}
                     onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter team identifier"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    placeholder="Auto-set to user's name"
+                    readOnly={formData.name === formData.teamId}
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    {formData.name === formData.teamId 
+                      ? "Team ID automatically set to user's name" 
+                      : "You can manually override the Team ID if needed"
+                    }
+                  </p>
+                </div>
+              )}
+
+              {formData.role === 'Sales Rep' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Team Leader</label>
+                  <select
+                    value={formData.teamId}
+                    onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Team Leader</option>
+                    {teamLeaders.map(leader => (
+                      <option key={leader.id} value={leader.name}>
+                        {leader.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Select the team leader this sales rep will work under</p>
                 </div>
               )}
 

@@ -11,9 +11,10 @@ const BACKUP_DATE_KEY = 'propai_last_backup_date';
 
 const defaultSettings = {
   companyName: 'Propai Real Estate',
-  currency: 'EGP',
-  timeZone: 'UTC',
-  language: 'en',
+  companyImage: '', // Add company image field
+  companyWebsite: 'www.propai.com',
+  companyEmail: 'info@propai.com',
+  companyAddress: '123 Main St, Alexandria, Egypt',
   notifications: {
     email: true,
     meeting: true,
@@ -66,6 +67,15 @@ const Settings: React.FC = () => {
       setSettingsChanged(true);
       return updated;
     });
+  };
+  const handleCompanyImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      handleSettingsChange('companyImage', reader.result);
+    };
+    reader.readAsDataURL(file);
   };
   const handleSaveSettings = () => {
     localStorage.setItem(SYSTEM_SETTINGS_KEY, JSON.stringify(settings));
@@ -220,39 +230,58 @@ const Settings: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Default Currency</label>
-                    <select
-                      value={settings.currency}
-                      onChange={e => handleSettingsChange('currency', e.target.value)}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Website</label>
+                    <input
+                      type="text"
+                      value={settings.companyWebsite}
+                      onChange={e => handleSettingsChange('companyWebsite', e.target.value)}
+                      placeholder="www.yourcompany.com"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="EGP">EGP (ج.م)</option>
-                      <option value="USD">USD ($)</option>
-                    </select>
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Time Zone</label>
-                    <select
-                      value={settings.timeZone}
-                      onChange={e => handleSettingsChange('timeZone', e.target.value)}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Email</label>
+                    <input
+                      type="email"
+                      value={settings.companyEmail}
+                      onChange={e => handleSettingsChange('companyEmail', e.target.value)}
+                      placeholder="info@yourcompany.com"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="UTC">UTC</option>
-                      <option value="Africa/Cairo">Africa/Cairo</option>
-                      <option value="EST">Eastern Time</option>
-                      <option value="PST">Pacific Time</option>
-                    </select>
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
-                    <select
-                      value={settings.language}
-                      onChange={e => handleSettingsChange('language', e.target.value)}
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Address</label>
+                    <textarea
+                      value={settings.companyAddress}
+                      onChange={e => handleSettingsChange('companyAddress', e.target.value)}
+                      placeholder="123 Main St, City, Country"
+                      rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="en">English</option>
-                      <option value="ar">العربية</option>
-                    </select>
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Image/Logo</label>
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-shrink-0">
+                        <img
+                          src={settings.companyImage || "/src/RockaidevLogo.jpg"}
+                          alt="Company Logo"
+                          className="h-16 w-16 object-cover rounded-full border-2 border-gray-200 shadow-sm"
+                          onError={(e) => {
+                            e.currentTarget.src = "/src/RockaidevLogo.jpg";
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleCompanyImageChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Upload your company logo (recommended: 200x200px)</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

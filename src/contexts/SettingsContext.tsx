@@ -2,9 +2,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const defaultSettings = {
   companyName: 'Propai Real Estate',
-  currency: 'EGP',
-  timeZone: 'UTC',
-  language: 'en',
+  companyImage: '',
+  companyWebsite: 'www.propai.com',
+  companyEmail: 'info@propai.com',
+  companyAddress: '123 Main St, Alexandria, Egypt',
   notifications: {
     email: true,
     meeting: true,

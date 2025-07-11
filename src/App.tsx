@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import Login from './components/auth/Login';
 import Sidebar from './components/layout/Sidebar';
 import Dashboard from './components/dashboard/Dashboard';
@@ -13,7 +14,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { settings } = useSettings();
   const [currentView, setCurrentView] = useState('dashboard');
+
+  // Update page title with company name
+  useEffect(() => {
+    const companyName = settings?.companyName || 'Propai';
+    document.title = `${companyName} - Real Estate CRM`;
+  }, [settings?.companyName]);
 
   if (!isAuthenticated) {
     return <Login />;
@@ -63,7 +71,9 @@ const App: React.FC = () => {
   return (
     <DataProvider>
       <AuthProvider>
-        <AppContent />
+        <SettingsProvider>
+          <AppContent />
+        </SettingsProvider>
       </AuthProvider>
     </DataProvider>
   );
