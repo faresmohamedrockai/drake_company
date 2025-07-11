@@ -103,11 +103,35 @@ const MeetingsManagement: React.FC = () => {
     }
   };
 
-  const filteredMeetings = meetings.filter(meeting =>
-    meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    meeting.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    meeting.type.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Role-based meeting filtering
+  const getFilteredMeetings = () => {
+    let userMeetings = meetings;
+    
+    // Role-based filtering
+    if (user?.role === 'Sales Rep') {
+      // Sales Reps can only see their own meetings
+      userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
+    } else if (user?.role === 'Team Leader') {
+      // Team leaders can see their team's meetings and unassigned meetings
+      userMeetings = meetings.filter(meeting => 
+        meeting.assignedTo === user.name || 
+        (user.teamId && meeting.assignedTo.includes(user.teamId)) ||
+        meeting.assignedTo === '' // Unassigned meetings
+      );
+    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+      // Sales Admin and Admin can see all meetings
+      userMeetings = meetings;
+    }
+    
+    // Search filtering
+    return userMeetings.filter(meeting =>
+      meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      meeting.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      meeting.type.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
+  const filteredMeetings = getFilteredMeetings();
 
   // Performance tracking for reports
   const userMeetingPerformance = React.useMemo(() => {
@@ -335,9 +359,28 @@ const MeetingsManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
                 <select name="assignedTo" value={form.assignedTo} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">Select User</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.name}>{u.name}</option>
-                  ))}
+                  {(() => {
+                    // Role-based user filtering for assignment
+                    let assignableUsers = users;
+                    
+                    if (user?.role === 'Sales Rep') {
+                      // Sales Reps can only assign to themselves
+                      assignableUsers = users.filter(u => u.name === user.name);
+                    } else if (user?.role === 'Team Leader') {
+                      // Team Leaders can assign to their team members and themselves
+                      assignableUsers = users.filter(u => 
+                        u.name === user.name || 
+                        (u.role === 'Sales Rep' && u.teamId === user.teamId)
+                      );
+                    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+                      // Sales Admin and Admin can assign to anyone
+                      assignableUsers = users.filter(u => u.role !== 'Admin' || user?.role === 'Admin');
+                    }
+                    
+                    return assignableUsers.map(u => (
+                      <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
+                    ));
+                  })()}
                 </select>
               </div>
               <div className="md:col-span-2">

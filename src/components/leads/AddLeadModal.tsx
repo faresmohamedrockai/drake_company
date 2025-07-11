@@ -118,9 +118,28 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               required
             >
               <option value="">Select User</option>
-              {users.map(user => (
-                <option key={user.id} value={user.name}>{user.name}</option>
-              ))}
+              {(() => {
+                // Role-based user filtering for assignment
+                let assignableUsers = users;
+                
+                if (user?.role === 'Sales Rep') {
+                  // Sales Reps can only assign to themselves
+                  assignableUsers = users.filter(u => u.name === user.name);
+                } else if (user?.role === 'Team Leader') {
+                  // Team Leaders can assign to their team members and themselves
+                  assignableUsers = users.filter(u => 
+                    u.name === user.name || 
+                    (u.role === 'Sales Rep' && u.teamId === user.teamId)
+                  );
+                } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+                  // Sales Admin and Admin can assign to anyone
+                  assignableUsers = users.filter(u => u.role !== 'Admin' || user?.role === 'Admin');
+                }
+                
+                return assignableUsers.map(user => (
+                  <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
+                ));
+              })()}
             </select>
           </div>
 

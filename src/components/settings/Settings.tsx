@@ -49,9 +49,25 @@ const Settings: React.FC = () => {
     { id: 'data', label: 'Data Management', icon: Database, adminOnly: true }
   ];
 
-  const availableTabs = tabs.filter(tab => 
-    !tab.adminOnly || user?.role === 'Admin' || user?.role === 'Sales Admin'
-  );
+  const availableTabs = tabs.filter(tab => {
+    if (!tab.adminOnly) return true;
+    
+    // Role-based access control
+    if (tab.id === 'users') {
+      return user?.role === 'Admin' || user?.role === 'Sales Admin';
+    }
+    if (tab.id === 'permissions') {
+      return user?.role === 'Admin' || user?.role === 'Sales Admin';
+    }
+    if (tab.id === 'data') {
+      return user?.role === 'Admin' || user?.role === 'Sales Admin';
+    }
+    if (tab.id === 'system') {
+      return user?.role === 'Admin' || user?.role === 'Sales Admin' || user?.role === 'Team Leader';
+    }
+    
+    return false;
+  });
 
   // System Settings Handlers
   const handleSettingsChange = (field: string, value: any) => {

@@ -26,8 +26,11 @@ const UserManagement: React.FC = () => {
   // Get all team leaders for the dropdown
   const teamLeaders = users.filter(user => user.role === 'Team Leader' && user.isActive);
 
-  const canManageUsers = currentUser?.role === 'Admin';
+  // Role-based permissions
+  const canManageUsers = currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin';
   const canDeleteUsers = currentUser?.role === 'Admin';
+  const canEditUserRoles = currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin';
+  const canCreateUsers = currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin';
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -108,26 +111,28 @@ const UserManagement: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
           <p className="text-gray-600">Manage system users and their permissions</p>
         </div>
-        <button
-          onClick={() => {
-            setEditingUser(null);
-            setFormData({
-              name: '',
-              email: '',
-              username: '',
-              password: '',
-              role: 'Sales Rep',
-              teamId: '',
-              isActive: true,
-              avatar: '', // <-- add avatar field
-            });
-            setShowAddModal(true);
-          }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add User
-        </button>
+        {canCreateUsers && (
+          <button
+            onClick={() => {
+              setEditingUser(null);
+              setFormData({
+                name: '',
+                email: '',
+                username: '',
+                password: '',
+                role: 'Sales Rep',
+                teamId: '',
+                isActive: true,
+                avatar: '', // <-- add avatar field
+              });
+              setShowAddModal(true);
+            }}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add User
+          </button>
+        )}
       </div>
 
       {/* Search */}
@@ -196,16 +201,20 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEdit(user)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
+                      {canManageUsers && (
+                        <button
+                          onClick={() => handleEdit(user)}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Edit user"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )}
                       {canDeleteUsers && user.id !== currentUser?.id && (
                         <button
                           onClick={() => handleDelete(user.id)}
                           className="text-red-600 hover:text-red-800"
+                          title="Delete user"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -340,12 +349,16 @@ const UserManagement: React.FC = () => {
                     setFormData({ ...formData, role: newRole, teamId: newTeamId });
                   }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!canEditUserRoles}
                 >
                   <option value="Sales Rep">Sales Rep</option>
                   <option value="Team Leader">Team Leader</option>
-                  <option value="Sales Admin">Sales Admin</option>
-                  <option value="Admin">Admin</option>
+                  {currentUser?.role === 'Admin' && <option value="Sales Admin">Sales Admin</option>}
+                  {currentUser?.role === 'Admin' && <option value="Admin">Admin</option>}
                 </select>
+                {!canEditUserRoles && (
+                  <p className="text-xs text-gray-500 mt-1">Only Admins can change user roles</p>
+                )}
               </div>
 
               {formData.role === 'Team Leader' && (

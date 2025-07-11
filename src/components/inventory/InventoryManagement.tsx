@@ -4,28 +4,48 @@ import PropertiesTab from './PropertiesTab';
 import ProjectsTab from './ProjectsTab';
 import ZonesTab from './ZonesTab';
 import DevelopersTab from './DevelopersTab';
+import { useAuth } from '../../contexts/AuthContext';
 
 const InventoryManagement: React.FC = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('properties');
 
+  // Role-based access control
+  const canManageInventory = user?.role === 'Admin' || user?.role === 'Sales Admin' || user?.role === 'Team Leader';
+  const canViewInventory = user?.role === 'Sales Rep' || canManageInventory;
+
   const tabs = [
-    { id: 'properties', label: 'Properties', icon: Building2 },
-    { id: 'projects', label: 'Projects', icon: Wrench },
-    { id: 'zones', label: 'Zones', icon: MapPin },
-    { id: 'developers', label: 'Developers', icon: Users }
+    { id: 'properties', label: 'Properties', icon: Building2, adminOnly: false },
+    { id: 'projects', label: 'Projects', icon: Wrench, adminOnly: false },
+    { id: 'zones', label: 'Zones', icon: MapPin, adminOnly: true },
+    { id: 'developers', label: 'Developers', icon: Users, adminOnly: true }
   ];
+
+  // Filter tabs based on user role
+  const accessibleTabs = tabs.filter(tab => 
+    !tab.adminOnly || canManageInventory
+  );
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Inventory Management</h1>
-        <p className="text-gray-600">Manage properties, projects, zones, and developers</p>
+        <p className="text-gray-600">
+          {canManageInventory ? 'Manage properties, projects, zones, and developers' : 'View inventory information'}
+        </p>
+        {!canManageInventory && (
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>View Only Mode:</strong> You can view inventory information but cannot make changes.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="bg-white rounded-lg shadow-md mb-6">
         <div className="flex space-x-2 sm:space-x-8 border-b border-gray-200 px-2 sm:px-6 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent">
-          {tabs.map((tab) => (
+          {accessibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}

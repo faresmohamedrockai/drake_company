@@ -126,13 +126,18 @@ const LeadsList: React.FC = () => {
     
     // Role-based filtering
     if (user?.role === 'Sales Rep') {
+      // Sales Reps can only see their own leads
       userLeads = leads.filter(lead => lead.assignedTo === user.name);
     } else if (user?.role === 'Team Leader') {
-      // Team leaders can see their team's leads
+      // Team leaders can see their team's leads and assign leads to team members
       userLeads = leads.filter(lead => 
         lead.assignedTo === user.name || 
-        (user.teamId && lead.assignedTo.includes(user.teamId))
+        (user.teamId && lead.assignedTo.includes(user.teamId)) ||
+        lead.assignedTo === '' // Unassigned leads
       );
+    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+      // Sales Admin and Admin can see all leads
+      userLeads = leads;
     }
     
     // Search filtering

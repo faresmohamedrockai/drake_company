@@ -348,10 +348,12 @@ const PropertiesTab: React.FC = () => {
           </select>
         </div>
         <div className="flex flex-row gap-2 items-center">
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
-            <Plus className="h-5 w-5 mr-2" />
-            Add Property
-          </button>
+          {user?.role !== 'Sales Rep' && (
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
+              <Plus className="h-5 w-5 mr-2" />
+              Add Property
+            </button>
+          )}
         </div>
       </div>
 
@@ -450,12 +452,16 @@ const PropertiesTab: React.FC = () => {
                   </td>
                   <td className="px-2 py-4">
                     <div className="flex space-x-1">
-                      <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title="Edit property">
-                        <Edit className="h-3 w-3" />
-                      </button>
-                      <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id)} title="Delete property">
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+                      {user?.role !== 'Sales Rep' && (
+                        <>
+                          <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title="Edit property">
+                            <Edit className="h-3 w-3" />
+                          </button>
+                          <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id)} title="Delete property">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </>
+                      )}
                       {canGenerateReport && (
                         <button className="text-green-600 hover:text-green-800" title="Generate Client Report" onClick={() => handleOpenReport(property)}>
                           <FileText className="h-4 w-4" />
