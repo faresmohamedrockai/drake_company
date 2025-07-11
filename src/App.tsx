@@ -9,6 +9,7 @@ import LeadsList from './components/leads/LeadsList';
 import InventoryManagement from './components/inventory/InventoryManagement';
 import MeetingsManagement from './components/meetings/MeetingsManagement';
 import ContractsManagement from './components/contracts/ContractsManagement';
+import Reports from './components/reports/Reports';
 import Settings from './components/settings/Settings';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -39,6 +40,8 @@ const AppContent: React.FC = () => {
         return <MeetingsManagement />;
       case 'contracts':
         return <ContractsManagement />;
+      case 'reports':
+        return <Reports />;
       case 'settings':
         return <Settings />;
       default:

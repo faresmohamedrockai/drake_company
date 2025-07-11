@@ -61,6 +61,44 @@ const LeadsList: React.FC = () => {
   const freshLeadsCount = leads.filter(lead => lead.status === 'Fresh Lead').length;
   const coldCallsCount = leads.filter(lead => lead.source === 'Cold Call').length;
 
+  // Performance tracking for reports
+  const userPerformance = React.useMemo(() => {
+    const userLeads = leads.filter(lead => lead.assignedTo === user?.name);
+    const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
+    const completedCalls = userLeads.reduce((sum, lead) => 
+      sum + (lead.calls?.filter((call: any) => 
+        ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)
+      ).length || 0), 0);
+    
+    const totalVisits = userLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
+    const completedVisits = userLeads.reduce((sum, lead) => 
+      sum + (lead.visits?.filter((visit: any) => visit.status === 'Completed').length || 0), 0);
+
+    return {
+      totalLeads: userLeads.length,
+      totalCalls,
+      completedCalls,
+      callCompletionRate: totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0,
+      totalVisits,
+      completedVisits,
+      visitCompletionRate: totalVisits > 0 ? Math.round((completedVisits / totalVisits) * 100) : 0
+    };
+  }, [leads, user?.name]);
+
+  // Save performance data to localStorage for reports
+  React.useEffect(() => {
+    if (user?.name) {
+      const performanceKey = `user_performance_${user.name}`;
+      localStorage.setItem(performanceKey, JSON.stringify({
+        ...userPerformance,
+        lastUpdated: new Date().toISOString(),
+        userId: user.id,
+        userName: user.name,
+        userRole: user.role
+      }));
+    }
+  }, [userPerformance, user]);
+
   // Previous values for percentage (from localStorage)
   const prevLeadsStats = JSON.parse(localStorage.getItem('leads_kpi_stats') || '{}');
   function getChange(current: number, previous: number) {
@@ -324,56 +362,84 @@ const LeadsList: React.FC = () => {
           <table className="w-full min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interest</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Call</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
-                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Name</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Phone</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Budget</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Interest</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Source</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Status</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Assigned To</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Last Call</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Last Visit</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredLeads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50">
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4">
                     <button
                       onClick={() => handleLeadClick(lead)}
-                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-sm"
+                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-sm truncate block w-full text-left"
+                      title={lead.name}
                     >
                       {lead.name}
                     </button>
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.phone}</td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.budget}</td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.inventoryInterest}</td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.source}</td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)}`}>
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className="text-sm text-gray-900 truncate block" title={lead.phone}>
+                      {lead.phone}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className="text-sm text-gray-900 truncate block" title={lead.budget}>
+                      {lead.budget}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className="text-sm text-gray-900 truncate block" title={lead.inventoryInterest}>
+                      {lead.inventoryInterest}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className="text-sm text-gray-900 truncate block" title={lead.source}>
+                      {lead.source}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`} title={lead.status}>
                       {lead.status}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4">
                     {lead.assignedTo ? (
-                      <div className="flex items-center space-x-2">
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold ${getUserColor(lead.assignedTo)}`}>
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0 ${getUserColor(lead.assignedTo)}`}>
                           {getUserInitials(lead.assignedTo)}
                         </span>
-                        <span className="text-sm text-gray-900">{lead.assignedTo}</span>
+                        <span className="text-sm text-gray-900 truncate block" title={lead.assignedTo}>
+                          {lead.assignedTo}
+                        </span>
                       </div>
                     ) : (
                       <span className="text-sm text-gray-400">Unassigned</span>
                     )}
                   </td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.lastCallDate}</td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.lastVisitDate}</td>
-                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className="text-sm text-gray-900 truncate block" title={lead.lastCallDate}>
+                      {lead.lastCallDate}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
+                    <span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>
+                      {lead.lastVisitDate}
+                    </span>
+                  </td>
+                  <td className="px-3 sm:px-6 py-4">
                     <button
                       onClick={() => handleLeadClick(lead)}
                       className="text-blue-600 hover:text-blue-800"
+                      title="View details"
                     >
                       <Eye className="h-4 w-4" />
                     </button>

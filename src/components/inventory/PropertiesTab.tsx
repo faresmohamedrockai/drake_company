@@ -360,17 +360,17 @@ const PropertiesTab: React.FC = () => {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Area (SQFT)</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bed/Bathrooms</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amenities</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Zone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Title</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Type</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Price</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Location</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Area</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Beds/Baths</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Amenities</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Zone</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Project</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Status</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -378,9 +378,10 @@ const PropertiesTab: React.FC = () => {
               const zone = zones.find(z => z.id === property.zoneId);
               return (
                 <tr key={property.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-2 py-4">
                     <button 
-                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer"
+                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer truncate block w-full text-left text-xs"
+                      title={property.title}
                       onClick={() => {
                         const propertyImages = (property as any).images || [];
                         const projectImages = (projects.find(p => p.id === property.projectId) as any)?.images || [];
@@ -393,26 +394,71 @@ const PropertiesTab: React.FC = () => {
                       {property.title}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{property.type}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{Number(property.price).toLocaleString()} EGP</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{property.location}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{property.area}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{property.bedrooms} / {property.bathrooms}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{Array.isArray(property.amenities) ? property.amenities.join(', ') : property.amenities}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 underline cursor-pointer" onClick={() => zone && setZoneModal(zone)}>
-                    {zone ? <span className="flex items-center"><MapPin className="h-4 w-4 mr-1" />{zone.name}</span> : '-'}
+                  <td className="px-2 py-4">
+                    <span className="text-xs text-gray-900 truncate block" title={property.type}>
+                      {property.type}
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{property.project}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(property.status)}`}>{property.status}</span>
+                  <td className="px-2 py-4">
+                    <span className="text-xs text-gray-900 truncate block" title={`${Number(property.price).toLocaleString()} EGP`}>
+                      {Number(property.price).toLocaleString()} EGP
+                    </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex space-x-2">
-                      <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)}><Edit className="h-4 w-4" /></button>
-                      <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id)}><Trash2 className="h-4 w-4" /></button>
+                  <td className="px-2 py-4">
+                    <span className="text-xs text-gray-900 truncate block" title={property.location}>
+                      {property.location}
+                    </span>
+                  </td>
+                  <td className="px-2 py-4">
+                    <span className="text-xs text-gray-900 truncate block" title={property.area}>
+                      {property.area}
+                    </span>
+                  </td>
+                  <td className="px-2 py-4">
+                    <span className="text-xs text-gray-900 truncate block" title={`${property.bedrooms} / ${property.bathrooms}`}>
+                      {property.bedrooms} / {property.bathrooms}
+                    </span>
+                  </td>
+                  <td className="px-2 py-4">
+                    <span className="text-xs text-gray-900 truncate block" title={Array.isArray(property.amenities) ? property.amenities.join(', ') : property.amenities}>
+                      {Array.isArray(property.amenities) ? property.amenities.join(', ') : property.amenities}
+                    </span>
+                  </td>
+                  <td className="px-2 py-4">
+                    {zone ? (
+                      <button 
+                        className="text-xs text-blue-600 underline cursor-pointer truncate block w-full text-left flex items-center"
+                        title={zone.name}
+                        onClick={() => setZoneModal(zone)}
+                      >
+                        <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                        <span className="truncate">{zone.name}</span>
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-4">
+                    <span className="text-xs text-gray-900 truncate block" title={property.project}>
+                      {property.project}
+                    </span>
+                  </td>
+                  <td className="px-2 py-4">
+                    <span className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(property.status)} truncate max-w-full`} title={property.status}>
+                      {property.status}
+                    </span>
+                  </td>
+                  <td className="px-2 py-4">
+                    <div className="flex space-x-1">
+                      <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title="Edit property">
+                        <Edit className="h-3 w-3" />
+                      </button>
+                      <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id)} title="Delete property">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                       {canGenerateReport && (
                         <button className="text-green-600 hover:text-green-800" title="Generate Client Report" onClick={() => handleOpenReport(property)}>
-                          <FileText className="h-5 w-5" />
+                          <FileText className="h-4 w-4" />
                         </button>
                       )}
                     </div>

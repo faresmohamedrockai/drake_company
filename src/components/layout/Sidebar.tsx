@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut,
   Building,
-  Menu
+  Menu,
+  BarChart3
 } from 'lucide-react';
 import { User as UserType } from '../../types';
 import UserProfileModal from '../settings/UserProfileModal';
@@ -32,6 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     { id: 'inventory', label: 'Inventory', icon: Building2 },
     { id: 'meetings', label: 'Meetings', icon: Calendar },
     { id: 'contracts', label: 'Contracts', icon: FileText },
+    { id: 'reports', label: 'Reports', icon: BarChart3, adminOnly: true },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -60,24 +62,34 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
       {/* Navigation */}
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
-          {menuItems.map((item) => (
-            <li key={item.id}>
-              <button
-                onClick={() => {
-                  setCurrentView(item.id);
-                  setSidebarOpen(false); // close sidebar on mobile after click
-                }}
-                className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
-                  currentView === item.id
-                    ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.label}
-              </button>
-            </li>
-          ))}
+          {menuItems.map((item) => {
+            // Check if user has access to this menu item
+            const hasAccess = !item.adminOnly || 
+              user?.role === 'Admin' || 
+              user?.role === 'Sales Admin' || 
+              user?.role === 'Team Leader';
+            
+            if (!hasAccess) return null;
+            
+            return (
+              <li key={item.id}>
+                <button
+                  onClick={() => {
+                    setCurrentView(item.id);
+                    setSidebarOpen(false); // close sidebar on mobile after click
+                  }}
+                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
+                    currentView === item.id
+                      ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5 mr-3" />
+                  {item.label}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 

@@ -109,6 +109,38 @@ const MeetingsManagement: React.FC = () => {
     meeting.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Performance tracking for reports
+  const userMeetingPerformance = React.useMemo(() => {
+    const userMeetings = meetings.filter(meeting => meeting.assignedTo === user?.name);
+    const totalMeetings = userMeetings.length;
+    const completedMeetings = userMeetings.filter(meeting => meeting.status === 'Completed').length;
+    const cancelledMeetings = userMeetings.filter(meeting => meeting.status === 'Cancelled').length;
+    const scheduledMeetings = userMeetings.filter(meeting => meeting.status === 'Scheduled').length;
+
+    return {
+      totalMeetings,
+      completedMeetings,
+      cancelledMeetings,
+      scheduledMeetings,
+      completionRate: totalMeetings > 0 ? Math.round((completedMeetings / totalMeetings) * 100) : 0,
+      cancellationRate: totalMeetings > 0 ? Math.round((cancelledMeetings / totalMeetings) * 100) : 0
+    };
+  }, [meetings, user?.name]);
+
+  // Save meeting performance data to localStorage for reports
+  React.useEffect(() => {
+    if (user?.name) {
+      const meetingPerformanceKey = `user_meeting_performance_${user.name}`;
+      localStorage.setItem(meetingPerformanceKey, JSON.stringify({
+        ...userMeetingPerformance,
+        lastUpdated: new Date().toISOString(),
+        userId: user.id,
+        userName: user.name,
+        userRole: user.role
+      }));
+    }
+  }, [userMeetingPerformance, user]);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-8">
