@@ -28,70 +28,82 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left side - Branding */}
-      <div className="flex-1 bg-gradient-to-br from-blue-600 to-purple-700 p-12 flex flex-col justify-center items-center text-white">
-        <div className="max-w-md w-full flex flex-col items-center">
-          <div className="flex items-center mb-8">
-            <Building2 className="h-8 w-8 mr-3" />
-            <h1 className="text-2xl font-bold">Propai</h1>
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Left side - Branding with Background Image */}
+      <div 
+        className="flex-1 relative p-6 lg:p-12 flex flex-col justify-center items-center text-white min-h-[50vh] lg:min-h-screen"
+        style={{
+          backgroundImage: 'url(/src/aspects/loginphoto.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }}
+      >
+        {/* Overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-purple-700/80"></div>
+        
+        {/* Content with relative positioning to appear above overlay */}
+        <div className="relative z-10 max-w-md w-full flex flex-col items-center text-center">
+          <div className="flex items-center mb-6 lg:mb-8">
+            <Building2 className="h-6 w-6 lg:h-8 lg:w-8 mr-2 lg:mr-3" />
+            <h1 className="text-xl lg:text-2xl font-bold">Propai</h1>
           </div>
           
-          <h2 className="text-4xl font-bold mb-6">The Complete Real Estate Solution</h2>
-          <p className="text-xl mb-8 text-blue-100">
+          <h2 className="text-2xl lg:text-4xl font-bold mb-4 lg:mb-6">The Complete Real Estate Solution</h2>
+          <p className="text-base lg:text-xl mb-6 lg:mb-8 text-blue-100 px-4">
             Manage your leads, inventory, meetings, and contracts all in one place. 
             Propai helps you close more deals and grow your real estate business.
           </p>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-              <User className="h-8 w-8 mb-4 text-blue-200" />
-              <h3 className="text-lg font-semibold mb-2">Lead Management</h3>
-              <p className="text-sm text-blue-100">Track and nurture leads through your sales pipeline</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 w-full max-w-lg">
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 lg:p-6">
+              <User className="h-6 w-6 lg:h-8 lg:w-8 mb-3 lg:mb-4 text-blue-200 mx-auto" />
+              <h3 className="text-sm lg:text-lg font-semibold mb-2">Lead Management</h3>
+              <p className="text-xs lg:text-sm text-blue-100">Track and nurture leads through your sales pipeline</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-              <Building2 className="h-8 w-8 mb-4 text-blue-200" />
-              <h3 className="text-lg font-semibold mb-2">Inventory Control</h3>
-              <p className="text-sm text-blue-100">Manage properties, projects, and zones efficiently</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 lg:p-6">
+              <Building2 className="h-6 w-6 lg:h-8 lg:w-8 mb-3 lg:mb-4 text-blue-200 mx-auto" />
+              <h3 className="text-sm lg:text-lg font-semibold mb-2">Inventory Control</h3>
+              <p className="text-xs lg:text-sm text-blue-100">Manage properties, projects, and zones efficiently</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-              <Calendar className="h-8 w-8 mb-4 text-blue-200" />
-              <h3 className="text-lg font-semibold mb-2">Meeting Scheduler</h3>
-              <p className="text-sm text-blue-100">Schedule and track property visits and meetings</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 lg:p-6">
+              <Calendar className="h-6 w-6 lg:h-8 lg:w-8 mb-3 lg:mb-4 text-blue-200 mx-auto" />
+              <h3 className="text-sm lg:text-lg font-semibold mb-2">Meeting Scheduler</h3>
+              <p className="text-xs lg:text-sm text-blue-100">Schedule and track property visits and meetings</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6">
-              <Briefcase className="h-8 w-8 mb-4 text-blue-200" />
-              <h3 className="text-lg font-semibold mb-2">Deal Tracker</h3>
-              <p className="text-sm text-blue-100">Track, update, and manage your deals through every stage</p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 lg:p-6">
+              <Briefcase className="h-6 w-6 lg:h-8 lg:w-8 mb-3 lg:mb-4 text-blue-200 mx-auto" />
+              <h3 className="text-sm lg:text-lg font-semibold mb-2">Deal Tracker</h3>
+              <p className="text-xs lg:text-sm text-blue-100">Track, update, and manage your deals through every stage</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* Right side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-12 bg-gray-50">
-        <div className="max-w-md w-full">
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Login to Propai</h2>
-            <p className="text-gray-600 mb-8">Enter your credentials to access your account</p>
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-12 bg-gray-50 min-h-[50vh] lg:min-h-screen">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8">
+            <h2 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">Login to Propai</h2>
+            <p className="text-sm lg:text-base text-gray-600 mb-6 lg:mb-8">Enter your credentials to access your account</p>
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-700">
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 lg:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm lg:text-base"
                     required
                   />
                 </div>
@@ -100,13 +112,13 @@ const Login: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 lg:h-5 lg:w-5 text-gray-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-12 py-2.5 lg:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm lg:text-base"
                     required
                   />
                   <button
@@ -114,12 +126,12 @@ const Login: React.FC = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-4 w-4 lg:h-5 lg:w-5" /> : <Eye className="h-4 w-4 lg:h-5 lg:w-5" />}
                   </button>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -138,13 +150,13 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full bg-blue-600 text-white py-2.5 lg:py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm lg:text-base font-medium"
               >
                 {isLoading ? 'Signing in...' : 'Login'}
               </button>
             </form>
 
-            <div className="mt-6 text-center text-sm text-gray-600">
+            <div className="mt-6 text-center text-xs lg:text-sm text-gray-600">
               Demo credentials: admin@propai.com / password
             </div>
           </div>

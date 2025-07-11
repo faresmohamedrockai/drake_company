@@ -11,11 +11,33 @@ import { Lead } from '../../types';
 const LeadsList: React.FC = () => {
   const { leads } = useData();
   const { user } = useAuth();
+  const { projects, users } = useData(); // Add users from DataContext
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilterPopup, setShowFilterPopup] = useState(false);
+
+  // User color mapping
+  const userColors = [
+    'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 
+    'bg-red-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
+    'bg-yellow-500', 'bg-cyan-500', 'bg-lime-500', 'bg-amber-500'
+  ];
+
+  const getUserColor = (userName: string) => {
+    const userIndex = users.findIndex(user => user.name === userName);
+    return userIndex >= 0 ? userColors[userIndex % userColors.length] : 'bg-gray-500';
+  };
+
+  const getUserInitials = (userName: string) => {
+    return userName
+      .split(' ')
+      .map(name => name.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   // Column filters
   const [filters, setFilters] = useState({
@@ -25,6 +47,7 @@ const LeadsList: React.FC = () => {
     inventoryInterest: '',
     source: '',
     status: '',
+    assignedTo: '',
     lastCallDate: '',
     lastVisitDate: '',
   });
@@ -89,6 +112,7 @@ const LeadsList: React.FC = () => {
       (filters.inventoryInterest === '' || lead.inventoryInterest === filters.inventoryInterest) &&
       (filters.source === '' || lead.source === filters.source) &&
       (filters.status === '' || lead.status === filters.status) &&
+      (filters.assignedTo === '' || lead.assignedTo === filters.assignedTo) &&
       (filters.lastCallDate === '' || lead.lastCallDate.includes(filters.lastCallDate)) &&
       (filters.lastVisitDate === '' || lead.lastVisitDate.includes(filters.lastVisitDate))
     );
@@ -224,12 +248,9 @@ const LeadsList: React.FC = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">All Interests</option>
-                <option value="1B Apartment">1B Apartment</option>
-                <option value="2B Apartment">2B Apartment</option>
-                <option value="3B Apartment">3B Apartment</option>
-                <option value="Villa">Villa</option>
-                <option value="Townhouse">Townhouse</option>
-                <option value="Commercial">Commercial</option>
+                {projects.map(project => (
+                  <option key={project.id} value={project.name}>{project.name}</option>
+                ))}
               </select>
               <select
                 value={filters.source}
@@ -255,6 +276,16 @@ const LeadsList: React.FC = () => {
                 <option value="Scheduled Visit">Scheduled Visit</option>
                 <option value="Open Deal">Open Deal</option>
                 <option value="Cancellation">Cancellation</option>
+              </select>
+              <select
+                value={filters.assignedTo}
+                onChange={e => setFilters(f => ({ ...f, assignedTo: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
+              >
+                <option value="">All Users</option>
+                {users.map(user => (
+                  <option key={user.id} value={user.name}>{user.name}</option>
+                ))}
               </select>
               <div className="flex flex-col">
                 <label className="text-xs text-gray-500 mb-1 flex items-center"><CalendarIcon className="h-4 w-4 mr-1" />Last Call Date</label>
@@ -290,43 +321,56 @@ const LeadsList: React.FC = () => {
       {/* Leads Table */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Inventory Interest</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Call Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Interest</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Call</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Visit</th>
+                <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredLeads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => handleLeadClick(lead)}
-                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform"
+                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-sm"
                     >
                       {lead.name}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.phone}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.budget}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.inventoryInterest}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.source}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.phone}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.budget}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.inventoryInterest}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.source}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)}`}>
                       {lead.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.lastCallDate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.lastVisitDate}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+                    {lead.assignedTo ? (
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold ${getUserColor(lead.assignedTo)}`}>
+                          {getUserInitials(lead.assignedTo)}
+                        </span>
+                        <span className="text-sm text-gray-900">{lead.assignedTo}</span>
+                      </div>
+                    ) : (
+                      <span className="text-sm text-gray-400">Unassigned</span>
+                    )}
+                  </td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.lastCallDate}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{lead.lastVisitDate}</td>
+                  <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <button
                       onClick={() => handleLeadClick(lead)}
                       className="text-blue-600 hover:text-blue-800"
@@ -338,7 +382,7 @@ const LeadsList: React.FC = () => {
               ))}
               {filteredLeads.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
                     {searchTerm ? 'No leads found matching your search.' : 'No leads available. Add your first lead to get started.'}
                   </td>
                 </tr>
