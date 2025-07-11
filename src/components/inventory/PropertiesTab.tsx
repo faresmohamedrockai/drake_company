@@ -30,6 +30,7 @@ interface Property {
   amenities: string[];
   project: string;
   status: 'Available' | 'Rented' | 'Sold';
+  projectId?: string; // Add projectId to link properties to projects
 }
 
 // Add FormState type for form
@@ -106,6 +107,7 @@ const PropertiesTab: React.FC = () => {
     'Review'
   ];
   const [showPlanPopup, setShowPlanPopup] = useState(false);
+  const [showImageModal, setShowImageModal] = useState<{ images: string[], title: string } | null>(null);
 
   const openAddForm = () => {
     setEditId(null);
@@ -376,7 +378,21 @@ const PropertiesTab: React.FC = () => {
               const zone = zones.find(z => z.id === property.zoneId);
               return (
                 <tr key={property.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{property.title}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button 
+                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer"
+                      onClick={() => {
+                        const propertyImages = (property as any).images || [];
+                        const projectImages = (projects.find(p => p.id === property.projectId) as any)?.images || [];
+                        const allImages = [...propertyImages, ...projectImages];
+                        if (allImages.length > 0) {
+                          setShowImageModal({ images: allImages, title: property.title });
+                        }
+                      }}
+                    >
+                      {property.title}
+                    </button>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{property.type}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{Number(property.price).toLocaleString()} EGP</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{property.location}</td>
@@ -954,6 +970,46 @@ const PropertiesTab: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Image Modal */}
+      {showImageModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">{showImageModal.title} - Images</h3>
+              <button 
+                onClick={() => setShowImageModal(null)}
+                className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {showImageModal.images.map((img: string, idx: number) => (
+                <div key={idx} className="relative group">
+                  <img 
+                    src={img} 
+                    alt={`${showImageModal.title} image ${idx + 1}`}
+                    className="w-full h-48 object-cover rounded-lg border shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => {
+                      // Open image in new tab for full view
+                      window.open(img, '_blank');
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                    <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-sm font-medium">
+                      Click to view full size
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 text-center text-sm text-gray-500">
+              {showImageModal.images.length} image{showImageModal.images.length !== 1 ? 's' : ''} • Click any image to view full size
+            </div>
           </div>
         </div>
       )}
