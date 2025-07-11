@@ -145,67 +145,71 @@ const LeadsList: React.FC = () => {
       </div>
 
       {/* Search and Actions + Filters */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex flex-row gap-2 flex-1 overflow-x-auto pb-2 items-center">
-          <div className="relative flex flex-col items-start flex-1 max-w-lg">
-            <label className="text-xs text-gray-500 mb-1 flex items-center"><Search className="h-4 w-4 mr-1" />Search Leads</label>
-            <input
-              type="text"
-              placeholder="Search leads..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
-            />
+      <div className="mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col sm:flex-row gap-2 w-full">
+            <div className="relative flex flex-col flex-1 max-w-full">
+              <label className="text-xs text-gray-500 mb-1 flex items-center"><Search className="h-4 w-4 mr-1" />Search Leads</label>
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
+              />
+            </div>
+            <div className="flex flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-6">
+              <button
+                onClick={() => setShowFilterPopup(true)}
+                className="flex items-center justify-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors text-gray-700 w-full sm:w-auto"
+                title="Show filters"
+              >
+                <Filter className="h-5 w-5 mr-1" />
+                <span className="hidden xs:inline">Filters</span>
+              </button>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center w-full sm:w-auto"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                <span className="hidden xs:inline">Add Lead</span>
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setShowFilterPopup(true)}
-            className="flex items-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors text-gray-700 ml-2"
-            title="Show filters"
-          >
-            <Filter className="h-5 w-5 mr-1" />
-            Filters
-          </button>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ml-2"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Lead
-          </button>
         </div>
       </div>
 
       {/* Filter Popup Modal */}
       {showFilterPopup && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg relative animate-fadeIn">
+          <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl p-4 sm:p-6 w-full h-full max-w-lg sm:h-auto sm:w-full relative animate-fadeIn flex flex-col justify-between mx-0 sm:mx-auto">
             <button
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl"
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl sm:text-xl"
               onClick={() => setShowFilterPopup(false)}
               aria-label="Close"
             >
               &times;
             </button>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Advanced Filters</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-4 mt-2 sm:mt-0">Advanced Filters</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto">
               <input
                 type="text"
                 value={filters.name}
                 onChange={e => setFilters(f => ({ ...f, name: e.target.value }))}
                 placeholder="Name"
-                className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               />
               <input
                 type="text"
                 value={filters.phone}
                 onChange={e => setFilters(f => ({ ...f, phone: e.target.value }))}
                 placeholder="Phone"
-                className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               />
               <select
                 value={filters.budget}
                 onChange={e => setFilters(f => ({ ...f, budget: e.target.value }))}
-                className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">All Budgets</option>
                 <option value="EGP100,000-300,000">EGP 100,000-300,000</option>
@@ -217,7 +221,7 @@ const LeadsList: React.FC = () => {
               <select
                 value={filters.inventoryInterest}
                 onChange={e => setFilters(f => ({ ...f, inventoryInterest: e.target.value }))}
-                className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">All Interests</option>
                 <option value="1B Apartment">1B Apartment</option>
@@ -230,7 +234,7 @@ const LeadsList: React.FC = () => {
               <select
                 value={filters.source}
                 onChange={e => setFilters(f => ({ ...f, source: e.target.value }))}
-                className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">All Sources</option>
                 <option value="Social Media">Social Media</option>
@@ -243,7 +247,7 @@ const LeadsList: React.FC = () => {
               <select
                 value={filters.status}
                 onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
-                className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">All Statuses</option>
                 <option value="Fresh Lead">Fresh Lead</option>
@@ -258,7 +262,7 @@ const LeadsList: React.FC = () => {
                   type="date"
                   value={filters.lastCallDate}
                   onChange={e => setFilters(f => ({ ...f, lastCallDate: e.target.value }))}
-                  className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                  className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
                 />
               </div>
               <div className="flex flex-col">
@@ -267,14 +271,14 @@ const LeadsList: React.FC = () => {
                   type="date"
                   value={filters.lastVisitDate}
                   onChange={e => setFilters(f => ({ ...f, lastVisitDate: e.target.value }))}
-                  className="px-2 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs w-full"
+                  className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
                 />
               </div>
             </div>
             <div className="flex justify-end mt-6">
               <button
                 onClick={() => setShowFilterPopup(false)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
               >
                 Apply Filters
               </button>

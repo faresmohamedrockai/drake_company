@@ -56,7 +56,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   const handleAddZone = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedLocation && user && zoneForm.name.trim() && zoneForm.description.trim()) {
+    if (selectedLocation && user && zoneForm.name.trim()) {
       addZone({
         name: zoneForm.name.trim(),
         description: zoneForm.description.trim(),
@@ -135,7 +135,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 <textarea
                   name="description"
                   className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
                   value={zoneForm.description}
                   onChange={e => setZoneForm({ ...zoneForm, description: e.target.value })}
                 />
@@ -160,7 +159,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 <button
                   type="submit"
                   className="px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors text-sm"
-                  disabled={!(zoneForm.name.trim() && zoneForm.description.trim())}
+                  disabled={!zoneForm.name.trim()}
                 >
                   Add Zone
                 </button>

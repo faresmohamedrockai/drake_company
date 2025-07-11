@@ -4,9 +4,11 @@ import { Search, Plus, MapPin, Edit, Trash2 } from 'lucide-react';
 import MapComponent from './MapComponent';
 
 const ZonesTab: React.FC = () => {
-  const { zones, deleteZone } = useData();
+  const { zones, deleteZone, updateZone } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editZone, setEditZone] = useState<any | null>(null);
+  const [editZoneData, setEditZoneData] = useState<any>({ name: '', description: '', latitude: '', longitude: '', properties: 0 });
 
   const filteredZones = zones.filter(zone =>
     zone.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -16,6 +18,27 @@ const ZonesTab: React.FC = () => {
   const handleDeleteZone = (id: string) => {
     if (window.confirm('Are you sure you want to delete this zone?')) {
       deleteZone(id);
+    }
+  };
+
+  const handleEditZone = (zone: any) => {
+    setEditZone(zone);
+    setEditZoneData({ ...zone });
+  };
+
+  const handleEditZoneChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setEditZoneData((prev: any) => ({ ...prev, [name]: value }));
+  };
+
+  const handleEditZoneSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editZone) {
+      updateZone(editZone.id, {
+        ...editZoneData,
+        properties: Number(editZoneData.properties) || 0
+      });
+      setEditZone(null);
     }
   };
 
@@ -62,7 +85,7 @@ const ZonesTab: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">{zone.name}</h4>
                   <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:text-blue-800">
+                    <button className="text-blue-600 hover:text-blue-800" onClick={() => handleEditZone(zone)}>
                       <Edit className="h-4 w-4" />
                     </button>
                     <button 
@@ -77,7 +100,7 @@ const ZonesTab: React.FC = () => {
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>Lat: {zone.latitude}, Lng: {zone.longitude}</span>
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    {zone.properties} properties
+                    Properties: {zone.properties}
                   </span>
                 </div>
               </div>
@@ -90,6 +113,58 @@ const ZonesTab: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Edit Zone Modal as right-side drawer */}
+      {editZone && (
+        <div className="fixed inset-0 z-50 flex justify-center items-center">
+          {/* Overlay */}
+          <div className="flex-1 bg-black bg-opacity-40" onClick={() => setEditZone(null)} />
+          {/* Drawer */}
+          <div className="w-full max-w-md max-h-[60vh] sm:max-h-[70vh] bg-white shadow-2xl p-4 sm:p-6 flex flex-col relative animate-slide-in-right overflow-y-auto rounded-2xl my-6">
+            <button
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
+              onClick={() => setEditZone(null)}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Edit Zone</h3>
+            <form onSubmit={handleEditZoneSubmit} className="space-y-4 flex-1 flex flex-col">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Zone Name</label>
+                <input type="text" name="name" value={editZoneData.name} onChange={handleEditZoneChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <textarea name="description" value={editZoneData.description} onChange={handleEditZoneChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+                <input type="text" name="latitude" value={editZoneData.latitude} onChange={handleEditZoneChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+                <input type="text" name="longitude" value={editZoneData.longitude} onChange={handleEditZoneChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Properties</label>
+                <input
+                  type="number"
+                  name="properties"
+                  min={0}
+                  value={editZoneData.properties}
+                  onChange={e => setEditZoneData((prev: any) => ({ ...prev, properties: Number(e.target.value) }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="flex justify-end gap-2 mt-auto">
+                <button type="button" onClick={() => setEditZone(null)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

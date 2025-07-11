@@ -49,6 +49,8 @@ type FormState = {
   developerId: string;
   typeOther: string;
   amenitiesOther: string;
+  images: string[]; // Array of data URLs (max 1)
+  paymentPlanIndex?: number; // Index of selected payment plan for the project
 };
 
 const PropertiesTab: React.FC = () => {
@@ -73,7 +75,9 @@ const PropertiesTab: React.FC = () => {
     projectId: '',
     developerId: '',
     typeOther: '',
-    amenitiesOther: ''
+    amenitiesOther: '',
+    images: [],
+    paymentPlanIndex: undefined,
   });
   const [filterProject, setFilterProject] = useState('');
   const [filterZone, setFilterZone] = useState('');
@@ -92,6 +96,14 @@ const PropertiesTab: React.FC = () => {
   const [reportError, setReportError] = useState('');
   const userRolesAllowed = ['Admin', 'Sales Admin', 'Team Leader', 'Sales Rep'];
   const canGenerateReport = userRolesAllowed.includes(user?.role || '');
+  const [formStep, setFormStep] = useState(0); // Stepper for add/edit form
+  const formSteps = [
+    'Basic Info',
+    'Details',
+    'Location',
+    'Review'
+  ];
+  const [showPlanPopup, setShowPlanPopup] = useState(false);
 
   const openAddForm = () => {
     setEditId(null);
@@ -111,15 +123,28 @@ const PropertiesTab: React.FC = () => {
       projectId: '',
       developerId: '',
       typeOther: '',
-      amenitiesOther: ''
+      amenitiesOther: '',
+      images: [],
+      paymentPlanIndex: undefined,
     });
     setShowForm(true);
+    setFormStep(0); // Reset step to 0 for new form
   };
 
   const openEditForm = (property: any) => {
     setEditId(property.id);
-    setForm({ ...property, zoneId: property.zoneId || '', projectId: property.projectId || '', developerId: property.developerId || '', typeOther: '', amenitiesOther: '' });
+    setForm({
+      ...property,
+      zoneId: property.zoneId || '',
+      projectId: property.projectId || '',
+      developerId: property.developerId || '',
+      typeOther: '',
+      amenitiesOther: '',
+      images: property.images && property.images.length ? property.images : [],
+      paymentPlanIndex: property.paymentPlanIndex,
+    });
     setShowForm(true);
+    setFormStep(0); // Reset step to 0 for edit form
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -127,14 +152,21 @@ const PropertiesTab: React.FC = () => {
     if (name === 'projectId') {
       // Find the selected project and set developerId accordingly
       const selectedProject = projects.find(p => p.id === value);
+      let paymentPlanIndex: number | undefined = undefined;
+      if (selectedProject && Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0) {
+        paymentPlanIndex = 0;
+      }
       setForm((prev) => ({
         ...prev,
         [name]: value,
         developerId: selectedProject?.developerId || '',
         typeOther: '', // Clear other type
-        amenitiesOther: '' // Clear other amenities
+        amenitiesOther: '', // Clear other amenities
+        paymentPlanIndex,
       }));
       setShowPaymentPlan(selectedProject?.paymentPlans || null);
+    } else if (name === 'paymentPlanIndex') {
+      setForm((prev) => ({ ...prev, paymentPlanIndex: Number(value) }));
     } else if (name === 'type') {
       setShowTypeOther(value === 'Other');
       setForm((prev) => ({ ...prev, [name]: value }));
@@ -143,6 +175,25 @@ const PropertiesTab: React.FC = () => {
       return;
     } else {
       setForm((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Handle image upload (multiple images, data URLs)
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileArr = Array.from(files);
+      const readers = fileArr.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+      Promise.all(readers).then(images => {
+        setForm(prev => ({ ...prev, images: [...prev.images, ...images] }));
+      });
     }
   };
 
@@ -160,6 +211,8 @@ const PropertiesTab: React.FC = () => {
       amenities: showAmenitiesOther
         ? [...form.amenities.filter((a: string) => a !== 'Other'), form.amenitiesOther].filter(Boolean)
         : form.amenities,
+      images: form.images && form.images.length ? form.images : [],
+      paymentPlanIndex: form.paymentPlanIndex,
     };
     if (editId) {
       updateProperty(editId, propertyData);
@@ -245,6 +298,10 @@ const PropertiesTab: React.FC = () => {
   function handlePrint() {
     window.print();
   }
+
+  // Helper to get selected project's payment plans
+  const selectedProject = projects.find(p => p.id === form.projectId);
+  const paymentPlans = selectedProject?.paymentPlans || [];
 
   return (
     <div>
@@ -352,136 +409,300 @@ const PropertiesTab: React.FC = () => {
       {/* Add/Edit Property Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">{editId ? 'Edit Property' : 'Add Property'}</h3>
-            <form onSubmit={handleFormSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input type="text" name="title" value={form.title} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <select name="type" value={form.type} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required>
-                  <option value="">Select Type</option>
-                  <option value="Apartment">Apartment</option>
-                  <option value="Villa">Villa</option>
-                  <option value="Townhouse">Townhouse</option>
-                  <option value="Commercial">Commercial</option>
-                  <option value="Other">Other</option>
-                </select>
-                {showTypeOther && (
-                  <input type="text" name="typeOther" placeholder="Specify other type" value={form.typeOther || ''} onChange={e => setForm(prev => ({ ...prev, typeOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
-                )}
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                <input type="number" name="price" value={form.price} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required placeholder="2200000" />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <input type="text" name="location" value={form.location} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Area (SQFT)</label>
-                <input type="text" name="area" value={form.area} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
-              </div>
-              <div className="col-span-1 flex gap-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
-                  <input type="text" name="bedrooms" value={form.bedrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
+          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8 w-full max-w-3xl mx-2 sm:mx-auto">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{editId ? 'Edit Property' : 'Add Property'}</h3>
+            {/* Stepper */}
+            <div className="flex items-center justify-center mb-6">
+              {formSteps.map((label, idx) => (
+                <div key={label} className="flex items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-200 ${formStep === idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{idx + 1}</div>
+                  {idx < formSteps.length - 1 && <div className="w-8 h-1 bg-gray-300 mx-1 rounded" />}
                 </div>
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
-                  <input type="text" name="bathrooms" value={form.bathrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
-                </div>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Parking</label>
-                <input type="text" name="parking" value={form.parking} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Amenities</label>
-                <div className="flex flex-wrap gap-3">
-                  {['Elevator', 'Security', 'Garden', 'Pool', 'Other'].map(option => (
-                    <label key={option} className="inline-flex items-center text-sm font-normal">
-                      <input
-                        type="checkbox"
-                        name="amenities"
-                        value={option}
-                        checked={form.amenities.includes(option)}
-                        onChange={e => {
-                          const checked = e.target.checked;
-                          setForm(prev => {
-                            let newAmenities: string[] = prev.amenities.filter((a) => a !== option);
-                            if (checked) newAmenities = [...prev.amenities, option];
-                            return { ...prev, amenities: newAmenities };
-                          });
-                          if (option === 'Other') setShowAmenitiesOther(e.target.checked);
-                        }}
-                        className="mr-2"
-                      />
-                      {option}
-                    </label>
-                  ))}
-                </div>
-                {showAmenitiesOther && (
-                  <input type="text" name="amenitiesOther" placeholder="Specify other amenities" value={form.amenitiesOther || ''} onChange={e => setForm(prev => ({ ...prev, amenitiesOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" />
-                )}
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                <select name="zoneId" value={form.zoneId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
-                  <option value="">Select Zone</option>
-                  {zones.map(zone => (
-                    <option key={zone.id} value={zone.id}>{zone.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
-                <select name="projectId" value={form.projectId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
-                  <option value="">Select Project</option>
-                  {projects.map(project => (
-                    <option key={project.id} value={project.id}>{project.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Developer</label>
-                <select name="developerId" value={form.developerId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
-                  <option value="">Select Developer</option>
-                  {developers.map(dev => (
-                    <option key={dev.id} value={dev.id}>{dev.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select name="status" value={form.status} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required>
-                  <option value="Available">Available</option>
-                  <option value="Rented">Rented</option>
-                  <option value="Sold">Sold</option>
-                </select>
-              </div>
-              {/* Payment Plan Display */}
-              {showPaymentPlan && (
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Inherited Payment Plan</label>
-                  {showPaymentPlan.map((plan: any, idx: number) => (
-                    <div key={idx} className="border rounded-lg p-4 mb-2 bg-gray-50">
-                      <div className="flex gap-4 text-xs">
-                        <div><span className="font-semibold text-blue-600">{plan.downPayment}%</span> Down Payment</div>
-                        <div><span className="font-semibold text-green-600">{plan.installments}%</span> Installments</div>
-                        <div><span className="font-semibold text-orange-600">{plan.delivery}%</span> Delivery</div>
-                        <div><span className="font-semibold text-gray-700">{plan.schedule}</span></div>
+              ))}
+            </div>
+            <form onSubmit={handleFormSubmit} className="space-y-6">
+              {/* Step 1: Basic Info */}
+              {formStep === 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <input type="text" name="title" value={form.title} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <select name="type" value={form.type} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
+                      <option value="">Select Type</option>
+                      <option value="Apartment">Apartment</option>
+                      <option value="Villa">Villa</option>
+                      <option value="Townhouse">Townhouse</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    {showTypeOther && (
+                      <input type="text" name="typeOther" placeholder="Specify other type" value={form.typeOther || ''} onChange={e => setForm(prev => ({ ...prev, typeOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" />
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <input type="number" name="price" value={form.price} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder="2200000" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <input type="text" name="location" value={form.location} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                  </div>
+                  {/* Image upload (multiple images) */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Property Images</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageUpload}
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg bg-gray-50 text-base"
+                    />
+                    {form.images && form.images.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {form.images.map((img, idx) => (
+                          <div key={idx} className="relative group">
+                            <img src={img} alt="Preview" className="h-24 w-32 object-cover rounded border" />
+                            <button
+                              type="button"
+                              className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-80 group-hover:opacity-100"
+                              title="Remove image"
+                              onClick={() => setForm(prev => ({
+                                ...prev,
+                                images: prev.images.filter((_, i) => i !== idx)
+                              }))}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
               )}
-              <div className="col-span-2 flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors">{editId ? 'Update' : 'Add'} Property</button>
+              {/* Step 2: Details */}
+              {formStep === 1 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Area (SQFT)</label>
+                    <input type="text" name="area" value={form.area} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
+                      <input type="text" name="bedrooms" value={form.bedrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
+                      <input type="text" name="bathrooms" value={form.bathrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Parking</label>
+                    <input type="text" name="parking" value={form.parking} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Amenities</label>
+                    <div className="flex flex-wrap gap-3">
+                      {['Elevator', 'Security', 'Garden', 'Pool', 'Other'].map(option => (
+                        <label key={option} className="inline-flex items-center text-sm font-normal">
+                          <input
+                            type="checkbox"
+                            name="amenities"
+                            value={option}
+                            checked={form.amenities.includes(option)}
+                            onChange={e => {
+                              const checked = e.target.checked;
+                              setForm(prev => {
+                                let newAmenities: string[] = prev.amenities.filter((a) => a !== option);
+                                if (checked) newAmenities = [...prev.amenities, option];
+                                return { ...prev, amenities: newAmenities };
+                              });
+                              if (option === 'Other') setShowAmenitiesOther(e.target.checked);
+                            }}
+                            className="mr-2"
+                          />
+                          {option}
+                        </label>
+                      ))}
+                    </div>
+                    {showAmenitiesOther && (
+                      <input type="text" name="amenitiesOther" placeholder="Specify other amenities" value={form.amenitiesOther || ''} onChange={e => setForm(prev => ({ ...prev, amenitiesOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" />
+                    )}
+                  </div>
+                </div>
+              )}
+              {/* Step 3: Location/Links */}
+              {formStep === 2 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
+                  {/* Project */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                    <select name="projectId" value={form.projectId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
+                      <option value="">Select Project</option>
+                      {projects.map(project => (
+                        <option key={project.id} value={project.id}>{project.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Developer */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Developer</label>
+                    <select name="developerId" value={form.developerId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
+                      <option value="">Select Developer</option>
+                      {developers.map(dev => (
+                        <option key={dev.id} value={dev.id}>{dev.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Zone */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                    <select name="zoneId" value={form.zoneId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
+                      <option value="">Select Zone</option>
+                      {zones.map(zone => (
+                        <option key={zone.id} value={zone.id}>{zone.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Status (last) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <select name="status" value={form.status} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
+                      <option value="Available">Available</option>
+                      <option value="Rented">Rented</option>
+                      <option value="Sold">Sold</option>
+                    </select>
+                  </div>
+                  {/* Payment Plan Selector (now always show cards, no select or popup) */}
+                  {selectedProject && paymentPlans.length > 0 && (
+                    <div className="md:col-span-2 mt-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Payment Plan</label>
+                      {/* Responsive slider/grid for payment plans */}
+                      <div className="flex md:grid md:grid-cols-2 gap-4 overflow-x-auto md:overflow-x-visible pb-2 snap-x snap-mandatory">
+                        {paymentPlans.map((plan, idx) => {
+                          const isSelected = form.paymentPlanIndex === idx;
+                          return (
+                            <div
+                              key={idx}
+                              className={`min-w-[65vw] max-w-[75vw] md:min-w-0 md:max-w-none snap-center cursor-pointer transition-all duration-200 rounded-xl border-2 shadow-md p-3 bg-gradient-to-br from-blue-100 via-white to-pink-100 hover:from-blue-200 hover:to-pink-200 hover:shadow-xl relative group ${isSelected ? 'border-blue-600 ring-2 ring-blue-300 scale-105' : 'border-gray-200'}`}
+                              style={{ flex: '0 0 65vw' }}
+                              onClick={() => setForm(prev => ({ ...prev, paymentPlanIndex: idx }))}
+                            >
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${isSelected ? 'bg-blue-600 text-white' : 'bg-blue-200 text-blue-700'} shadow-md`}>
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
+                                </span>
+                                <span className="font-semibold text-blue-800 text-base">Plan {idx + 1}</span>
+                                {plan.schedule && <span className="ml-2 text-[10px] bg-pink-200 text-pink-800 px-1.5 py-0.5 rounded-full">{plan.schedule}</span>}
+                                {isSelected && <span className="ml-auto text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full shadow">Selected</span>}
+                              </div>
+                              <div className="text-xs text-gray-800 space-y-0.5">
+                                <div className="flex items-center gap-2"><span className="font-medium">Down Payment:</span> <span className="text-blue-700 font-bold">{plan.downPayment}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">Installments:</span> <span className="text-green-700 font-bold">{100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">Delivery:</span> <span className="text-orange-700 font-bold">{plan.delivery}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">Years to Pay:</span> <span className="text-purple-700 font-bold">{plan.payYears}</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">Installment Period:</span> <span className="text-pink-700 font-bold">{plan.installmentPeriod}{plan.installmentPeriod === 'custom' && plan.installmentMonthsCount ? ` (${plan.installmentMonthsCount} months)` : ''}</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">First Installment Date:</span> <span className="text-gray-700 font-bold">{plan.firstInstallmentDate}</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">Delivery Date:</span> <span className="text-gray-700 font-bold">{plan.deliveryDate}</span></div>
+                                {plan.schedule && <div className="flex items-center gap-2"><span className="font-medium">Schedule Description:</span> <span className="text-blue-700 font-bold">{plan.schedule}</span></div>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {/* Step 4: Review */}
+              {formStep === 3 && (
+                <div className="space-y-2 text-sm max-h-[60vh] sm:max-h-[70vh] overflow-y-auto px-1 sm:px-2">
+                  <div><span className="font-semibold">Title:</span> {form.title}</div>
+                  <div><span className="font-semibold">Type:</span> {showTypeOther ? form.typeOther : form.type}</div>
+                  <div><span className="font-semibold">Price:</span> {form.price}</div>
+                  <div><span className="font-semibold">Location:</span> {form.location}</div>
+                  <div><span className="font-semibold">Area:</span> {form.area}</div>
+                  <div><span className="font-semibold">Bedrooms:</span> {form.bedrooms}</div>
+                  <div><span className="font-semibold">Bathrooms:</span> {form.bathrooms}</div>
+                  <div><span className="font-semibold">Parking:</span> {form.parking}</div>
+                  <div><span className="font-semibold">Amenities:</span> {showAmenitiesOther ? [...form.amenities.filter(a => a !== 'Other'), form.amenitiesOther].filter(Boolean).join(', ') : form.amenities.join(', ')}</div>
+                  <div><span className="font-semibold">Zone:</span> {zones.find(z => z.id === form.zoneId)?.name || ''}</div>
+                  <div><span className="font-semibold">Project:</span> {projects.find(p => p.id === form.projectId)?.name || ''}</div>
+                  <div><span className="font-semibold">Developer:</span> {developers.find(d => d.id === form.developerId)?.name || ''}</div>
+                  <div><span className="font-semibold">Status:</span> {form.status}</div>
+                  {/* Payment Plan Review (always show if project selected) */}
+                  {(() => {
+                    const selectedProject = projects.find(p => p.id === form.projectId);
+                    if (selectedProject) {
+                      const hasPlans = Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0;
+                      if (hasPlans && form.paymentPlanIndex !== undefined) {
+                        const plan = selectedProject.paymentPlans[form.paymentPlanIndex];
+                        if (plan) {
+                          const price = Number(form.price || 0);
+                          const schedule = generatePaymentSchedule(price, plan);
+                          return (
+                            <div className="mt-4">
+                              <div className="font-semibold mb-1">Selected Payment Plan:</div>
+                              <div className="mb-2 text-xs text-gray-700">{plan.schedule ? plan.schedule : `Plan ${form.paymentPlanIndex + 1}`}</div>
+                              <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="bg-blue-600 text-white">
+                                      <th className="border px-2 py-1 font-bold">Payment</th>
+                                      <th className="border px-2 py-1 font-bold">Date</th>
+                                      <th className="border px-2 py-1 font-bold">Amount</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {schedule.map((item: any, idx: number) => (
+                                      <tr key={idx} className={
+                                        item.label && item.label.toLowerCase().includes('down payment')
+                                          ? 'bg-blue-50 font-semibold'
+                                          : item.label && item.label.toLowerCase().includes('delivery')
+                                            ? 'bg-orange-50 font-semibold'
+                                            : idx % 2 === 0
+                                              ? 'bg-gray-50'
+                                              : 'bg-white'
+                                      }>
+                                        <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.label}</td>
+                                        <td className="border px-2 py-1">{item.dueDate}</td>
+                                        <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.amount.toLocaleString()} EGP</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          );
+                        }
+                      } else {
+                        return (
+                          <div className="mt-4 text-xs text-red-500">No payment plans found for this project. Please add at least one plan in the Projects tab.</div>
+                        );
+                      }
+                    }
+                    return null;
+                  })()}
+                </div>
+              )}
+              {/* Stepper Navigation */}
+              <div className="flex justify-between items-center pt-4 gap-2 flex-col sm:flex-row">
+                <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors w-full sm:w-auto mb-2 sm:mb-0">Cancel</button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  {formStep > 0 && (
+                    <button type="button" onClick={() => setFormStep(s => s - 1)} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 w-full sm:w-auto">Back</button>
+                  )}
+                  {formStep < formSteps.length - 1 && (
+                    <button type="button" onClick={() => setFormStep(s => s + 1)} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto">Next</button>
+                  )}
+                  {formStep === formSteps.length - 1 && (
+                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">{editId ? 'Update' : 'Add'} Property</button>
+                  )}
+                </div>
               </div>
             </form>
           </div>
@@ -601,9 +822,13 @@ const PropertiesTab: React.FC = () => {
                 )}
                 {/* Payment Plan Table - Full Installments */}
                 {(() => {
-                  // Find the linked project and its first payment plan
+                  // Find the linked project and its selected payment plan
                   const project = projects.find(p => p.id === reportProperty?.projectId);
-                  const plan = project && Array.isArray(project.paymentPlans) ? project.paymentPlans[0] : null;
+                  let plan = null;
+                  if (project && Array.isArray(project.paymentPlans)) {
+                    const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
+                    plan = project.paymentPlans[idx];
+                  }
                   const price = Number(reportProperty?.price || 0);
                   if (!plan || !price) return null;
                   const schedule = generatePaymentSchedule(price, plan);

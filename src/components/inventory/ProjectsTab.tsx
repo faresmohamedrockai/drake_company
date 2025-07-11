@@ -15,6 +15,8 @@ interface Project {
     delivery: number;
     schedule: string;
   };
+  // Add images property
+  images?: string[];
 }
 
 // Utility: Generate payment schedule for a property price and payment plan
@@ -125,6 +127,7 @@ const ProjectsTab: React.FC = () => {
       }
     ],
     propertyIds: [] as string[],
+    images: [] as string[],
     createdBy: user?.name || 'System'
   });
   const [editProject, setEditProject] = useState({
@@ -146,8 +149,16 @@ const ProjectsTab: React.FC = () => {
       }
     ],
     propertyIds: [] as string[],
+    images: [] as string[],
     createdBy: user?.name || 'System'
   });
+  const [addStep, setAddStep] = useState(0); // Stepper for add form
+  const addSteps = [
+    'Basic Info',
+    'Properties',
+    'Payment Plans',
+    'Review'
+  ];
 
   const filteredProjects = projects.filter(project =>
     project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -214,6 +225,7 @@ const ProjectsTab: React.FC = () => {
         { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
       ],
       propertyIds: [],
+      images: [],
       createdBy: user?.name || 'System'
     });
   };
@@ -229,6 +241,7 @@ const ProjectsTab: React.FC = () => {
         { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
       ],
       propertyIds: project.propertyIds || [],
+      images: project.images || [],
       createdBy: project.createdBy || user?.name || 'System'
     });
     setShowEditForm(true);
@@ -259,6 +272,29 @@ const ProjectsTab: React.FC = () => {
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       deleteProject(id);
+    }
+  };
+
+  // Add image upload handler for multiple images
+  const handleProjectImageUpload = (e: React.ChangeEvent<HTMLInputElement>, isEdit = false) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const fileArr = Array.from(files);
+      const readers = fileArr.map(file => {
+        return new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      });
+      Promise.all(readers).then(images => {
+        if (isEdit) {
+          setEditProject(prev => ({ ...prev, images: [...prev.images, ...images] }));
+        } else {
+          setNewProject(prev => ({ ...prev, images: [...prev.images, ...images] }));
+        }
+      });
     }
   };
 
@@ -297,6 +333,19 @@ const ProjectsTab: React.FC = () => {
                 </button>
               </div>
             </div>
+            {Array.isArray((project as any).images) && (project as any).images.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
+                {((project as any).images as string[]).map((img: string, idx: number) => (
+                  <img
+                    key={idx}
+                    src={img}
+                    alt={`Project ${project.name} image ${idx + 1}`}
+                    className="h-24 w-32 object-cover rounded-lg border shadow-sm flex-shrink-0"
+                    style={{ minWidth: '8rem' }}
+                  />
+                ))}
+              </div>
+            )}
             
             <div className="space-y-3 mb-4">
               <div>
@@ -350,149 +399,223 @@ const ProjectsTab: React.FC = () => {
       {/* Add Project Modal */}
       {showAddForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Add Project</h3>
-            <form onSubmit={handleAddProject} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input type="text" value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Developer</label>
-                <select value={newProject.developerId} onChange={e => setNewProject({ ...newProject, developerId: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required>
-                  <option value="">Select Developer</option>
-                  {developers.map(dev => (
-                    <option key={dev.id} value={dev.id}>{dev.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                <select value={newProject.zoneId} onChange={e => setNewProject({ ...newProject, zoneId: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required>
-                  <option value="">Select Zone</option>
-                  {zones.map(zone => (
-                    <option key={zone.id} value={zone.id}>{zone.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <input type="text" value={newProject.type} onChange={e => setNewProject({ ...newProject, type: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Properties</label>
-                <select multiple value={newProject.propertyIds} onChange={e => setNewProject({ ...newProject, propertyIds: Array.from(e.target.selectedOptions, option => option.value) })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 h-32">
-                  {properties.map(property => (
-                    <option key={property.id} value={property.id}>{property.title}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-1">Hold Ctrl (Windows) or Cmd (Mac) to select multiple properties.</p>
-              </div>
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Plans</label>
-                {newProject.paymentPlans.map((plan, idx) => (
-                  <div key={idx} className="border rounded-lg p-4 mb-4 relative bg-gray-50">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Down Payment (%)</label>
-                        <input type="number" value={plan.downPayment} onChange={e => {
-                          const val = Number(e.target.value);
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downPayment: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Delivery (%)</label>
-                        <input type="number" value={plan.delivery} onChange={e => {
-                          const val = Number(e.target.value);
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, delivery: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Schedule Description</label>
-                        <input type="text" value={plan.schedule} onChange={e => {
-                          const val = e.target.value;
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, schedule: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Years to Pay</label>
-                        <input type="number" value={plan.payYears} onChange={e => {
-                          const val = Number(e.target.value);
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Installment Period</label>
-                        <select value={plan.installmentPeriod} onChange={e => {
-                          const val = e.target.value;
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                          <option value="yearly">Yearly</option>
-                          <option value="custom">Custom</option>
-                        </select>
-                      </div>
-                      {plan.installmentPeriod === 'custom' && (
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Installment Every (Months)</label>
-                          <input type="number" value={plan.installmentMonthsCount} onChange={e => {
-                            const val = Number(e.target.value);
-                            setNewProject(prev => ({
-                              ...prev,
-                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentMonthsCount: val } : p)
-                            }));
-                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8 w-full max-w-4xl mx-2 sm:mx-auto">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Add Project</h3>
+            {/* Stepper */}
+            <div className="flex items-center justify-center mb-6">
+              {addSteps.map((label, idx) => (
+                <div key={label} className="flex items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-200 ${addStep === idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{idx + 1}</div>
+                  {idx < addSteps.length - 1 && <div className="w-8 h-1 bg-gray-300 mx-1 rounded" />}
+                </div>
+              ))}
+            </div>
+            <div className="max-h-[60vh] sm:max-h-[70vh] overflow-y-auto px-1 sm:px-2">
+              <form onSubmit={handleAddProject} className="space-y-6">
+                {/* Step 1: Basic Info */}
+                {addStep === 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                      <input type="text" value={newProject.name} onChange={e => setNewProject({ ...newProject, name: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Project Images</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={e => handleProjectImageUpload(e, false)}
+                        className="w-full px-2 py-2 border border-gray-300 rounded-lg bg-gray-50 text-base"
+                      />
+                      {newProject.images && newProject.images.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {newProject.images.map((img, idx) => (
+                            <div key={idx} className="relative group">
+                              <img src={img} alt="Preview" className="h-24 w-32 object-cover rounded border" />
+                              <button
+                                type="button"
+                                className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-80 group-hover:opacity-100"
+                                title="Remove image"
+                                onClick={() => setNewProject(prev => ({
+                                  ...prev,
+                                  images: prev.images.filter((_, i) => i !== idx)
+                                }))}
+                              >
+                                &times;
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       )}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">First Installment Date</label>
-                        <input type="date" value={plan.firstInstallmentDate} onChange={e => {
-                          const val = e.target.value;
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, firstInstallmentDate: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Delivery Date</label>
-                        <input type="date" value={plan.deliveryDate} onChange={e => {
-                          const val = e.target.value;
-                          setNewProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, deliveryDate: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
                     </div>
-                    {newProject.paymentPlans.length > 1 && (
-                      <button type="button" onClick={() => handleRemovePlan(idx)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs">Remove</button>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Developer</label>
+                      <select value={newProject.developerId} onChange={e => setNewProject({ ...newProject, developerId: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
+                        <option value="">Select Developer</option>
+                        {developers.map(dev => (
+                          <option key={dev.id} value={dev.id}>{dev.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                      <select value={newProject.zoneId} onChange={e => setNewProject({ ...newProject, zoneId: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
+                        <option value="">Select Zone</option>
+                        {zones.map(zone => (
+                          <option key={zone.id} value={zone.id}>{zone.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                      <input type="text" value={newProject.type} onChange={e => setNewProject({ ...newProject, type: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    </div>
+                  </div>
+                )}
+                {/* Step 2: Properties */}
+                {addStep === 1 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Properties</label>
+                    <select multiple value={newProject.propertyIds} onChange={e => setNewProject({ ...newProject, propertyIds: Array.from(e.target.selectedOptions, option => option.value) })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 h-32 text-base">
+                      {properties.map(property => (
+                        <option key={property.id} value={property.id}>{property.title}</option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Hold Ctrl (Windows) or Cmd (Mac) to select multiple properties.</p>
+                  </div>
+                )}
+                {/* Step 3: Payment Plans */}
+                {addStep === 2 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Payment Plans</label>
+                    {newProject.paymentPlans.map((plan, idx) => (
+                      <div key={idx} className="border rounded-lg p-4 mb-4 relative bg-gray-50">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Down Payment (%)</label>
+                            <input type="number" value={plan.downPayment} onChange={e => {
+                              const val = Number(e.target.value);
+                              setNewProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downPayment: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Delivery (%)</label>
+                            <input type="number" value={plan.delivery} onChange={e => {
+                              const val = Number(e.target.value);
+                              setNewProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, delivery: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Schedule Description</label>
+                            <input type="text" value={plan.schedule} onChange={e => {
+                              const val = e.target.value;
+                              setNewProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, schedule: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Years to Pay</label>
+                            <input type="number" value={plan.payYears} onChange={e => {
+                              const val = Number(e.target.value);
+                              setNewProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Installment Period</label>
+                            <select value={plan.installmentPeriod} onChange={e => {
+                              const val = e.target.value;
+                              setNewProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                              <option value="monthly">Monthly</option>
+                              <option value="quarterly">Quarterly</option>
+                              <option value="yearly">Yearly</option>
+                              <option value="custom">Custom</option>
+                            </select>
+                          </div>
+                          {plan.installmentPeriod === 'custom' && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Installment Every (Months)</label>
+                              <input type="number" value={plan.installmentMonthsCount} onChange={e => {
+                                const val = Number(e.target.value);
+                                setNewProject(prev => ({
+                                  ...prev,
+                                  paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentMonthsCount: val } : p)
+                                }));
+                              }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                            </div>
+                          )}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">First Installment Date</label>
+                            <input type="date" value={plan.firstInstallmentDate} onChange={e => {
+                              const val = e.target.value;
+                              setNewProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, firstInstallmentDate: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Delivery Date</label>
+                            <input type="date" value={plan.deliveryDate} onChange={e => {
+                              const val = e.target.value;
+                              setNewProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, deliveryDate: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                          </div>
+                        </div>
+                        {newProject.paymentPlans.length > 1 && (
+                          <button type="button" onClick={() => handleRemovePlan(idx)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs">Remove</button>
+                        )}
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => handleAddPlan()} className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-xs">+ Add Plan</button>
+                  </div>
+                )}
+                {/* Step 4: Review */}
+                {addStep === 3 && (
+                  <div className="space-y-2 text-sm">
+                    <div><span className="font-semibold">Name:</span> {newProject.name}</div>
+                    <div><span className="font-semibold">Developer:</span> {developers.find(d => d.id === newProject.developerId)?.name || ''}</div>
+                    <div><span className="font-semibold">Zone:</span> {zones.find(z => z.id === newProject.zoneId)?.name || ''}</div>
+                    <div><span className="font-semibold">Type:</span> {newProject.type}</div>
+                    <div><span className="font-semibold">Properties:</span> {newProject.propertyIds.map(pid => properties.find(p => p.id === pid)?.title).join(', ')}</div>
+                    <div><span className="font-semibold">Payment Plans:</span> {newProject.paymentPlans.length}</div>
+                  </div>
+                )}
+                {/* Stepper Navigation */}
+                <div className="flex justify-between items-center pt-4 gap-2 flex-col sm:flex-row">
+                  <button type="button" onClick={() => setShowAddForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors w-full sm:w-auto mb-2 sm:mb-0">Cancel</button>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    {addStep > 0 && (
+                      <button type="button" onClick={() => setAddStep(s => s - 1)} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 w-full sm:w-auto">Back</button>
+                    )}
+                    {addStep < addSteps.length - 1 && (
+                      <button type="button" onClick={() => setAddStep(s => s + 1)} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto">Next</button>
+                    )}
+                    {addStep === addSteps.length - 1 && (
+                      <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">Add Project</button>
                     )}
                   </div>
-                ))}
-                <button type="button" onClick={() => handleAddPlan()} className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-xs">+ Add Plan</button>
-              </div>
-              <div className="col-span-2 flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={() => setShowAddForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors">Cancel</button>
-                <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors">Add Project</button>
-              </div>
-            </form>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -502,138 +625,170 @@ const ProjectsTab: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Edit Project</h3>
-            <form onSubmit={handleEditProject} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input type="text" value={editProject.name} onChange={e => setEditProject({ ...editProject, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Developer</label>
-                <select value={editProject.developerId} onChange={e => setEditProject({ ...editProject, developerId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="">Select Developer</option>
-                  {developers.map(dev => (
-                    <option key={dev.id} value={dev.id}>{dev.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                <select value={editProject.zoneId} onChange={e => setEditProject({ ...editProject, zoneId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="">Select Zone</option>
-                  {zones.map(zone => (
-                    <option key={zone.id} value={zone.id}>{zone.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                <input type="text" value={editProject.type} onChange={e => setEditProject({ ...editProject, type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Payment Plans</label>
-                {editProject.paymentPlans.map((plan, idx) => (
-                  <div key={idx} className="border rounded-lg p-4 mb-4 relative bg-gray-50">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Down Payment (%)</label>
-                        <input type="number" value={plan.downPayment} onChange={e => {
-                          const val = Number(e.target.value);
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downPayment: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Delivery (%)</label>
-                        <input type="number" value={plan.delivery} onChange={e => {
-                          const val = Number(e.target.value);
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, delivery: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Schedule Description</label>
-                        <input type="text" value={plan.schedule} onChange={e => {
-                          const val = e.target.value;
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, schedule: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Years to Pay</label>
-                        <input type="number" value={plan.payYears} onChange={e => {
-                          const val = Number(e.target.value);
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Installment Period</label>
-                        <select value={plan.installmentPeriod} onChange={e => {
-                          const val = e.target.value;
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="monthly">Monthly</option>
-                          <option value="quarterly">Quarterly</option>
-                          <option value="yearly">Yearly</option>
-                          <option value="custom">Custom</option>
-                        </select>
-                      </div>
-                      {plan.installmentPeriod === 'custom' && (
+            <div className="max-h-[60vh] sm:max-h-[70vh] overflow-y-auto px-1 sm:px-2">
+              <form onSubmit={handleEditProject} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input type="text" value={editProject.name} onChange={e => setEditProject({ ...editProject, name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Images</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={e => handleProjectImageUpload(e, true)}
+                    className="w-full px-2 py-2 border border-gray-300 rounded-lg bg-gray-50 text-base"
+                  />
+                  {editProject.images && editProject.images.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {editProject.images.map((img, idx) => (
+                        <div key={idx} className="relative group">
+                          <img src={img} alt="Preview" className="h-24 w-32 object-cover rounded border" />
+                          <button
+                            type="button"
+                            className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-80 group-hover:opacity-100"
+                            title="Remove image"
+                            onClick={() => setEditProject(prev => ({
+                              ...prev,
+                              images: prev.images.filter((_, i) => i !== idx)
+                            }))}
+                          >
+                            &times;
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Developer</label>
+                  <select value={editProject.developerId} onChange={e => setEditProject({ ...editProject, developerId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <option value="">Select Developer</option>
+                    {developers.map(dev => (
+                      <option key={dev.id} value={dev.id}>{dev.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <select value={editProject.zoneId} onChange={e => setEditProject({ ...editProject, zoneId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                    <option value="">Select Zone</option>
+                    {zones.map(zone => (
+                      <option key={zone.id} value={zone.id}>{zone.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <input type="text" value={editProject.type} onChange={e => setEditProject({ ...editProject, type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Plans</label>
+                  {editProject.paymentPlans.map((plan, idx) => (
+                    <div key={idx} className="border rounded-lg p-4 mb-4 relative bg-gray-50">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">Installment Every (Months)</label>
-                          <input type="number" value={plan.installmentMonthsCount} onChange={e => {
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Down Payment (%)</label>
+                          <input type="number" value={plan.downPayment} onChange={e => {
                             const val = Number(e.target.value);
                             setEditProject(prev => ({
                               ...prev,
-                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentMonthsCount: val } : p)
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downPayment: val } : p)
                             }));
                           }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                         </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Delivery (%)</label>
+                          <input type="number" value={plan.delivery} onChange={e => {
+                            const val = Number(e.target.value);
+                            setEditProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, delivery: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Schedule Description</label>
+                          <input type="text" value={plan.schedule} onChange={e => {
+                            const val = e.target.value;
+                            setEditProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, schedule: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Years to Pay</label>
+                          <input type="number" value={plan.payYears} onChange={e => {
+                            const val = Number(e.target.value);
+                            setEditProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Installment Period</label>
+                          <select value={plan.installmentPeriod} onChange={e => {
+                            const val = e.target.value;
+                            setEditProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="monthly">Monthly</option>
+                            <option value="quarterly">Quarterly</option>
+                            <option value="yearly">Yearly</option>
+                            <option value="custom">Custom</option>
+                          </select>
+                        </div>
+                        {plan.installmentPeriod === 'custom' && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Installment Every (Months)</label>
+                            <input type="number" value={plan.installmentMonthsCount} onChange={e => {
+                              const val = Number(e.target.value);
+                              setEditProject(prev => ({
+                                ...prev,
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentMonthsCount: val } : p)
+                              }));
+                            }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">First Installment Date</label>
+                          <input type="date" value={plan.firstInstallmentDate} onChange={e => {
+                            const val = e.target.value;
+                            setEditProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, firstInstallmentDate: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Delivery Date</label>
+                          <input type="date" value={plan.deliveryDate} onChange={e => {
+                            const val = e.target.value;
+                            setEditProject(prev => ({
+                              ...prev,
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, deliveryDate: val } : p)
+                            }));
+                          }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                        </div>
+                      </div>
+                      {editProject.paymentPlans.length > 1 && (
+                        <button type="button" onClick={() => handleRemovePlan(idx, true)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs">Remove</button>
                       )}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">First Installment Date</label>
-                        <input type="date" value={plan.firstInstallmentDate} onChange={e => {
-                          const val = e.target.value;
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, firstInstallmentDate: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Delivery Date</label>
-                        <input type="date" value={plan.deliveryDate} onChange={e => {
-                          const val = e.target.value;
-                          setEditProject(prev => ({
-                            ...prev,
-                            paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, deliveryDate: val } : p)
-                          }));
-                        }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                      </div>
                     </div>
-                    {editProject.paymentPlans.length > 1 && (
-                      <button type="button" onClick={() => handleRemovePlan(idx, true)} className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-xs">Remove</button>
-                    )}
-                  </div>
-                ))}
-                <button type="button" onClick={() => handleAddPlan(true)} className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-xs">+ Add Plan</button>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={() => setShowEditForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update Project</button>
-              </div>
-            </form>
+                  ))}
+                  <button type="button" onClick={() => handleAddPlan(true)} className="px-3 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-xs">+ Add Plan</button>
+                </div>
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button type="button" onClick={() => setShowEditForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update Project</button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
