@@ -27,13 +27,18 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
   const { user, logout } = useAuth();
   const { settings } = useSettings();
-  const { language, setLanguage, isRTL } = useLanguage();
+  const { language, setLanguage, isRTL, rtlClass, rtlPosition } = useLanguage();
   const { t } = useTranslation('common');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
 
   const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'ar' : 'en');
+    setIsSwitching(true);
+    setTimeout(() => {
+      setLanguage(language === 'en' ? 'ar' : 'en');
+      setIsSwitching(false);
+    }, 150); // Half of the transition duration
   };
 
   const menuItems = [
@@ -72,18 +77,21 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
           <div className="flex items-center">
             <button
               onClick={toggleLanguage}
-              className="relative inline-flex h-9 w-20 items-center rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl"
+              className="language-toggle-button relative inline-flex h-9 w-20 items-center rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl"
               role="switch"
               aria-checked={language === 'ar'}
               aria-label="Toggle language"
+              disabled={isSwitching}
             >
               <span className="sr-only">Toggle language</span>
               <span
                 className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 ease-in-out ${
-                  language === 'ar' ? 'translate-x-12' : 'translate-x-1'
+                  language === 'ar' ? 'translate-x-13' : 'translate-x-1'
                 }`}
               >
-                <Globe className="h-3.5 w-3.5 text-blue-600" />
+                <Globe className={`h-3.5 w-3.5 text-blue-600 transition-opacity duration-150 ${
+                  isSwitching ? 'opacity-0' : 'opacity-100'
+                }`} />
               </span>
               <div className="absolute inset-0 flex items-center justify-between px-2">
                 <span className={`text-xs font-bold transition-all duration-300 ${
@@ -166,9 +174,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     <>
       {/* Hamburger menu for mobile */}
       <button
-        className={`md:hidden fixed top-4 left-4 z-50 bg-white p-2 rounded-full shadow-lg border border-gray-200 transition-all duration-300 ${
+        className={`md:hidden fixed top-4 z-50 bg-white p-2 rounded-full shadow-lg border border-gray-200 transition-all duration-300 ${
           sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
+        } ${rtlPosition('left-4', 'right-4')}`}
         onClick={() => setSidebarOpen(true)}
         aria-label="Open sidebar"
       >
@@ -185,14 +193,14 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
             aria-label="Close sidebar"
           />
           {/* Sidebar */}
-          <div className="relative z-50">
+          <div className={`relative z-50 ${isRTL ? 'ml-auto' : ''}`}>
             {sidebarContent}
           </div>
         </div>
       )}
 
       {/* Sidebar for desktop */}
-      <div className="hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 md:w-64 md:z-30">
+      <div className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64 md:z-30 ${rtlPosition('md:left-0', 'md:right-0')}`}>
         {sidebarContent}
       </div>
     </>

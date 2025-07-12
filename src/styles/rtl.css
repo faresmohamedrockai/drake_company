@@ -4,15 +4,155 @@
   text-align: right;
 }
 
+/* RTL Responsive Wrapper */
+.rtl-responsive-wrapper {
+  direction: ltr;
+}
+
+.rtl-responsive-wrapper[dir="rtl"] {
+  direction: rtl;
+}
+
+/* Enhanced Navigation Tabs */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Tab hover effects */
+.tab-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Active tab indicator */
+.tab-active {
+  position: relative;
+}
+
+.tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
+
+/* Scroll gradient indicators */
+.scroll-gradient-left {
+  background: linear-gradient(90deg, rgba(249, 250, 251, 1) 0%, rgba(249, 250, 251, 0) 100%);
+}
+
+.scroll-gradient-right {
+  background: linear-gradient(270deg, rgba(249, 250, 251, 1) 0%, rgba(249, 250, 251, 0) 100%);
+}
+
+/* Language Toggle Animation Fixes for RTL */
+[dir="rtl"] .translate-x-10 {
+  transform: translateX(-2.5rem) !important;
+}
+
+[dir="rtl"] .translate-x-1 {
+  transform: translateX(0.25rem) !important;
+}
+
+/* Enhanced Language Toggle Button Styles */
+.language-toggle-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.language-toggle-button:hover {
+  transform: scale(1.05);
+  transition: transform 0.2s ease-in-out;
+}
+
+.language-toggle-button:active {
+  transform: scale(0.95);
+}
+
+.language-toggle-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.language-toggle-button:disabled:hover {
+  transform: none;
+}
+
+/* Globe icon transition */
+.language-toggle-button svg {
+  transition: opacity 0.15s ease-in-out;
+}
+
+/* Ensure language toggle animations work in both directions */
+.language-toggle-button .translate-x-10 {
+  transform: translateX(2.5rem);
+}
+
+.language-toggle-button .translate-x-1 {
+  transform: translateX(0.25rem);
+}
+
+[dir="rtl"] .language-toggle-button .translate-x-10 {
+  transform: translateX(-2.5rem);
+}
+
+[dir="rtl"] .language-toggle-button .translate-x-1 {
+  transform: translateX(0.25rem);
+}
+
+/* Smooth transition for the toggle circle */
+.language-toggle-button span {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Text fade animation */
+.language-toggle-button .text-xs {
+  transition: opacity 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+/* Sidebar RTL adjustments */
 [dir="rtl"] .sidebar {
   right: 0;
   left: auto;
 }
 
+/* Main content margin adjustments for RTL */
+[dir="rtl"] .md\:ml-64 {
+  margin-left: 0;
+  margin-right: 16rem;
+}
+
+[dir="rtl"] .md\:left-0 {
+  left: auto;
+  right: 0;
+}
+
+/* Mobile sidebar positioning for RTL */
+[dir="rtl"] .md\:flex.md\:flex-col.md\:fixed.md\:inset-y-0.md\:left-0.md\:w-64.md\:z-30 {
+  left: auto;
+  right: 0;
+}
+
+/* Mobile hamburger menu positioning for RTL */
+[dir="rtl"] .md\:hidden.fixed.top-4.left-4.z-50 {
+  left: auto;
+  right: 1rem;
+}
+
+/* Flex direction adjustments */
 [dir="rtl"] .flex-row {
   flex-direction: row-reverse;
 }
 
+/* Margin adjustments */
 [dir="rtl"] .mr-3 {
   margin-right: 0;
   margin-left: 0.75rem;
@@ -23,6 +163,7 @@
   margin-right: 0.75rem;
 }
 
+/* Text alignment adjustments */
 [dir="rtl"] .text-left {
   text-align: right;
 }
@@ -55,35 +196,10 @@
   margin-right: 0.5rem;
 }
 
-/* Sidebar specific RTL adjustments */
-[dir="rtl"] .md\:ml-64 {
-  margin-left: 0;
-  margin-right: 16rem;
-}
-
-[dir="rtl"] .md\:left-0 {
-  left: auto;
-  right: 0;
-}
-
 /* Navigation items */
 [dir="rtl"] .border-r-2 {
   border-right: none;
   border-left: 2px solid;
-}
-
-[dir="rtl"] .mr-3 {
-  margin-right: 0;
-  margin-left: 0.75rem;
-}
-
-/* Language toggle button */
-[dir="rtl"] .translate-x-12 {
-  transform: translateX(-3rem);
-}
-
-[dir="rtl"] .translate-x-1 {
-  transform: translateX(0.25rem);
 }
 
 /* Modal and overlay adjustments */
@@ -201,4 +317,250 @@
 
 [dir="rtl"] ::-webkit-scrollbar-thumb {
   direction: rtl;
+}
+
+/* Responsive grid adjustments for RTL */
+[dir="rtl"] .grid-cols-1.md\:grid-cols-4 {
+  direction: rtl;
+}
+
+[dir="rtl"] .grid-cols-1.md\:grid-cols-2 {
+  direction: rtl;
+}
+
+[dir="rtl"] .grid-cols-1.md\:grid-cols-3 {
+  direction: rtl;
+}
+
+/* Flex container adjustments for RTL */
+[dir="rtl"] .flex.items-center.justify-between {
+  flex-direction: row-reverse;
+}
+
+[dir="rtl"] .flex.items-center {
+  flex-direction: row-reverse;
+}
+
+/* Icon positioning in flex containers */
+[dir="rtl"] .flex.items-center .mr-3 {
+  margin-right: 0;
+  margin-left: 0.75rem;
+}
+
+[dir="rtl"] .flex.items-center .ml-3 {
+  margin-left: 0;
+  margin-right: 0.75rem;
+}
+
+/* Mobile responsive fixes for RTL */
+@media (max-width: 768px) {
+  [dir="rtl"] .md\:hidden.fixed.top-4.left-4.z-50 {
+    left: auto;
+    right: 1rem;
+  }
+  
+  [dir="rtl"] .md\:ml-64 {
+    margin-left: 0;
+    margin-right: 0;
+  }
+  
+  [dir="rtl"] .md\:mr-64 {
+    margin-right: 0;
+    margin-left: 0;
+  }
+}
+
+/* Ensure proper RTL layout for all screen sizes */
+[dir="rtl"] .flex.h-screen {
+  direction: rtl;
+}
+
+[dir="rtl"] .flex.h-screen > * {
+  direction: ltr;
+}
+
+/* Additional responsive utilities for RTL */
+[dir="rtl"] .space-x-4 > * + * {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+[dir="rtl"] .space-x-2 > * + * {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+[dir="rtl"] .space-x-1 > * + * {
+  margin-left: 0;
+  margin-right: 0.25rem;
+}
+
+/* RTL specific spacing utilities */
+[dir="rtl"] .rtl-space-x-reverse > * + * {
+  margin-right: 0;
+  margin-left: 1rem;
+}
+
+/* Form field spacing in RTL */
+[dir="rtl"] .flex.items-center.space-x-4 > * + * {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+/* Button spacing in RTL */
+[dir="rtl"] .flex.items-center.space-x-2 > * + * {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+/* Card content alignment */
+[dir="rtl"] .card-content {
+  text-align: right;
+}
+
+/* Modal content alignment */
+[dir="rtl"] .modal-content {
+  text-align: right;
+}
+
+/* Dropdown alignment */
+[dir="rtl"] .dropdown-content {
+  text-align: right;
+}
+
+/* Navigation menu alignment */
+[dir="rtl"] .nav-menu {
+  text-align: right;
+}
+
+/* Status indicators */
+[dir="rtl"] .status-indicator {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+/* Action buttons */
+[dir="rtl"] .action-buttons {
+  flex-direction: row-reverse;
+}
+
+/* Search input groups */
+[dir="rtl"] .search-input-group {
+  flex-direction: row-reverse;
+}
+
+/* Filter controls */
+[dir="rtl"] .filter-controls {
+  flex-direction: row-reverse;
+}
+
+/* Data table headers */
+[dir="rtl"] .data-table th {
+  text-align: right;
+}
+
+/* Data table cells */
+[dir="rtl"] .data-table td {
+  text-align: right;
+}
+
+/* Chart containers */
+[dir="rtl"] .chart-container {
+  direction: rtl;
+}
+
+/* Legend positioning */
+[dir="rtl"] .chart-legend {
+  text-align: right;
+}
+
+/* Tooltip positioning */
+[dir="rtl"] .tooltip-content {
+  text-align: right;
+}
+
+/* Notification positioning */
+[dir="rtl"] .notification {
+  text-align: right;
+}
+
+/* Loading spinner positioning */
+[dir="rtl"] .loading-spinner {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+/* Error message alignment */
+[dir="rtl"] .error-message {
+  text-align: right;
+}
+
+/* Success message alignment */
+[dir="rtl"] .success-message {
+  text-align: right;
+}
+
+/* Warning message alignment */
+[dir="rtl"] .warning-message {
+  text-align: right;
+}
+
+/* Info message alignment */
+[dir="rtl"] .info-message {
+  text-align: right;
+}
+
+/* RTL Wrapper specific styles */
+.rtl-responsive-wrapper[dir="rtl"] .flex.items-center.space-x-4 > * + * {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+.rtl-responsive-wrapper[dir="rtl"] .flex.items-center.space-x-2 > * + * {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+.rtl-responsive-wrapper[dir="rtl"] .flex.space-x-4 > * + * {
+  margin-left: 0;
+  margin-right: 1rem;
+}
+
+.rtl-responsive-wrapper[dir="rtl"] .flex.space-x-2 > * + * {
+  margin-left: 0;
+  margin-right: 0.5rem;
+}
+
+/* RTL responsive grid fixes */
+.rtl-responsive-wrapper[dir="rtl"] .grid {
+  direction: rtl;
+}
+
+.rtl-responsive-wrapper[dir="rtl"] .grid > * {
+  direction: ltr;
+}
+
+/* RTL responsive table fixes */
+.rtl-responsive-wrapper[dir="rtl"] table {
+  direction: rtl;
+}
+
+.rtl-responsive-wrapper[dir="rtl"] table th,
+.rtl-responsive-wrapper[dir="rtl"] table td {
+  text-align: right;
+}
+
+/* RTL responsive navigation fixes */
+.rtl-responsive-wrapper[dir="rtl"] nav ul {
+  flex-direction: row-reverse;
+}
+
+/* RTL responsive form fixes */
+.rtl-responsive-wrapper[dir="rtl"] .flex.items-center.space-x-4 {
+  flex-direction: row-reverse;
+}
+
+/* RTL responsive button group fixes */
+.rtl-responsive-wrapper[dir="rtl"] .flex.items-center.space-x-2 {
+  flex-direction: row-reverse;
 } 

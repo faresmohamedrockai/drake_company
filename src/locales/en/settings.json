@@ -139,6 +139,8 @@
     "saving": "Saving..."
   },
   "accessDenied": "Access Denied",
+  "accessDeniedMessage": "You don't have permission to access the Settings module. Please contact your administrator if you believe this is an error.",
+  "currentRole": "Current Role",
   "noPermissionToManageUsers": "You don't have permission to manage users.",
   "addNewUser": "Add New User",
   "team": "Team"

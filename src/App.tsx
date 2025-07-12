@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
-import { LanguageProvider } from './contexts/LanguageContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import Login from './components/auth/Login';
 import Sidebar from './components/layout/Sidebar';
 import Dashboard from './components/dashboard/Dashboard';
@@ -19,6 +19,7 @@ import './styles/rtl.css';
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
+  const { isRTL, rtlMargin } = useLanguage();
   const [currentView, setCurrentView] = useState('dashboard');
 
   // Update page title with company name
@@ -55,7 +56,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
-      <main className="flex-1 overflow-y-auto md:ml-64 transition-all">
+      <main className={`flex-1 overflow-y-auto transition-all ${rtlMargin('md:ml-64', 'md:mr-64')}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={currentView}

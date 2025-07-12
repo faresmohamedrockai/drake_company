@@ -5,6 +5,10 @@ interface LanguageContextType {
   language: string;
   setLanguage: (lang: string) => void;
   isRTL: boolean;
+  rtlClass: (ltrClass: string, rtlClass: string) => string;
+  rtlMargin: (ltrMargin: string, rtlMargin: string) => string;
+  rtlPadding: (ltrPadding: string, rtlPadding: string) => string;
+  rtlPosition: (ltrPosition: string, rtlPosition: string) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -27,6 +31,23 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const isRTL = language === 'ar';
 
+  // RTL utility functions
+  const rtlClass = (ltrClass: string, rtlClass: string) => {
+    return isRTL ? rtlClass : ltrClass;
+  };
+
+  const rtlMargin = (ltrMargin: string, rtlMargin: string) => {
+    return isRTL ? rtlMargin : ltrMargin;
+  };
+
+  const rtlPadding = (ltrPadding: string, rtlPadding: string) => {
+    return isRTL ? rtlPadding : ltrPadding;
+  };
+
+  const rtlPosition = (ltrPosition: string, rtlPosition: string) => {
+    return isRTL ? rtlPosition : ltrPosition;
+  };
+
   useEffect(() => {
     // Initialize language from localStorage
     const savedLanguage = localStorage.getItem('language') || 'en';
@@ -34,7 +55,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, isRTL }}>
+    <LanguageContext.Provider value={{ 
+      language, 
+      setLanguage, 
+      isRTL, 
+      rtlClass, 
+      rtlMargin, 
+      rtlPadding, 
+      rtlPosition 
+    }}>
       {children}
     </LanguageContext.Provider>
   );
