@@ -1,0 +1,87 @@
+{
+  "title": "إدارة الاجتماعات",
+  "description": "تنظيم وجدولة وتتبع جميع اجتماعاتك وزيارات العملاء",
+  "addMeeting": "إضافة اجتماع",
+  "editMeeting": "تعديل الاجتماع",
+  "meetingDetails": "تفاصيل الاجتماع",
+  "meetingTitle": "عنوان الاجتماع",
+  "meetingDate": "تاريخ الاجتماع",
+  "meetingTime": "وقت الاجتماع",
+  "meetingLocation": "مكان الاجتماع",
+  "meetingType": "نوع الاجتماع",
+  "meetingStatus": "حالة الاجتماع",
+  "meetingNotes": "ملاحظات الاجتماع",
+  "meetingAttendees": "حضور الاجتماع",
+  "searchMeetings": "البحث في الاجتماعات...",
+  "scheduleMeeting": "جدولة اجتماع",
+  "deleteConfirm": "هل أنت متأكد من حذف هذا الاجتماع؟",
+  "meetingTypeOptions": {
+    "client": "اجتماع مع العميل",
+    "internal": "اجتماع داخلي",
+    "presentation": "عرض تقديمي",
+    "negotiation": "تفاوض",
+    "followUp": "متابعة"
+  },
+  "meetingStatusOptions": {
+    "scheduled": "مجدول",
+    "confirmed": "مؤكد",
+    "completed": "مكتمل",
+    "cancelled": "ملغي",
+    "rescheduled": "إعادة جدولة"
+  },
+  "tableHeaders": {
+    "meeting": "الاجتماع",
+    "client": "العميل",
+    "dateTime": "التاريخ والوقت",
+    "duration": "المدة",
+    "type": "النوع",
+    "status": "الحالة",
+    "location": "الموقع",
+    "actions": "الإجراءات"
+  },
+  "form": {
+    "title": "العنوان",
+    "client": "العميل",
+    "date": "التاريخ",
+    "time": "الوقت",
+    "duration": "المدة",
+    "type": "النوع",
+    "status": "الحالة",
+    "locationType": "نوع الموقع",
+    "location": "الموقع",
+    "assignedTo": "تعيين إلى",
+    "notes": "ملاحظات",
+    "assignment": "التعيين",
+    "selectType": "اختر النوع",
+    "selectUser": "اختر المستخدم",
+    "selectLocationType": "اختر نوع الموقع"
+  },
+  "locationTypes": {
+    "online": "عبر الإنترنت",
+    "offline": "في الموقع"
+  },
+  "meetingTypes": {
+    "proposal": "عرض",
+    "siteVisit": "زيارة موقع",
+    "negotiation": "تفاوض"
+  },
+  "statuses": {
+    "scheduled": "مجدول",
+    "completed": "مكتمل",
+    "cancelled": "ملغي"
+  },
+  "actions": {
+    "edit": "تعديل",
+    "delete": "حذف",
+    "cancel": "إلغاء",
+    "update": "تحديث",
+    "schedule": "جدولة"
+  },
+  "modal": {
+    "editMeeting": "تعديل الاجتماع",
+    "scheduleMeeting": "جدولة اجتماع",
+    "close": "إغلاق"
+  },
+  "with": "مع",
+  "online": "عبر الإنترنت"
+} 

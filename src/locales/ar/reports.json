@@ -1,0 +1,121 @@
+{
+  "title": "تقارير الأداء",
+  "description": "تتبع أداء الفريق ومعدلات التحويل ومقاييس النشاط",
+  "accessDenied": "تم رفض الوصول",
+  "noPermission": "ليس لديك إذن لعرض التقارير.",
+  "salesReport": "تقرير المبيعات",
+  "leadReport": "تقرير العملاء المحتملين",
+  "propertyReport": "تقرير العقارات",
+  "meetingReport": "تقرير الاجتماعات",
+  "contractReport": "تقرير العقود",
+  "revenueReport": "تقرير الإيرادات",
+  "performanceReport": "تقرير الأداء",
+  "generateReport": "إنشاء تقرير",
+  "exportReport": "تصدير التقرير",
+  "reportPeriod": "فترة التقرير",
+  "reportType": "نوع التقرير",
+  "reportFilters": "فلاتر التقرير",
+  "reportSummary": "ملخص التقرير",
+  "reportDetails": "تفاصيل التقرير",
+  "totalSales": "إجمالي المبيعات",
+  "totalRevenue": "إجمالي الإيرادات",
+  "averageDealSize": "متوسط حجم الصفقة",
+  "conversionRate": "معدل التحويل",
+  "salesByPeriod": "المبيعات حسب الفترة",
+  "topPerformers": "أفضل الأداء",
+  "controls": {
+    "searchUsers": "البحث في المستخدمين...",
+    "allUsers": "جميع المستخدمين",
+    "showInactive": "إظهار غير النشطين",
+    "dashboard": "لوحة التحكم",
+    "detailed": "مفصل",
+    "dash": "لوحة",
+    "list": "قائمة"
+  },
+  "export": {
+    "exportData": "تصدير البيانات:",
+    "csv": "CSV",
+    "json": "JSON",
+    "excel": "Excel"
+  },
+  "timeframes": {
+    "today": "اليوم",
+    "thisWeek": "هذا الأسبوع",
+    "thisMonth": "هذا الشهر",
+    "customRange": "نطاق مخصص",
+    "to": "إلى"
+  },
+  "filters": {
+    "activityFeed": "سجل النشاط",
+    "feed": "السجل",
+    "sortByPerformance": "ترتيب حسب الأداء",
+    "sortByName": "ترتيب حسب الاسم",
+    "sortByActivity": "ترتيب حسب النشاط"
+  },
+  "activityFeed": {
+    "recentActivityFeed": "سجل النشاط الأخير",
+    "leadUpdated": "تم تحديث العميل المحتمل",
+    "meeting": "اجتماع",
+    "by": "بواسطة"
+  },
+  "metrics": {
+    "totalUsers": "إجمالي المستخدمين",
+    "active": "نشط",
+    "totalLeads": "إجمالي العملاء المحتملين",
+    "assigned": "مُعين",
+    "avgConversion": "متوسط التحويل",
+    "rate": "المعدل",
+    "callCompletion": "إكمال المكالمات",
+    "avgCallCompletion": "متوسط إكمال المكالمات",
+    "avgMeetingCompletion": "متوسط إكمال الاجتماعات"
+  },
+  "charts": {
+    "performanceMetrics": "مقاييس الأداء",
+    "roleDistribution": "توزيع الأدوار",
+    "performanceTrends": "اتجاهات الأداء",
+    "avgConversionRate": "متوسط معدل التحويل",
+    "avgCallCompletion": "متوسط إكمال المكالمات",
+    "avgMeetingCompletion": "متوسط إكمال الاجتماعات"
+  },
+  "performance": {
+    "excellent": "ممتاز",
+    "good": "جيد",
+    "fair": "مقبول",
+    "needsImprovement": "يحتاج تحسين",
+    "outstanding": "متفوق",
+    "needsWork": "يحتاج عمل",
+    "perfect": "مثالي",
+    "needsAttention": "يحتاج انتباه"
+  },
+  "tableHeaders": {
+    "user": "المستخدم",
+    "role": "الدور",
+    "leads": "العملاء المحتملين",
+    "calls": "المكالمات",
+    "visits": "الزيارات",
+    "meetings": "الاجتماعات",
+    "deals": "الصفقات",
+    "conversion": "التحويل",
+    "lastActivity": "آخر نشاط",
+    "status": "الحالة"
+  },
+  "mobileLabels": {
+    "leads": "العملاء المحتملين",
+    "calls": "المكالمات",
+    "visits": "الزيارات",
+    "meetings": "الاجتماعات",
+    "closedDeals": "الصفقات المغلقة",
+    "conversionRate": "معدل التحويل",
+    "lastActivity": "آخر نشاط"
+  },
+  "statuses": {
+    "active": "نشط",
+    "inactive": "غير نشط"
+  },
+  "roles": {
+    "salesRep": "مندوب مبيعات",
+    "teamLeader": "قائد الفريق",
+    "salesAdmin": "مدير مبيعات",
+    "admin": "مدير"
+  }
+} 

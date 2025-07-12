@@ -3,6 +3,8 @@ import { Search, Plus, Edit, Trash2, MapPin, FileText } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -36,6 +38,8 @@ interface Property {
 // Add FormState type for form
 type FormState = {
   title: string;
+  titleEn: string;
+  titleAr: string;
   type: string;
   price: string;
   location: string;
@@ -59,11 +63,14 @@ const PropertiesTab: React.FC = () => {
   const { properties, addProperty, updateProperty, deleteProperty, projects, zones, developers, leads } = useData();
   const { user } = useAuth();
   const { settings } = useSettings(); // Add settings context
+  const { language } = useLanguage(); // Add language context
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>({
     title: '',
+    titleEn: '',
+    titleAr: '',
     type: '',
     price: '', // will be handled as number in input and calculations
     location: '',
@@ -100,19 +107,87 @@ const PropertiesTab: React.FC = () => {
   const userRolesAllowed = ['Admin', 'Sales Admin', 'Team Leader', 'Sales Rep'];
   const canGenerateReport = userRolesAllowed.includes(user?.role || '');
   const [formStep, setFormStep] = useState(0); // Stepper for add/edit form
+  const { t } = useTranslation('inventory');
   const formSteps = [
-    'Basic Info',
-    'Details',
-    'Location',
-    'Review'
+    t('stepBasicInfo'),
+    t('stepDetails'),
+    t('stepLocation'),
+    t('stepReview')
   ];
   const [showPlanPopup, setShowPlanPopup] = useState(false);
   const [showImageModal, setShowImageModal] = useState<{ images: string[], title: string } | null>(null);
+
+  // Helper functions to get language-appropriate data
+  const getPropertyName = (property: any) => {
+    if (!property) return '';
+    if (language === 'ar' && property.titleAr) {
+      return property.titleAr;
+    }
+    return property.titleEn || property.title || '';
+  };
+
+  const getPropertyType = (type: string | undefined) => {
+    if (!type) return '';
+    if (language === 'ar') {
+      const typeMap: { [key: string]: string } = {
+        'Apartment': 'شقة',
+        'Villa': 'فيلا',
+        'Townhouse': 'تاون هاوس',
+        'Commercial': 'تجاري',
+        'Office': 'مكتب',
+        'Shop': 'محل',
+        'Land': 'أرض',
+        'Other': 'أخرى'
+      };
+      return typeMap[type] || type;
+    }
+    return type;
+  };
+
+  const getAmenities = (amenities: string[]) => {
+    if (language === 'ar') {
+      const amenitiesMap: { [key: string]: string } = {
+        'Elevator': 'مصعد',
+        'Security': 'أمن',
+        'Garden': 'حديقة',
+        'Pool': 'مسبح',
+        'Other': 'أخرى'
+      };
+      return amenities.map(amenity => amenitiesMap[amenity] || amenity);
+    }
+    return amenities;
+  };
+
+  const getProjectName = (projectId: string | undefined) => {
+    if (!projectId) return '';
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return '';
+    
+    if (language === 'ar' && project.nameAr) {
+      return project.nameAr;
+    }
+    return project.nameEn || project.name;
+  };
+
+  const getStatusText = (status: string | undefined) => {
+    if (!status) return '';
+    if (language === 'ar') {
+      const statusMap: { [key: string]: string } = {
+        'Available': 'متاح',
+        'Rented': 'مؤجر',
+        'Sold': 'مباع'
+      };
+      return statusMap[status] || status;
+    }
+    return status;
+  };
 
   const openAddForm = () => {
     setEditId(null);
     setForm({
       title: '',
+      titleEn: '',
+      titleAr: '',
       type: '',
       price: '', // will be handled as number in input and calculations
       location: '',
@@ -139,6 +214,8 @@ const PropertiesTab: React.FC = () => {
     setEditId(property.id);
     setForm({
       ...property,
+      titleEn: property.titleEn || '',
+      titleAr: property.titleAr || '',
       zoneId: property.zoneId || '',
       projectId: property.projectId || '',
       developerId: property.developerId || '',
@@ -225,6 +302,7 @@ const PropertiesTab: React.FC = () => {
         : form.amenities,
       images: form.images && form.images.length ? form.images : [],
       paymentPlanIndex: form.paymentPlanIndex,
+      title: form.titleEn + (form.titleAr ? ' / ' + form.titleAr : ''), // Combine names for display
     };
     if (editId) {
       updateProperty(editId, propertyData);
@@ -250,8 +328,11 @@ const PropertiesTab: React.FC = () => {
   };
 
   const filteredProperties = properties.filter(property =>
-    (property.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (getPropertyName(property).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getPropertyType(property.type).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getAmenities(property.amenities || []).join(' ').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getProjectName(property.projectId).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getStatusText(property.status).toLowerCase().includes(searchTerm.toLowerCase()) ||
       property.location.toLowerCase().includes(searchTerm.toLowerCase())) &&
     (filterProject ? property.projectId === filterProject : true) &&
     (filterZone ? property.zoneId === filterZone : true) &&
@@ -317,6 +398,13 @@ const PropertiesTab: React.FC = () => {
 
   return (
     <div>
+      {/* Title */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {language === 'ar' ? 'العقارات' : 'Properties'}
+        </h2>
+      </div>
+      
       {/* Search and Actions + Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-2 flex-1">
@@ -324,42 +412,48 @@ const PropertiesTab: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search properties..."
+              placeholder={language === 'ar' ? 'البحث في العقارات...' : 'Search properties...'}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="">All Projects</option>
+            <option value="">{language === 'ar' ? 'جميع المشاريع' : 'All Projects'}</option>
             {projects.map(project => (
-              <option key={project.id} value={project.id}>{project.name}</option>
+              <option key={project.id} value={project.id}>
+                {language === 'ar' && project.nameAr ? project.nameAr : (project.nameEn || project.name)}
+              </option>
             ))}
           </select>
           <select value={filterZone} onChange={e => setFilterZone(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="">All Zones</option>
+            <option value="">{language === 'ar' ? 'جميع المناطق' : 'All Zones'}</option>
             {zones.map(zone => (
-              <option key={zone.id} value={zone.id}>{zone.name}</option>
+              <option key={zone.id} value={zone.id}>
+                {language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name)}
+              </option>
             ))}
           </select>
           <select value={filterDeveloper} onChange={e => setFilterDeveloper(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="">All Developers</option>
+            <option value="">{language === 'ar' ? 'جميع المطورين' : 'All Developers'}</option>
             {developers.map(dev => (
-              <option key={dev.id} value={dev.id}>{dev.name}</option>
+              <option key={dev.id} value={dev.id}>
+                {language === 'ar' && dev.nameAr ? dev.nameAr : (dev.nameEn || dev.name)}
+              </option>
             ))}
           </select>
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-            <option value="">All Statuses</option>
-            <option value="Available">Available</option>
-            <option value="Rented">Rented</option>
-            <option value="Sold">Sold</option>
+            <option value="">{language === 'ar' ? 'جميع الحالات' : 'All Statuses'}</option>
+            <option value="Available">{getStatusText('Available')}</option>
+            <option value="Rented">{getStatusText('Rented')}</option>
+            <option value="Sold">{getStatusText('Sold')}</option>
           </select>
         </div>
         <div className="flex flex-row gap-2 items-center">
           {user?.role !== 'Sales Rep' && (
             <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
               <Plus className="h-5 w-5 mr-2" />
-              Add Property
+              {t('addProperty')}
             </button>
           )}
         </div>
@@ -367,20 +461,20 @@ const PropertiesTab: React.FC = () => {
 
       {/* Properties Table */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">Title</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Type</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Price</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Location</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Area</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Beds/Baths</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Amenities</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Zone</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Project</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">Status</th>
-              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">Actions</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">{t('propertyName')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">{t('propertyType')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">{t('propertyPrice')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">{t('propertyLocation')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">{t('area')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">{t('bedrooms')}/{t('bathrooms')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">{t('amenities')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">{t('zone')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">{t('project')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">{t('status')}</th>
+              <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">{t('actions')}</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -391,22 +485,22 @@ const PropertiesTab: React.FC = () => {
                   <td className="px-2 py-4">
                     <button 
                       className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer truncate block w-full text-left text-xs"
-                      title={property.title}
+                      title={getPropertyName(property)}
                       onClick={() => {
                         const propertyImages = (property as any).images || [];
                         const projectImages = (projects.find(p => p.id === property.projectId) as any)?.images || [];
                         const allImages = [...propertyImages, ...projectImages];
                         if (allImages.length > 0) {
-                          setShowImageModal({ images: allImages, title: property.title });
+                          setShowImageModal({ images: allImages, title: getPropertyName(property) });
                         }
                       }}
                     >
-                      {property.title}
+                      {getPropertyName(property)}
                     </button>
                   </td>
                   <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={property.type}>
-                      {property.type}
+                    <span className="text-xs text-gray-900 truncate block" title={getPropertyType(property.type)}>
+                      {getPropertyType(property.type)}
                     </span>
                   </td>
                   <td className="px-2 py-4">
@@ -430,8 +524,8 @@ const PropertiesTab: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={Array.isArray(property.amenities) ? property.amenities.join(', ') : property.amenities}>
-                      {Array.isArray(property.amenities) ? property.amenities.join(', ') : property.amenities}
+                    <span className="text-xs text-gray-900 truncate block" title={getAmenities(property.amenities || []).join(', ')}>
+                      {getAmenities(property.amenities || []).join(', ')}
                     </span>
                   </td>
                   <td className="px-2 py-4">
@@ -449,29 +543,29 @@ const PropertiesTab: React.FC = () => {
                     )}
                   </td>
                   <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={property.project}>
-                      {property.project}
+                    <span className="text-xs text-gray-900 truncate block" title={getProjectName(property.projectId)}>
+                      {getProjectName(property.projectId)}
                     </span>
                   </td>
                   <td className="px-2 py-4">
-                    <span className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(property.status)} truncate max-w-full`} title={property.status}>
-                      {property.status}
+                    <span className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(property.status)} truncate max-w-full`} title={getStatusText(property.status)}>
+                      {getStatusText(property.status)}
                     </span>
                   </td>
                   <td className="px-2 py-4">
                     <div className="flex space-x-1">
                       {user?.role !== 'Sales Rep' && (
                         <>
-                          <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title="Edit property">
+                          <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title={t('editProperty')}>
                             <Edit className="h-3 w-3" />
                           </button>
-                          <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id)} title="Delete property">
+                          <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id)} title={t('deleteProperty')}>
                             <Trash2 className="h-3 w-3" />
                           </button>
                         </>
                       )}
                       {canGenerateReport && (
-                        <button className="text-green-600 hover:text-green-800" title="Generate Client Report" onClick={() => handleOpenReport(property)}>
+                        <button className="text-green-600 hover:text-green-800" title={t('generateClientReport')} onClick={() => handleOpenReport(property)}>
                           <FileText className="h-4 w-4" />
                         </button>
                       )}
@@ -488,7 +582,7 @@ const PropertiesTab: React.FC = () => {
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-8 w-full max-w-3xl mx-2 sm:mx-auto">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">{editId ? 'Edit Property' : 'Add Property'}</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{editId ? t('editProperty') : t('addProperty')}</h3>
             {/* Stepper */}
             <div className="flex items-center justify-center mb-6">
               {formSteps.map((label, idx) => (
@@ -503,34 +597,38 @@ const PropertiesTab: React.FC = () => {
               {formStep === 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                    <input type="text" name="title" value={form.title} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyNameEn')}</label>
+                    <input type="text" name="titleEn" value={form.titleEn} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyNameAr')}</label>
+                    <input type="text" name="titleAr" value={form.titleAr} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyType')}</label>
                     <select name="type" value={form.type} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
-                      <option value="">Select Type</option>
-                      <option value="Apartment">Apartment</option>
-                      <option value="Villa">Villa</option>
-                      <option value="Townhouse">Townhouse</option>
-                      <option value="Commercial">Commercial</option>
-                      <option value="Other">Other</option>
+                      <option value="">{t('selectType')}</option>
+                      <option value="Apartment">{getPropertyType('Apartment')}</option>
+                      <option value="Villa">{getPropertyType('Villa')}</option>
+                      <option value="Townhouse">{getPropertyType('Townhouse')}</option>
+                      <option value="Commercial">{getPropertyType('Commercial')}</option>
+                      <option value="Other">{getPropertyType('Other')}</option>
                     </select>
                     {showTypeOther && (
-                      <input type="text" name="typeOther" placeholder="Specify other type" value={form.typeOther || ''} onChange={e => setForm(prev => ({ ...prev, typeOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" />
+                      <input type="text" name="typeOther" placeholder={t('specifyOtherType')} value={form.typeOther || ''} onChange={e => setForm(prev => ({ ...prev, typeOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" />
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                    <input type="number" name="price" value={form.price} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder="2200000" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyPrice')}</label>
+                    <input type="number" name="price" value={form.price} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'أدخل السعر' : 'Enter price'} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                    <input type="text" name="location" value={form.location} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyLocation')}</label>
+                    <input type="text" name="location" value={form.location} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'أدخل الموقع' : 'Enter location'} />
                   </div>
                   {/* Image upload (multiple images) */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Property Images</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyImages')}</label>
                     <input
                       type="file"
                       accept="image/*"
@@ -546,7 +644,7 @@ const PropertiesTab: React.FC = () => {
                             <button
                               type="button"
                               className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-80 group-hover:opacity-100"
-                              title="Remove image"
+                              title={t('removeImage')}
                               onClick={() => setForm(prev => ({
                                 ...prev,
                                 images: prev.images.filter((_, i) => i !== idx)
@@ -565,25 +663,25 @@ const PropertiesTab: React.FC = () => {
               {formStep === 1 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Area (SQFT)</label>
-                    <input type="text" name="area" value={form.area} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('area')}</label>
+                    <input type="text" name="area" value={form.area} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'أدخل المساحة' : 'Enter area'} />
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bedrooms</label>
-                      <input type="text" name="bedrooms" value={form.bedrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('bedrooms')}</label>
+                      <input type="text" name="bedrooms" value={form.bedrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'عدد الغرف' : 'Number of bedrooms'} />
                     </div>
                     <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bathrooms</label>
-                      <input type="text" name="bathrooms" value={form.bathrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('bathrooms')}</label>
+                      <input type="text" name="bathrooms" value={form.bathrooms} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'عدد الحمامات' : 'Number of bathrooms'} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Parking</label>
-                    <input type="text" name="parking" value={form.parking} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('parking')}</label>
+                    <input type="text" name="parking" value={form.parking} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'موقف السيارات' : 'Parking spaces'} />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Amenities</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('amenities')}</label>
                     <div className="flex flex-wrap gap-3">
                       {['Elevator', 'Security', 'Garden', 'Pool', 'Other'].map(option => (
                         <label key={option} className="inline-flex items-center text-sm font-normal">
@@ -603,13 +701,13 @@ const PropertiesTab: React.FC = () => {
                             }}
                             className="mr-2"
                           />
-                          {option}
+                          <span className="ml-2">{getAmenities([option])[0]}</span>
                         </label>
                       ))}
+                      {showAmenitiesOther && (
+                        <input type="text" name="amenitiesOther" placeholder={t('specifyOtherAmenity')} value={form.amenitiesOther || ''} onChange={e => setForm(prev => ({ ...prev, amenitiesOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" />
+                      )}
                     </div>
-                    {showAmenitiesOther && (
-                      <input type="text" name="amenitiesOther" placeholder="Specify other amenities" value={form.amenitiesOther || ''} onChange={e => setForm(prev => ({ ...prev, amenitiesOther: e.target.value }))} className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" />
-                    )}
                   </div>
                 </div>
               )}
@@ -618,19 +716,21 @@ const PropertiesTab: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] sm:max-h-[70vh] overflow-y-auto">
                   {/* Project */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('project')}</label>
                     <select name="projectId" value={form.projectId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
-                      <option value="">Select Project</option>
+                      <option value="">{t('selectProject')}</option>
                       {projects.map(project => (
-                        <option key={project.id} value={project.id}>{project.name}</option>
+                        <option key={project.id} value={project.id}>
+                          {language === 'ar' && project.nameAr ? project.nameAr : (project.nameEn || project.name)}
+                        </option>
                       ))}
                     </select>
                   </div>
                   {/* Developer */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Developer</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('developer')}</label>
                     <select name="developerId" value={form.developerId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
-                      <option value="">Select Developer</option>
+                      <option value="">{t('selectDeveloper')}</option>
                       {developers.map(dev => (
                         <option key={dev.id} value={dev.id}>{dev.name}</option>
                       ))}
@@ -646,10 +746,10 @@ const PropertiesTab: React.FC = () => {
                       const zone = zones.find(z => z.id === projectHasZone);
                       return (
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Zone (from project)</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('zoneFromProject')}</label>
                           <input 
                             type="text" 
-                            value={zone?.name || 'Unknown Zone'} 
+                            value={zone?.name || t('unknownZone')} 
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-base cursor-not-allowed" 
                             readOnly 
                           />
@@ -660,9 +760,9 @@ const PropertiesTab: React.FC = () => {
                     // If project doesn't have a zone, show zone selection
                     return (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">{t('zone')}</label>
                         <select name="zoneId" value={form.zoneId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
-                          <option value="">Select Zone</option>
+                          <option value="">{t('selectZone')}</option>
                           {zones.map(zone => (
                             <option key={zone.id} value={zone.id}>{zone.name}</option>
                           ))}
@@ -672,45 +772,45 @@ const PropertiesTab: React.FC = () => {
                   })()}
                   {/* Status (last) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('status')}</label>
                     <select name="status" value={form.status} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
-                      <option value="Available">Available</option>
-                      <option value="Rented">Rented</option>
-                      <option value="Sold">Sold</option>
+                      <option value="Available">{getStatusText('Available')}</option>
+                      <option value="Rented">{getStatusText('Rented')}</option>
+                      <option value="Sold">{getStatusText('Sold')}</option>
                     </select>
                   </div>
                   {/* Payment Plan Selector (now always show cards, no select or popup) */}
                   {selectedProject && paymentPlans.length > 0 && (
                     <div className="md:col-span-2 mt-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Select Payment Plan</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('selectPaymentPlan')}</label>
                       {/* Responsive slider/grid for payment plans */}
-                      <div className="flex md:grid md:grid-cols-2 gap-4 overflow-x-auto md:overflow-x-visible pb-2 snap-x snap-mandatory">
+                      <div className="flex md:grid md:grid-cols-2 gap-6 overflow-x-auto md:overflow-x-visible pb-2 snap-x snap-mandatory px-4 md:px-0">
                         {paymentPlans.map((plan, idx) => {
                           const isSelected = form.paymentPlanIndex === idx;
                           return (
                             <div
                               key={idx}
-                              className={`min-w-[65vw] max-w-[75vw] md:min-w-0 md:max-w-none snap-center cursor-pointer transition-all duration-200 rounded-xl border-2 shadow-md p-3 bg-gradient-to-br from-blue-100 via-white to-pink-100 hover:from-blue-200 hover:to-pink-200 hover:shadow-xl relative group ${isSelected ? 'border-blue-600 ring-2 ring-blue-300 scale-105' : 'border-gray-200'}`}
-                              style={{ flex: '0 0 65vw' }}
+                              className={`min-w-[60vw] max-w-[70vw] md:min-w-0 md:max-w-none snap-center cursor-pointer transition-all duration-200 rounded-xl border-2 shadow-md p-2 bg-gradient-to-br from-blue-100 via-white to-pink-100 hover:from-blue-200 hover:to-pink-200 hover:shadow-xl relative group ${isSelected ? 'border-blue-600 ring-2 ring-blue-300 scale-105' : 'border-gray-200'}`}
+                              style={{ flex: '0 0 60vw' }}
                               onClick={() => setForm(prev => ({ ...prev, paymentPlanIndex: idx }))}
                             >
                               <div className="flex items-center gap-2 mb-1">
                                 <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full ${isSelected ? 'bg-blue-600 text-white' : 'bg-blue-200 text-blue-700'} shadow-md`}>
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
                                 </span>
-                                <span className="font-semibold text-blue-800 text-base">Plan {idx + 1}</span>
+                                <span className="font-semibold text-blue-800 text-base">{t('plan')} {idx + 1}</span>
                                 {plan.schedule && <span className="ml-2 text-[10px] bg-pink-200 text-pink-800 px-1.5 py-0.5 rounded-full">{plan.schedule}</span>}
-                                {isSelected && <span className="ml-auto text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full shadow">Selected</span>}
+                                {isSelected && <span className="ml-auto text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full shadow">{t('selected')}</span>}
                               </div>
                               <div className="text-xs text-gray-800 space-y-0.5">
-                                <div className="flex items-center gap-2"><span className="font-medium">Down Payment:</span> <span className="text-blue-700 font-bold">{plan.downPayment}%</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">Installments:</span> <span className="text-green-700 font-bold">{100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">Delivery:</span> <span className="text-orange-700 font-bold">{plan.delivery}%</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">Years to Pay:</span> <span className="text-purple-700 font-bold">{plan.payYears}</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">Installment Period:</span> <span className="text-pink-700 font-bold">{plan.installmentPeriod}{plan.installmentPeriod === 'custom' && plan.installmentMonthsCount ? ` (${plan.installmentMonthsCount} months)` : ''}</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">First Installment Date:</span> <span className="text-gray-700 font-bold">{plan.firstInstallmentDate}</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">Delivery Date:</span> <span className="text-gray-700 font-bold">{plan.deliveryDate}</span></div>
-                                {plan.schedule && <div className="flex items-center gap-2"><span className="font-medium">Schedule Description:</span> <span className="text-blue-700 font-bold">{plan.schedule}</span></div>}
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('downPayment')}:</span> <span className="text-blue-700 font-bold">{plan.downPayment}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('installments')}:</span> <span className="text-green-700 font-bold">{100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('delivery')}:</span> <span className="text-orange-700 font-bold">{plan.delivery}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('yearsToPay')}:</span> <span className="text-purple-700 font-bold">{plan.payYears}</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('installmentPeriod')}:</span> <span className="text-pink-700 font-bold">{plan.installmentPeriod}{plan.installmentPeriod === 'custom' && plan.installmentMonthsCount ? ` (${plan.installmentMonthsCount} {t('months')})` : ''}</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('firstInstallmentDate')}:</span> <span className="text-gray-700 font-bold">{plan.firstInstallmentDate}</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('deliveryDate')}:</span> <span className="text-gray-700 font-bold">{plan.deliveryDate}</span></div>
+                                {plan.schedule && <div className="flex items-center gap-2"><span className="font-medium">{t('scheduleDescription')}:</span> <span className="text-blue-700 font-bold">{plan.schedule}</span></div>}
                               </div>
                             </div>
                           );
@@ -723,19 +823,20 @@ const PropertiesTab: React.FC = () => {
               {/* Step 4: Review */}
               {formStep === 3 && (
                 <div className="space-y-2 text-sm max-h-[60vh] sm:max-h-[70vh] overflow-y-auto px-1 sm:px-2">
-                  <div><span className="font-semibold">Title:</span> {form.title}</div>
-                  <div><span className="font-semibold">Type:</span> {showTypeOther ? form.typeOther : form.type}</div>
-                  <div><span className="font-semibold">Price:</span> {form.price}</div>
-                  <div><span className="font-semibold">Location:</span> {form.location}</div>
-                  <div><span className="font-semibold">Area:</span> {form.area}</div>
-                  <div><span className="font-semibold">Bedrooms:</span> {form.bedrooms}</div>
-                  <div><span className="font-semibold">Bathrooms:</span> {form.bathrooms}</div>
-                  <div><span className="font-semibold">Parking:</span> {form.parking}</div>
-                  <div><span className="font-semibold">Amenities:</span> {showAmenitiesOther ? [...form.amenities.filter(a => a !== 'Other'), form.amenitiesOther].filter(Boolean).join(', ') : form.amenities.join(', ')}</div>
-                  <div><span className="font-semibold">Zone:</span> {zones.find(z => z.id === form.zoneId)?.name || ''}</div>
-                  <div><span className="font-semibold">Project:</span> {projects.find(p => p.id === form.projectId)?.name || ''}</div>
-                  <div><span className="font-semibold">Developer:</span> {developers.find(d => d.id === form.developerId)?.name || ''}</div>
-                  <div><span className="font-semibold">Status:</span> {form.status}</div>
+                  <div><span className="font-semibold">{t('propertyNameEn')}:</span> {form.titleEn}</div>
+                  <div><span className="font-semibold">{t('propertyNameAr')}:</span> {form.titleAr}</div>
+                  <div><span className="font-semibold">{t('type')}:</span> {showTypeOther ? form.typeOther : getPropertyType(form.type)}</div>
+                  <div><span className="font-semibold">{t('price')}:</span> {form.price}</div>
+                  <div><span className="font-semibold">{t('location')}:</span> {form.location}</div>
+                  <div><span className="font-semibold">{t('area')}:</span> {form.area}</div>
+                  <div><span className="font-semibold">{t('bedrooms')}:</span> {form.bedrooms}</div>
+                  <div><span className="font-semibold">{t('bathrooms')}:</span> {form.bathrooms}</div>
+                  <div><span className="font-semibold">{t('parking')}:</span> {form.parking}</div>
+                  <div><span className="font-semibold">{t('amenities')}:</span> {showAmenitiesOther ? [...form.amenities.filter(a => a !== 'Other'), form.amenitiesOther].filter(Boolean).join(', ') : getAmenities(form.amenities).join(', ')}</div>
+                  <div><span className="font-semibold">{t('zone')}:</span> {zones.find(z => z.id === form.zoneId)?.name || ''}</div>
+                  <div><span className="font-semibold">{t('project')}:</span> {getProjectName(form.projectId)}</div>
+                  <div><span className="font-semibold">{t('developer')}:</span> {developers.find(d => d.id === form.developerId)?.name || ''}</div>
+                  <div><span className="font-semibold">{t('status')}:</span> {getStatusText(form.status)}</div>
                   {/* Payment Plan Review (always show if project selected) */}
                   {(() => {
                     const selectedProject = projects.find(p => p.id === form.projectId);
@@ -748,15 +849,15 @@ const PropertiesTab: React.FC = () => {
                           const schedule = generatePaymentSchedule(price, plan);
                           return (
                             <div className="mt-4">
-                              <div className="font-semibold mb-1">Selected Payment Plan:</div>
-                              <div className="mb-2 text-xs text-gray-700">{plan.schedule ? plan.schedule : `Plan ${form.paymentPlanIndex + 1}`}</div>
+                              <div className="font-semibold mb-1">{t('selectedPaymentPlan')}:</div>
+                              <div className="mb-2 text-xs text-gray-700">{plan.schedule ? plan.schedule : `${t('plan')} ${form.paymentPlanIndex + 1}`}</div>
                               <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
                                 <table className="w-full text-xs">
                                   <thead>
                                     <tr className="bg-blue-600 text-white">
-                                      <th className="border px-2 py-1 font-bold">Payment</th>
-                                      <th className="border px-2 py-1 font-bold">Date</th>
-                                      <th className="border px-2 py-1 font-bold">Amount</th>
+                                      <th className="border px-2 py-1 font-bold">{t('payment')}</th>
+                                      <th className="border px-2 py-1 font-bold">{t('date')}</th>
+                                      <th className="border px-2 py-1 font-bold">{t('amount')}</th>
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -783,7 +884,7 @@ const PropertiesTab: React.FC = () => {
                         }
                       } else {
                         return (
-                          <div className="mt-4 text-xs text-red-500">No payment plans found for this project. Please add at least one plan in the Projects tab.</div>
+                          <div className="mt-4 text-xs text-red-500">{t('noPaymentPlansFound')}</div>
                         );
                       }
                     }
@@ -793,16 +894,16 @@ const PropertiesTab: React.FC = () => {
               )}
               {/* Stepper Navigation */}
               <div className="flex justify-between items-center pt-4 gap-2 flex-col sm:flex-row">
-                <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors w-full sm:w-auto mb-2 sm:mb-0">Cancel</button>
+                <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors w-full sm:w-auto mb-2 sm:mb-0">{t('cancel')}</button>
                 <div className="flex gap-2 w-full sm:w-auto">
                   {formStep > 0 && (
-                    <button type="button" onClick={() => setFormStep(s => s - 1)} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 w-full sm:w-auto">Back</button>
+                    <button type="button" onClick={() => setFormStep(s => s - 1)} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 w-full sm:w-auto">{t('back')}</button>
                   )}
                   {formStep < formSteps.length - 1 && (
-                    <button type="button" onClick={() => setFormStep(s => s + 1)} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto">Next</button>
+                    <button type="button" onClick={() => setFormStep(s => s + 1)} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto">{t('next')}</button>
                   )}
                   {formStep === formSteps.length - 1 && (
-                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">{editId ? 'Update' : 'Add'} Property</button>
+                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">{editId ? t('updateProperty') : t('addProperty')}</button>
                   )}
                 </div>
               </div>
@@ -816,9 +917,9 @@ const PropertiesTab: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
             <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl" onClick={() => setZoneModal(null)}>&times;</button>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Zone: {zoneModal.name}</h3>
-            <div className="mb-2 text-gray-700">Latitude: <span className="font-mono">{zoneModal.latitude}</span></div>
-            <div className="mb-4 text-gray-700">Longitude: <span className="font-mono">{zoneModal.longitude}</span></div>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('zone')}: {zoneModal.name}</h3>
+            <div className="mb-2 text-gray-700">{t('latitude')}: <span className="font-mono">{zoneModal.latitude}</span></div>
+            <div className="mb-4 text-gray-700">{t('longitude')}: <span className="font-mono">{zoneModal.longitude}</span></div>
             {/* Real map using react-leaflet */}
             {zoneModal.latitude && zoneModal.longitude ? (
               <MapContainer
@@ -839,7 +940,7 @@ const PropertiesTab: React.FC = () => {
               </MapContainer>
             ) : (
               <div className="w-full h-48 bg-gray-100 rounded flex items-center justify-center">
-                <span className="text-gray-500">No geo-location available</span>
+                <span className="text-gray-500">{t('noGeoLocationAvailable')}</span>
               </div>
             )}
           </div>
@@ -855,19 +956,27 @@ const PropertiesTab: React.FC = () => {
               className="absolute top-2 right-2 z-50 text-white bg-red-500 hover:bg-red-700 shadow-lg rounded-full w-10 h-10 flex items-center justify-center text-3xl font-bold transition-all duration-200 border-4 border-white focus:outline-none focus:ring-2 focus:ring-red-400 print:hidden"
               style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }}
               onClick={() => setShowReportModal(false)}
-              aria-label="Close Report"
+              aria-label={t('closeReport')}
             >
               &times;
             </button>
             {reportStep === 'input' && (
               <form onSubmit={handleReportPhoneSubmit} className="space-y-4">
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Generate Client Report</h3>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Enter Client Phone Number</label>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  {language === 'ar' ? 'إنشاء تقرير العميل' : 'Generate Client Report'}
+                </h3>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {language === 'ar' ? 'أدخل رقم هاتف العميل' : 'Enter Client Phone Number'}
+                </label>
                 <input type="text" value={reportPhone} onChange={e => setReportPhone(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 {reportError && <div className="text-red-600 text-sm">{reportError}</div>}
                 <div className="flex justify-end gap-2">
-                  <button type="button" onClick={() => setShowReportModal(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
-                  <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">Next</button>
+                  <button type="button" onClick={() => setShowReportModal(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">
+                    {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                  </button>
+                  <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                    {language === 'ar' ? 'التالي' : 'Next'}
+                  </button>
                 </div>
               </form>
             )}
@@ -876,9 +985,9 @@ const PropertiesTab: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-center mb-4 border-b pb-2 justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{settings?.companyName || 'Propai Real Estate'}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">{settings?.companyName || t('propaiRealEstate')}</h2>
                     <div className="text-xs text-gray-500">
-                      {settings?.companyWebsite || 'www.propai.com'} | {settings?.companyEmail || 'info@propai.com'}
+                      {settings?.companyWebsite || t('companyWebsite') + ' | ' + (settings?.companyEmail || t('companyEmail'))}
                     </div>
                     {settings?.companyAddress && (
                       <div className="text-xs text-gray-500 mt-1">{settings.companyAddress}</div>
@@ -887,7 +996,7 @@ const PropertiesTab: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <img 
                       src={settings?.companyImage || "/src/RockaidevLogo.jpg"} 
-                      alt="Company Logo" 
+                      alt={t('companyLogo')} 
                       className="h-12 w-12 rounded-lg ml-2" 
                       style={{borderRadius: '12px'}} 
                       onError={e => {
@@ -901,13 +1010,15 @@ const PropertiesTab: React.FC = () => {
                   <>
                     {(reportLead.name || reportLead.phone || reportLead.budget || reportLead.status || reportLead.assignedTo) && (
                       <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">Client Information</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                          {language === 'ar' ? 'معلومات العميل' : 'Client Information'}
+                        </h3>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          {reportLead.name && <div><span className="font-medium">Name:</span> {reportLead.name}</div>}
-                          {reportLead.phone && <div><span className="font-medium">Phone:</span> {reportLead.phone}</div>}
-                          {reportLead.budget && <div><span className="font-medium">Budget:</span> {reportLead.budget}</div>}
-                          {reportLead.status && <div><span className="font-medium">Status:</span> {reportLead.status}</div>}
-                          {reportLead.assignedTo && <div><span className="font-medium">Assigned Rep:</span> {reportLead.assignedTo}</div>}
+                          {reportLead.name && <div><span className="font-medium">{t('name')}:</span> {reportLead.name}</div>}
+                          {reportLead.phone && <div><span className="font-medium">{t('phone')}:</span> {reportLead.phone}</div>}
+                          {reportLead.budget && <div><span className="font-medium">{t('budget')}:</span> {reportLead.budget}</div>}
+                          {reportLead.status && <div><span className="font-medium">{t('status')}:</span> {reportLead.status}</div>}
+                          {reportLead.assignedTo && <div><span className="font-medium">{t('assignedRep')}:</span> {reportLead.assignedTo}</div>}
                         </div>
                       </div>
                     )}
@@ -918,18 +1029,20 @@ const PropertiesTab: React.FC = () => {
                   <>
                     {(reportProperty.title || reportProperty.type || reportProperty.price || reportProperty.area || reportProperty.location || reportProperty.bedrooms || reportProperty.bathrooms || reportProperty.parking || reportProperty.amenities || reportProperty.project) && (
                       <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">Property Information</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                          {language === 'ar' ? 'معلومات العقار' : 'Property Information'}
+                        </h3>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          {reportProperty.title && <div><span className="font-medium">Title:</span> {reportProperty.title}</div>}
-                          {reportProperty.type && <div><span className="font-medium">Type:</span> {reportProperty.type}</div>}
-                          {reportProperty.price && <div><span className="font-medium">Price:</span> {Number(reportProperty.price).toLocaleString()} EGP</div>}
-                          {reportProperty.area && <div><span className="font-medium">Area:</span> {reportProperty.area}</div>}
-                          {reportProperty.location && <div><span className="font-medium">Location:</span> {reportProperty.location}</div>}
-                          {reportProperty.bedrooms && <div><span className="font-medium">Bedrooms:</span> {reportProperty.bedrooms}</div>}
-                          {reportProperty.bathrooms && <div><span className="font-medium">Bathrooms:</span> {reportProperty.bathrooms}</div>}
-                          {reportProperty.parking && <div><span className="font-medium">Parking:</span> {reportProperty.parking}</div>}
-                          {reportProperty.amenities && <div><span className="font-medium">Amenities:</span> {Array.isArray(reportProperty.amenities) ? reportProperty.amenities.join(', ') : reportProperty.amenities}</div>}
-                          {reportProperty.project && <div><span className="font-medium">Project:</span> {reportProperty.project}</div>}
+                          {reportProperty.title && <div><span className="font-medium">{t('title')}:</span> {reportProperty.title}</div>}
+                          {reportProperty.type && <div><span className="font-medium">{t('type')}:</span> {reportProperty.type}</div>}
+                          {reportProperty.price && <div><span className="font-medium">{t('price')}:</span> {Number(reportProperty.price).toLocaleString()} EGP</div>}
+                          {reportProperty.area && <div><span className="font-medium">{t('area')}:</span> {reportProperty.area}</div>}
+                          {reportProperty.location && <div><span className="font-medium">{t('location')}:</span> {reportProperty.location}</div>}
+                          {reportProperty.bedrooms && <div><span className="font-medium">{t('bedrooms')}:</span> {reportProperty.bedrooms}</div>}
+                          {reportProperty.bathrooms && <div><span className="font-medium">{t('bathrooms')}:</span> {reportProperty.bathrooms}</div>}
+                          {reportProperty.parking && <div><span className="font-medium">{t('parking')}:</span> {reportProperty.parking}</div>}
+                          {reportProperty.amenities && <div><span className="font-medium">{t('amenities')}:</span> {Array.isArray(reportProperty.amenities) ? reportProperty.amenities.join(', ') : reportProperty.amenities}</div>}
+                          {reportProperty.project && <div><span className="font-medium">{t('project')}:</span> {reportProperty.project}</div>}
                         </div>
                       </div>
                     )}
@@ -964,36 +1077,44 @@ const PropertiesTab: React.FC = () => {
                   }
                   return (
                     <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800 mb-3">Payment Plan {project?.name ? ` ${project.name}` : ''}</h3>
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3">
+                        {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {project?.name ? ` ${project.name}` : ''}
+                      </h3>
                       {/* Summary Card */}
                       <div className="flex flex-wrap gap-4 mb-4">
                         <div className="flex items-center bg-blue-100 text-blue-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
                           <svg className="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
-                          Down Payment: <span className="ml-1">{plan.downPayment}%</span>
+                          {t('downPayment')}: <span className="ml-1">{plan.downPayment}%</span>
                         </div>
                         <div className="flex items-center bg-green-100 text-green-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
                           <svg className="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" /></svg>
-                          Installments: <span className="ml-1">{100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span>
+                          {t('installments')}: <span className="ml-1">{100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span>
                         </div>
                         <div className="flex items-center bg-orange-100 text-orange-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
                           <svg className="w-5 h-5 mr-2 text-orange-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12,2 22,22 2,22" /></svg>
-                          Delivery: <span className="ml-1">{plan.delivery}%</span>
+                          {t('delivery')}: <span className="ml-1">{plan.delivery}%</span>
                         </div>
                         <div className="flex items-center bg-gray-100 text-gray-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
                           <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M8 7V3M16 7V3M4 11H20M4 19H20M4 15H20" /></svg>
-                          Delivery Date: <span className="ml-1">{deliveryDateStr}</span>
+                          {t('deliveryDate')}: <span className="ml-1">{deliveryDateStr}</span>
                         </div>
                       </div>
-                      {/* Table */}
-                      <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-blue-600 text-white">
-                              <th className="border px-3 py-2 font-bold">Payment</th>
-                              <th className="border px-3 py-2 font-bold">Date</th>
-                              <th className="border px-3 py-2 font-bold">Amount</th>
-                            </tr>
-                          </thead>
+                                              {/* Table */}
+                        <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-blue-600 text-white">
+                                <th className="border px-3 py-2 font-bold">
+                                  {language === 'ar' ? 'الدفعة' : 'Payment'}
+                                </th>
+                                <th className="border px-3 py-2 font-bold">
+                                  {language === 'ar' ? 'التاريخ' : 'Date'}
+                                </th>
+                                <th className="border px-3 py-2 font-bold">
+                                  {language === 'ar' ? 'المبلغ' : 'Amount'}
+                                </th>
+                              </tr>
+                            </thead>
                           <tbody>
                             {schedule.map((item, idx) => (
                               <tr key={idx} className={
@@ -1015,10 +1136,10 @@ const PropertiesTab: React.FC = () => {
                       </div>
                       {/* Totals */}
                       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-base font-bold">
-                        <div>Total Price: <span className="text-blue-700">{price.toLocaleString()} EGP</span></div>
-                        <div>Down Payment: <span className="text-green-700">{downPayment.toLocaleString()} EGP</span></div>
-                        <div>Installments: <span className="text-orange-700">{installmentsTotal.toLocaleString()} EGP</span></div>
-                        <div>Developer: <span className="text-gray-700">{developers.find(d => d.id === project?.developerId)?.name || project?.developer || '-'}</span></div>
+                        <div>{language === 'ar' ? 'السعر الإجمالي' : 'Total Price'}: <span className="text-blue-700">{price.toLocaleString()} EGP</span></div>
+                        <div>{language === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}: <span className="text-green-700">{downPayment.toLocaleString()} EGP</span></div>
+                        <div>{language === 'ar' ? 'الأقساط' : 'Installments'}: <span className="text-orange-700">{installmentsTotal.toLocaleString()} EGP</span></div>
+                        <div>{language === 'ar' ? 'المطور' : 'Developer'}: <span className="text-gray-700">{developers.find(d => d.id === project?.developerId)?.name || project?.developer || '-'}</span></div>
                       </div>
                     </div>
                   );
@@ -1038,23 +1159,27 @@ const PropertiesTab: React.FC = () => {
                   if (allImages.length > 0) {
                     return (
                       <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">Images</h3>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-1">{t('images')}</h3>
                         {propertyImages.length > 0 && (
                           <div className="mb-3">
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Property Images ({propertyImages.length})</h4>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">
+                              {language === 'ar' ? 'صور العقار' : 'Property Images'}
+                            </h4>
                             <div className="flex gap-2 flex-wrap">
                               {propertyImages.map((img: string, idx: number) => (
-                                <img key={idx} src={img} alt="Property" className="h-24 w-32 object-cover rounded border shadow-sm" />
+                                <img key={idx} src={img} alt={language === 'ar' ? 'صورة العقار' : 'Property Image'} className="h-24 w-32 object-cover rounded border shadow-sm" />
                               ))}
                             </div>
                           </div>
                         )}
                         {projectImages.length > 0 && (
                           <div>
-                            <h4 className="text-sm font-medium text-gray-700 mb-2">Project Images ({projectImages.length})</h4>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">
+                              {language === 'ar' ? 'صور المشروع' : 'Project Images'}
+                            </h4>
                             <div className="flex gap-2 flex-wrap">
                               {projectImages.map((img: string, idx: number) => (
-                                <img key={idx} src={img} alt="Project" className="h-24 w-32 object-cover rounded border shadow-sm" />
+                                <img key={idx} src={img} alt={language === 'ar' ? 'صورة المشروع' : 'Project Image'} className="h-24 w-32 object-cover rounded border shadow-sm" />
                               ))}
                             </div>
                           </div>
@@ -1067,20 +1192,28 @@ const PropertiesTab: React.FC = () => {
                 {/* Notes */}
                 {reportNotes && (
                   <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Custom Notes</h3>
-                    <textarea value={reportNotes} onChange={e => setReportNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} placeholder="Add custom notes..." />
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                      {language === 'ar' ? 'ملاحظات مخصصة' : 'Custom Notes'}
+                    </h3>
+                    <textarea value={reportNotes} onChange={e => setReportNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} placeholder={language === 'ar' ? 'أضف ملاحظات مخصصة' : 'Add custom notes'} />
                   </div>
                 )}
                 {/* Footer */}
                 <div className="mt-6 pt-4 border-t text-xs text-gray-500">
-                  <div>{settings?.companyName || 'Propai Real Estate'} | {settings?.companyWebsite || 'www.propai.com'} | {settings?.companyEmail || 'info@propai.com'}</div>
+                  <div>{settings?.companyName || (language === 'ar' ? 'بروباي العقارية' : 'Propai Real Estate')} | {settings?.companyWebsite || (language === 'ar' ? 'www.propai.com' : 'www.propai.com')} | {settings?.companyEmail || (language === 'ar' ? 'info@propai.com' : 'info@propai.com')}</div>
                   {settings?.companyAddress && <div>{settings.companyAddress}</div>}
-                  <div className="mt-1">This report is confidential and intended for the recipient only.</div>
+                  <div className="mt-1">
+                    {language === 'ar' ? 'هذا التقرير سري' : 'This report is confidential'}
+                  </div>
                 </div>
                 {/* Export Buttons (restored to original position) */}
                 <div className="flex justify-end gap-2 mt-6 print:hidden no-pdf" id="report-export-buttons">
-                  <button onClick={handlePrint} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">Print</button>
-                  <button onClick={handleDownloadPDF} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Download PDF</button>
+                  <button onClick={handlePrint} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
+                    {language === 'ar' ? 'طباعة' : 'Print'}
+                  </button>
+                  <button onClick={handleDownloadPDF} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    {language === 'ar' ? 'تحميل PDF' : 'Download PDF'}
+                  </button>
                 </div>
               </div>
             )}
@@ -1093,7 +1226,7 @@ const PropertiesTab: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900">{showImageModal.title} - Images</h3>
+              <h3 className="text-xl font-bold text-gray-900">{showImageModal.title} - {t('images')}</h3>
               <button 
                 onClick={() => setShowImageModal(null)}
                 className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
@@ -1106,7 +1239,7 @@ const PropertiesTab: React.FC = () => {
                 <div key={idx} className="relative group">
                   <img 
                     src={img} 
-                    alt={`${showImageModal.title} image ${idx + 1}`}
+                    alt={`${showImageModal.title} ${idx + 1}`}
                     className="w-full h-48 object-cover rounded-lg border shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => {
                       // Open image in new tab for full view
@@ -1115,14 +1248,15 @@ const PropertiesTab: React.FC = () => {
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
                     <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity text-sm font-medium">
-                      Click to view full size
+                      {t('clickToViewFullSize')}
                     </span>
                   </div>
                 </div>
               ))}
             </div>
             <div className="mt-4 text-center text-sm text-gray-500">
-              {showImageModal.images.length} image{showImageModal.images.length !== 1 ? 's' : ''} • Click any image to view full size
+              {showImageModal.images.length} {t('image')}
+              {showImageModal.images.length !== 1 ? t('s') : ''} • {t('clickAnyImageToViewFullSize')}
             </div>
           </div>
         </div>

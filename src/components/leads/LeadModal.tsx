@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { X, Phone, Calendar, MessageSquare, Plus } from 'lucide-react';
 import { Lead, CallLog, VisitLog, Note } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +16,7 @@ interface LeadModalProps {
 const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const { updateLead, addCallLog, addVisitLog, addNote, projects, leads } = useData();
   const { user } = useAuth();
+  const { t } = useTranslation('leads');
   const [activeTab, setActiveTab] = useState('details');
   const [newNote, setNewNote] = useState('');
   const [showCallForm, setShowCallForm] = useState(false);
@@ -54,11 +56,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   // Dynamic stages based on status order (remove Cancellation)
   const statusStages = [
-    { id: 'fresh', label: 'Fresh Lead', value: 'Fresh Lead' },
-    { id: 'follow', label: 'Follow Up', value: 'Follow Up' },
-    { id: 'visit', label: 'Scheduled Visit', value: 'Scheduled Visit' },
-    { id: 'open', label: 'Open Deal', value: 'Open Deal' },
-    { id: 'closed', label: 'Closed Deal', value: 'Closed Deal' }
+    { id: 'fresh', label: t('freshLead'), value: 'Fresh Lead' },
+    { id: 'follow', label: t('followUp'), value: 'Follow Up' },
+    { id: 'visit', label: t('scheduledVisit'), value: 'Scheduled Visit' },
+    { id: 'open', label: t('openDeal'), value: 'Open Deal' },
+    { id: 'closed', label: t('closedDeal'), value: 'Closed Deal' }
   ];
   const isCancelled = currentLead.status === 'Cancellation';
   const currentStatusIndex = isCancelled ? -1 : statusStages.findIndex(s => s.value === currentLead.status);
@@ -162,7 +164,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               ) : (
                 <RotateCw className="h-5 w-5 mr-2" />
               )}
-              <span>{isUpdating ? 'Updating...' : 'Update'}</span>
+              <span>{isUpdating ? t('updating') : t('update')}</span>
             </button>
           </div>
           <button
@@ -177,22 +179,22 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         <div className="p-6 border-b border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
               <p className="text-sm text-gray-900">{currentLead.phone}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Budget</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('budget')}</label>
               <p className="text-sm text-gray-900">{currentLead.budget}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Inventory Interest</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('interest')}</label>
               <p className="text-sm text-gray-900">{currentLead.inventoryInterest}</p>
             </div>
           </div>
 
           {/* Animated Deal Progress Bar */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">Deal Progress</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">{t('dealProgress')}</label>
             <div className="flex items-center justify-center space-x-0 md:space-x-3 overflow-x-auto py-2 w-full">
               {statusStages.map((stage, index) => {
                 const isCompleted = !isCancelled && index < currentStatusIndex;
@@ -239,7 +241,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               })}
             </div>
             {isCancelled && (
-              <div className="mt-1 text-xs text-red-600 font-semibold text-center">Deal Cancelled</div>
+              <div className="mt-1 text-xs text-red-600 font-semibold text-center">{t('dealCancelled')}</div>
             )}
           </div>
 
@@ -250,14 +252,14 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
             >
               <Phone className="h-4 w-4 mr-2" />
-              Log Call
+              {t('logCall')}
             </button>
             <button 
               onClick={() => setShowVisitForm(true)}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
             >
               <Calendar className="h-4 w-4 mr-2" />
-              Schedule Visit
+              {t('scheduleVisit')}
             </button>
             {canEdit && (
               <select
@@ -265,12 +267,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="Fresh Lead">Fresh Lead</option>
-                <option value="Follow Up">Follow Up</option>
-                <option value="Scheduled Visit">Scheduled Visit</option>
-                <option value="Open Deal">Open Deal</option>
-                <option value="Closed Deal">Closed Deal</option>
-                <option value="Cancellation">Cancellation</option>
+                <option value="Fresh Lead">{t('freshLead')}</option>
+                <option value="Follow Up">{t('followUp')}</option>
+                <option value="Scheduled Visit">{t('scheduledVisit')}</option>
+                <option value="Open Deal">{t('openDeal')}</option>
+                <option value="Closed Deal">{t('closedDeal')}</option>
+                <option value="Cancellation">{t('cancellation')}</option>
               </select>
             )}
           </div>
@@ -289,7 +291,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                {tab}
+                {t(tab)}
               </button>
             ))}
           </div>
@@ -300,35 +302,35 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           {activeTab === 'details' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('contactInformation')}</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Name</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('name')}</label>
                     <p className="text-sm text-gray-900">{currentLead.name}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Phone</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('phone')}</label>
                     <p className="text-sm text-gray-900">{currentLead.phone}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Source</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('source')}</label>
                     <p className="text-sm text-gray-900">{currentLead.source}</p>
                   </div>
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Lead Details</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('leadDetailsSection')}</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Status</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('status')}</label>
                     <p className="text-sm text-gray-900">{currentLead.status}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Budget</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('budget')}</label>
                     <p className="text-sm text-gray-900">{currentLead.budget}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Inventory Interest</label>
+                    <label className="block text-sm font-medium text-gray-700">{t('interest')}</label>
                     <p className="text-sm text-gray-900">{currentLead.inventoryInterest}</p>
                   </div>
                 </div>
@@ -339,13 +341,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           {activeTab === 'calls' && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Call History</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('callHistory')}</h3>
                 <button 
                   onClick={() => setShowCallForm(true)}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Call
+                  {t('addCall')}
                 </button>
               </div>
               <div className="space-y-4">
@@ -357,11 +359,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                       <div>
-                        <span className="text-sm text-gray-600">Outcome: </span>
+                        <span className="text-sm text-gray-600">{t('outcome')}: </span>
                         <span className="text-sm text-gray-900">{call.outcome}</span>
                       </div>
                       <div>
-                        <span className="text-sm text-gray-600">Project: </span>
+                        <span className="text-sm text-gray-600">{t('project')}: </span>
                         <span className="text-sm text-gray-900">{call.project}</span>
                       </div>
                     </div>
@@ -369,7 +371,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   </div>
                 ))}
                 {currentLead.calls.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">No calls logged yet</p>
+                  <p className="text-gray-500 text-center py-4">{t('noCallsLogged')}</p>
                 )}
               </div>
             </div>
@@ -378,13 +380,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           {activeTab === 'visits' && (
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Visit History</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('visitHistory')}</h3>
                 <button 
                   onClick={() => setShowVisitForm(true)}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Visit
+                  {t('addVisit')}
                 </button>
               </div>
               <div className="space-y-4">
@@ -396,11 +398,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                       <div>
-                        <span className="text-sm text-gray-600">Project: </span>
+                        <span className="text-sm text-gray-600">{t('project')}: </span>
                         <span className="text-sm text-gray-900">{visit.project}</span>
                       </div>
                       <div>
-                        <span className="text-sm text-gray-600">Objections: </span>
+                        <span className="text-sm text-gray-600">{t('objections')}: </span>
                         <span className="text-sm text-gray-900">{visit.objections}</span>
                       </div>
                     </div>
@@ -408,7 +410,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   </div>
                 ))}
                 {currentLead.visits.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">No visits logged yet</p>
+                  <p className="text-gray-500 text-center py-4">{t('noVisitsLogged')}</p>
                 )}
               </div>
             </div>
@@ -417,12 +419,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           {activeTab === 'notes' && (
             <div>
               <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Notes</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('notes')}</h3>
                 <div className="mb-4">
                   <textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="Add a note..."
+                    placeholder={t('addNotePlaceholder')}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={3}
                   />
@@ -430,7 +432,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     onClick={handleAddNote}
                     className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Add Note
+                    {t('addNote')}
                   </button>
                 </div>
               </div>
@@ -439,13 +441,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   <div key={note.id} className="bg-gray-50 p-4 rounded-lg">
                     <p className="text-sm text-gray-900 mb-2">{note.content}</p>
                     <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>By {note.createdBy}</span>
+                      <span>{t('by')} {note.createdBy}</span>
                       <span>{new Date(note.createdAt).toLocaleDateString()}</span>
                     </div>
                   </div>
                 ))}
                 {currentLead.notes.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">No notes added yet</p>
+                  <p className="text-gray-500 text-center py-4">{t('noNotesAdded')}</p>
                 )}
               </div>
             </div>
@@ -456,10 +458,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         {showCallForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Log Call</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('logCall')}</h3>
               <form onSubmit={handleAddCall} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('date')}</label>
                   <input
                     type="date"
                     value={callForm.date}
@@ -469,46 +471,46 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Outcome</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('outcome')}</label>
                   <select
                     value={callForm.outcome}
                     onChange={(e) => setCallForm({ ...callForm, outcome: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Select Outcome</option>
-                    <option value="Interested">Interested</option>
-                    <option value="Not Interested">Not Interested</option>
-                    <option value="Follow Up Required">Follow Up Required</option>
-                    <option value="Meeting Scheduled">Meeting Scheduled</option>
+                    <option value="">{t('selectOutcome')}</option>
+                    <option value="Interested">{t('interested')}</option>
+                    <option value="Not Interested">{t('notInterested')}</option>
+                    <option value="Follow Up Required">{t('followUpRequired')}</option>
+                    <option value="Meeting Scheduled">{t('meetingScheduled')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('duration')}</label>
                   <input
                     type="text"
                     value={callForm.duration}
                     onChange={(e) => setCallForm({ ...callForm, duration: e.target.value })}
-                    placeholder="e.g., 15 minutes"
+                    placeholder={t('durationPlaceholder')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('project')}</label>
                   <select
                     value={callForm.project}
                     onChange={(e) => setCallForm({ ...callForm, project: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">Select Project</option>
+                    <option value="">{t('selectProject')}</option>
                     {projects.map(project => (
                       <option key={project.id} value={project.name}>{project.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('notesField')}</label>
                   <textarea
                     value={callForm.notes}
                     onChange={(e) => setCallForm({ ...callForm, notes: e.target.value })}
@@ -523,13 +525,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     onClick={() => setShowCallForm(false)}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button
                     type="submit"
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    Log Call
+                    {t('logCallButton')}
                   </button>
                 </div>
               </form>
@@ -541,10 +543,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         {showVisitForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Log Visit</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('logVisit')}</h3>
               <form onSubmit={handleAddVisit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('date')}</label>
                   <input
                     type="date"
                     value={visitForm.date}
@@ -554,45 +556,45 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('project')}</label>
                   <select
                     value={visitForm.project}
                     onChange={(e) => setVisitForm({ ...visitForm, project: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Select Project</option>
+                    <option value="">{t('selectProject')}</option>
                     {projects.map(project => (
                       <option key={project.id} value={project.name}>{project.name}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('status')}</label>
                   <select
                     value={visitForm.status}
                     onChange={(e) => setVisitForm({ ...visitForm, status: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Select Status</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
-                    <option value="Rescheduled">Rescheduled</option>
+                    <option value="">{t('selectStatus')}</option>
+                    <option value="Completed">{t('completed')}</option>
+                    <option value="Cancelled">{t('cancelled')}</option>
+                    <option value="Rescheduled">{t('rescheduled')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Objections</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('objections')}</label>
                   <input
                     type="text"
                     value={visitForm.objections}
                     onChange={(e) => setVisitForm({ ...visitForm, objections: e.target.value })}
-                    placeholder="e.g., Price too high"
+                    placeholder={t('objectionsPlaceholder')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('notesField')}</label>
                   <textarea
                     value={visitForm.notes}
                     onChange={(e) => setVisitForm({ ...visitForm, notes: e.target.value })}
@@ -607,13 +609,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     onClick={() => setShowVisitForm(false)}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800"
                   >
-                    Cancel
+                    {t('cancel')}
                   </button>
                   <button
                     type="submit"
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
                   >
-                    Log Visit
+                    {t('logVisitButton')}
                   </button>
                 </div>
               </form>

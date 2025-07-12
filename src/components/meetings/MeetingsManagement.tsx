@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Search, Plus, Edit, Clock, User, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface Meeting {
   id: string;
@@ -20,6 +22,8 @@ interface Meeting {
 const MeetingsManagement: React.FC = () => {
   const { meetings, addMeeting, updateMeeting, deleteMeeting, users } = useData();
   const { user } = useAuth();
+  const { t } = useTranslation('meetings');
+  const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -37,6 +41,35 @@ const MeetingsManagement: React.FC = () => {
     locationType: 'Online',
     location: '',
   });
+
+  // Helper function to translate meeting types
+  const translateMeetingType = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'Proposal': t('meetingTypes.proposal'),
+      'Site Visit': t('meetingTypes.siteVisit'),
+      'Negotiation': t('meetingTypes.negotiation'),
+    };
+    return typeMap[type] || type;
+  };
+
+  // Helper function to translate meeting statuses
+  const translateMeetingStatus = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'Scheduled': t('statuses.scheduled'),
+      'Completed': t('statuses.completed'),
+      'Cancelled': t('statuses.cancelled'),
+    };
+    return statusMap[status] || status;
+  };
+
+  // Helper function to translate location types
+  const translateLocationType = (locationType: string) => {
+    const locationMap: { [key: string]: string } = {
+      'Online': t('locationTypes.online'),
+      'Offline': t('locationTypes.offline'),
+    };
+    return locationMap[locationType] || locationType;
+  };
 
   const openAddForm = () => {
     setEditId(null);
@@ -80,7 +113,7 @@ const MeetingsManagement: React.FC = () => {
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this meeting?')) {
+    if (window.confirm(t('deleteConfirm'))) {
       deleteMeeting(id);
     }
   };
@@ -168,8 +201,8 @@ const MeetingsManagement: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Meetings Management</h1>
-        <p className="text-gray-600">Organize, schedule, and track all your client meetings and visits</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h1>
+        <p className="text-gray-600">{t('description')}</p>
       </div>
 
       {/* Search and Actions */}
@@ -179,7 +212,7 @@ const MeetingsManagement: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search meetings..."
+              placeholder={t('searchMeetings')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -187,7 +220,7 @@ const MeetingsManagement: React.FC = () => {
           </div>
           <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
             <Plus className="h-5 w-5 mr-2" />
-            Schedule Meeting
+            {t('scheduleMeeting')}
           </button>
         </div>
       </div>
@@ -198,14 +231,14 @@ const MeetingsManagement: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meeting</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date&Time</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.meeting')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.client')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.dateTime')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.duration')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.type')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.status')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.location')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -218,7 +251,7 @@ const MeetingsManagement: React.FC = () => {
                       </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">{meeting.title}</div>
-                        <div className="text-sm text-gray-500">with {meeting.client}</div>
+                        <div className="text-sm text-gray-500">{t('with')} {meeting.client}</div>
                       </div>
                     </div>
                   </td>
@@ -235,16 +268,16 @@ const MeetingsManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(meeting.type)}`}>
-                      {meeting.type}
+                      {translateMeetingType(meeting.type)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(meeting.status)}`}>
-                      {meeting.status}
+                      {translateMeetingStatus(meeting.status)}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {(meeting as any).locationType === 'Offline' ? (meeting as any).location : (meeting as any).locationType || 'Online'}
+                    {(meeting as any).locationType === 'Offline' ? (meeting as any).location : translateLocationType((meeting as any).locationType || 'Online')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <button className="text-blue-600 hover:text-blue-800 mr-3" onClick={() => openEditForm(meeting)}>
@@ -267,14 +300,14 @@ const MeetingsManagement: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 sm:mx-8 relative flex flex-col max-h-[90vh]">
             {/* Sticky Header */}
             <div className="sticky top-0 z-10 bg-white rounded-t-2xl flex items-center justify-between px-6 py-4 border-b">
-              <h3 className="text-2xl font-bold text-gray-900">{editId ? 'Edit Meeting' : 'Schedule Meeting'}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">{editId ? t('modal.editMeeting') : t('modal.scheduleMeeting')}</h3>
               <button
                 type="button"
-                aria-label="Close"
+                aria-label={t('modal.close')}
                 onClick={() => setShowForm(false)}
                 className="text-gray-400 hover:text-gray-700 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{t('modal.close')}</span>
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -287,47 +320,47 @@ const MeetingsManagement: React.FC = () => {
               style={{ maxHeight: 'calc(90vh - 72px)' }}
             >
               <div className="md:col-span-2 mb-2">
-                <h4 className="text-lg font-semibold text-gray-700 mb-2">Meeting Details</h4>
+                <h4 className="text-lg font-semibold text-gray-700 mb-2">{t('meetingDetails')}</h4>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.title')}</label>
                 <input type="text" name="title" value={form.title} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.client')}</label>
                 <input type="text" name="client" value={form.client} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.date')}</label>
                 <input type="date" name="date" value={form.date} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.time')}</label>
                 <input type="time" name="time" value={form.time} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.duration')}</label>
                 <input type="text" name="duration" value={form.duration} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.type')}</label>
                 <select name="type" value={form.type} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="">Select Type</option>
-                  <option value="Proposal">Proposal</option>
-                  <option value="Site Visit">Site Visit</option>
-                  <option value="Negotiation">Negotiation</option>
+                  <option value="">{t('form.selectType')}</option>
+                  <option value="Proposal">{t('meetingTypes.proposal')}</option>
+                  <option value="Site Visit">{t('meetingTypes.siteVisit')}</option>
+                  <option value="Negotiation">{t('meetingTypes.negotiation')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.status')}</label>
                 <select name="status" value={form.status} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="Scheduled">Scheduled</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Cancelled">Cancelled</option>
+                  <option value="Scheduled">{t('statuses.scheduled')}</option>
+                  <option value="Completed">{t('statuses.completed')}</option>
+                  <option value="Cancelled">{t('statuses.cancelled')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.locationType')}</label>
                 <select
                   name="locationType"
                   value={form.locationType}
@@ -335,13 +368,13 @@ const MeetingsManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="Online">Online</option>
-                  <option value="Offline">Offline</option>
+                  <option value="Online">{t('locationTypes.online')}</option>
+                  <option value="Offline">{t('locationTypes.offline')}</option>
                 </select>
               </div>
               {form.locationType === 'Offline' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.location')}</label>
                   <input
                     type="text"
                     name="location"
@@ -353,12 +386,12 @@ const MeetingsManagement: React.FC = () => {
                 </div>
               )}
               <div className="md:col-span-2 mt-2">
-                <h4 className="text-lg font-semibold text-gray-700 mb-2">Assignment</h4>
+                <h4 className="text-lg font-semibold text-gray-700 mb-2">{t('form.assignment')}</h4>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Assigned To</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.assignedTo')}</label>
                 <select name="assignedTo" value={form.assignedTo} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-                  <option value="">Select User</option>
+                  <option value="">{t('form.selectUser')}</option>
                   {(() => {
                     // Role-based user filtering for assignment
                     let assignableUsers = users;
@@ -384,12 +417,12 @@ const MeetingsManagement: React.FC = () => {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.notes')}</label>
                 <textarea name="notes" value={form.notes} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />
               </div>
               <div className="md:col-span-2 flex justify-end space-x-3 mt-4">
-                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editId ? 'Update' : 'Schedule'} Meeting</button>
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">{t('actions.cancel')}</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editId ? t('actions.update') : t('actions.schedule')} {t('meetingDetails').toLowerCase()}</button>
               </div>
             </form>
           </div>

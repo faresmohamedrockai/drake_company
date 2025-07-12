@@ -1,0 +1,121 @@
+{
+  "title": "Performance Reports",
+  "description": "Track team performance, conversion rates, and activity metrics",
+  "accessDenied": "Access Denied",
+  "noPermission": "You don't have permission to view reports.",
+  "salesReport": "Sales Report",
+  "leadReport": "Lead Report",
+  "propertyReport": "Property Report",
+  "meetingReport": "Meeting Report",
+  "contractReport": "Contract Report",
+  "revenueReport": "Revenue Report",
+  "performanceReport": "Performance Report",
+  "generateReport": "Generate Report",
+  "exportReport": "Export Report",
+  "reportPeriod": "Report Period",
+  "reportType": "Report Type",
+  "reportFilters": "Report Filters",
+  "reportSummary": "Report Summary",
+  "reportDetails": "Report Details",
+  "totalSales": "Total Sales",
+  "totalRevenue": "Total Revenue",
+  "averageDealSize": "Average Deal Size",
+  "conversionRate": "Conversion Rate",
+  "salesByPeriod": "Sales by Period",
+  "topPerformers": "Top Performers",
+  "controls": {
+    "searchUsers": "Search users...",
+    "allUsers": "All Users",
+    "showInactive": "Show Inactive",
+    "dashboard": "Dashboard",
+    "detailed": "Detailed",
+    "dash": "Dash",
+    "list": "List"
+  },
+  "export": {
+    "exportData": "Export Data:",
+    "csv": "CSV",
+    "json": "JSON",
+    "excel": "Excel"
+  },
+  "timeframes": {
+    "today": "Today",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "customRange": "Custom Range",
+    "to": "to"
+  },
+  "filters": {
+    "activityFeed": "Activity Feed",
+    "feed": "Feed",
+    "sortByPerformance": "Sort by Performance",
+    "sortByName": "Sort by Name",
+    "sortByActivity": "Sort by Activity"
+  },
+  "activityFeed": {
+    "recentActivityFeed": "Recent Activity Feed",
+    "leadUpdated": "Lead Updated",
+    "meeting": "Meeting",
+    "by": "by"
+  },
+  "metrics": {
+    "totalUsers": "Total Users",
+    "active": "active",
+    "totalLeads": "Total Leads",
+    "assigned": "Assigned",
+    "avgConversion": "Avg Conversion",
+    "rate": "Rate",
+    "callCompletion": "Call Completion",
+    "avgCallCompletion": "Avg Call Completion",
+    "avgMeetingCompletion": "Avg Meeting Completion"
+  },
+  "charts": {
+    "performanceMetrics": "Performance Metrics",
+    "roleDistribution": "Role Distribution",
+    "performanceTrends": "Performance Trends",
+    "avgConversionRate": "Avg Conversion Rate",
+    "avgCallCompletion": "Avg Call Completion",
+    "avgMeetingCompletion": "Avg Meeting Completion"
+  },
+  "performance": {
+    "excellent": "Excellent",
+    "good": "Good",
+    "fair": "Fair",
+    "needsImprovement": "Needs Improvement",
+    "outstanding": "Outstanding",
+    "needsWork": "Needs Work",
+    "perfect": "Perfect",
+    "needsAttention": "Needs Attention"
+  },
+  "tableHeaders": {
+    "user": "User",
+    "role": "Role",
+    "leads": "Leads",
+    "calls": "Calls",
+    "visits": "Visits",
+    "meetings": "Meetings",
+    "deals": "Deals",
+    "conversion": "Conversion",
+    "lastActivity": "Last Activity",
+    "status": "Status"
+  },
+  "mobileLabels": {
+    "leads": "Leads",
+    "calls": "Calls",
+    "visits": "Visits",
+    "meetings": "Meetings",
+    "closedDeals": "Closed Deals",
+    "conversionRate": "Conversion Rate",
+    "lastActivity": "Last Activity"
+  },
+  "statuses": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "roles": {
+    "salesRep": "Sales Rep",
+    "teamLeader": "Team Leader",
+    "salesAdmin": "Sales Admin",
+    "admin": "Admin"
+  }
+} 

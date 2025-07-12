@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import Login from './components/auth/Login';
 import Sidebar from './components/layout/Sidebar';
 import Dashboard from './components/dashboard/Dashboard';
@@ -12,6 +13,8 @@ import ContractsManagement from './components/contracts/ContractsManagement';
 import Reports from './components/reports/Reports';
 import Settings from './components/settings/Settings';
 import { AnimatePresence, motion } from 'framer-motion';
+import './i18n';
+import './styles/rtl.css';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -72,13 +75,15 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <DataProvider>
-      <AuthProvider>
-        <SettingsProvider>
-          <AppContent />
-        </SettingsProvider>
-      </AuthProvider>
-    </DataProvider>
+    <LanguageProvider>
+      <DataProvider>
+        <AuthProvider>
+          <SettingsProvider>
+            <AppContent />
+          </SettingsProvider>
+        </AuthProvider>
+      </DataProvider>
+    </LanguageProvider>
   );
 };
 

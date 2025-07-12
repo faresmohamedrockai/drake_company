@@ -2,6 +2,8 @@ import React, { useState, ChangeEvent } from 'react';
 import { User as UserType } from '../../types';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface UserProfileModalProps {
   user: UserType | null;
@@ -11,6 +13,8 @@ interface UserProfileModalProps {
 const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) => {
   const { updateUser } = useData();
   const { logout } = useAuth();
+  const { t } = useTranslation('settings');
+  const { language } = useLanguage();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -61,7 +65,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
         >
           &times;
         </button>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">My Profile</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{t('profile.myProfile')}</h2>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="flex flex-col items-center">
             <label htmlFor="avatar-upload" className="cursor-pointer group relative">
@@ -72,7 +76,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                   <span className="text-3xl text-blue-600 font-bold">{user.name.charAt(0)}</span>
                 )}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
-                  <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                  <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>
                 </div>
               </div>
               <input
@@ -85,7 +89,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
             </label>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.fullName')}</label>
             <input
               type="text"
               name="name"
@@ -96,7 +100,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.email')}</label>
             <input
               type="email"
               name="email"
@@ -112,7 +116,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
               onClick={handleLogout}
               className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
             >
-              Logout
+              {t('profile.logout')}
             </button>
             <div className="flex space-x-3">
               <button
@@ -121,14 +125,14 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 disabled={saving}
               >
-                Cancel
+                {t('profile.cancel')}
               </button>
               <button
                 type="submit"
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
                 disabled={saving}
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? t('profile.saving') : t('profile.saveChanges')}
               </button>
             </div>
           </div>

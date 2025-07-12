@@ -1,0 +1,60 @@
+{
+  "navigation": {
+    "dashboard": "لوحة التحكم",
+    "leads": "العملاء المحتملين",
+    "inventory": "المخزون",
+    "meetings": "الاجتماعات",
+    "contracts": "العقود",
+    "reports": "التقارير",
+    "settings": "الإعدادات"
+  },
+  "actions": {
+    "add": "إضافة",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "search": "بحث",
+    "filter": "تصفية",
+    "export": "تصدير",
+    "import": "استيراد",
+    "refresh": "تحديث",
+    "back": "رجوع",
+    "next": "التالي",
+    "previous": "السابق"
+  },
+  "status": {
+    "active": "نشط",
+    "inactive": "غير نشط",
+    "pending": "قيد الانتظار",
+    "completed": "مكتمل",
+    "cancelled": "ملغي",
+    "draft": "مسودة",
+    "published": "منشور"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "noData": "لا توجد بيانات متاحة",
+    "error": "حدث خطأ",
+    "success": "نجح",
+    "warning": "تحذير",
+    "info": "معلومات",
+    "confirm": "تأكيد",
+    "yes": "نعم",
+    "no": "لا",
+    "ok": "موافق",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "phone": "الهاتف",
+    "address": "العنوان",
+    "date": "التاريخ",
+    "time": "الوقت",
+    "description": "الوصف",
+    "notes": "ملاحظات",
+    "created": "تم الإنشاء",
+    "updated": "تم التحديث",
+    "createdBy": "أنشئ بواسطة",
+    "updatedBy": "حدث بواسطة"
+  }
+} 

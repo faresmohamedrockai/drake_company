@@ -1,0 +1,74 @@
+{
+  "title": "إدارة العقود",
+  "description": "تتبع وإدارة جميع عقود العقارات والصفقات",
+  "addContract": "إضافة عقد",
+  "editContract": "تعديل العقد",
+  "addNewContract": "إضافة عقد جديد",
+  "contractDetails": "تفاصيل العقد",
+  "contractNumber": "رقم العقد",
+  "contractType": "نوع العقد",
+  "contractStatus": "حالة العقد",
+  "contractValue": "قيمة العقد",
+  "contractDate": "تاريخ العقد",
+  "contractExpiry": "تاريخ انتهاء العقد",
+  "contractNotes": "ملاحظات العقد",
+  "searchContracts": "البحث في العقود...",
+  "deleteConfirm": "هل أنت متأكد من حذف هذا العقد؟",
+  "contractTypeOptions": {
+    "sale": "عقد بيع",
+    "rental": "عقد إيجار",
+    "management": "عقد إدارة",
+    "brokerage": "عقد وساطة"
+  },
+  "contractStatusOptions": {
+    "draft": "مسودة",
+    "pending": "قيد الانتظار",
+    "active": "نشط",
+    "expired": "منتهي الصلاحية",
+    "terminated": "منهي"
+  },
+  "tableHeaders": {
+    "contractId": "رقم العقد",
+    "leadName": "اسم العميل",
+    "propertyProject": "العقار/المشروع",
+    "dealValue": "قيمة الصفقة",
+    "contractDate": "تاريخ العقد",
+    "status": "الحالة",
+    "createdBy": "أنشئ بواسطة",
+    "actions": "الإجراءات"
+  },
+  "form": {
+    "lead": "العميل",
+    "propertyProject": "العقار/المشروع",
+    "dealValue": "قيمة الصفقة",
+    "contractDate": "تاريخ العقد",
+    "status": "الحالة",
+    "notes": "ملاحظات",
+    "selectLead": "اختر العميل",
+    "selectProperty": "اختر العقار"
+  },
+  "statuses": {
+    "pending": "قيد الانتظار",
+    "signed": "مُوقع",
+    "cancelled": "ملغي"
+  },
+  "actions": {
+    "edit": "تعديل",
+    "delete": "حذف",
+    "cancel": "إلغاء",
+    "update": "تحديث",
+    "add": "إضافة"
+  },
+  "modal": {
+    "editContract": "تعديل العقد",
+    "addNewContract": "إضافة عقد جديد",
+    "close": "إغلاق"
+  },
+  "cardLabels": {
+    "client": "العميل",
+    "property": "العقار",
+    "dealValue": "قيمة الصفقة",
+    "date": "التاريخ",
+    "notes": "ملاحظات"
+  }
+} 

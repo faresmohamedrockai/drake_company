@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { Lead } from '../../types';
 
-interface AddLeadModalProps {
+interface EditLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  lead: Lead | null;
 }
 
-const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
-  const { addLead, leads, projects, users } = useData(); // Add users from DataContext
+const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) => {
+  const { updateLead, leads, projects, users } = useData();
   const { user } = useAuth();
   const { t, i18n } = useTranslation('leads');
   const [formData, setFormData] = useState({
@@ -21,17 +23,37 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     budget: '',
     inventoryInterest: '',
     source: '',
-    status: 'Fresh Lead' as const,
+    status: 'Fresh Lead' as 'Fresh Lead' | 'Follow Up' | 'Scheduled Visit' | 'Open Deal' | 'Closed Deal' | 'Cancellation',
     assignedTo: ''
   });
   const [error, setError] = useState('');
+
+  // Initialize form data when lead changes
+  useEffect(() => {
+    if (lead) {
+      setFormData({
+        nameEn: lead.nameEn || '',
+        nameAr: lead.nameAr || '',
+        phone: lead.phone || '',
+        email: lead.email || '',
+        budget: lead.budget || '',
+        inventoryInterest: lead.inventoryInterest || '',
+        source: lead.source || '',
+        status: lead.status || 'Fresh Lead',
+        assignedTo: lead.assignedTo || ''
+      });
+      setError('');
+    }
+  }, [lead]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Check for duplicate phone number
-    const existingLead = leads.find(lead => lead.phone === formData.phone);
+    if (!lead) return;
+
+    // Check for duplicate phone number (excluding current lead)
+    const existingLead = leads.find(l => l.phone === formData.phone && l.id !== lead.id);
     if (existingLead) {
       setError(t('duplicatePhoneError'));
       return;
@@ -42,38 +64,29 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       ? (formData.nameAr || formData.nameEn)
       : (formData.nameEn || formData.nameAr);
 
-    addLead({
-      ...formData,
+    updateLead(lead.id, {
       name: combinedName,
       nameEn: formData.nameEn,
       nameAr: formData.nameAr,
-      lastCallDate: '------',
-      lastVisitDate: '------',
-      assignedTo: formData.assignedTo || user?.name || '',
-      createdBy: user?.name || ''
+      phone: formData.phone,
+      email: formData.email,
+      budget: formData.budget,
+      inventoryInterest: formData.inventoryInterest,
+      source: formData.source,
+      status: formData.status,
+      assignedTo: formData.assignedTo
     });
 
-    setFormData({
-      nameEn: '',
-      nameAr: '',
-      phone: '',
-      email: '',
-      budget: '',
-      inventoryInterest: '',
-      source: '',
-      status: 'Fresh Lead',
-      assignedTo: ''
-    });
     onClose();
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !lead) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto transition-all duration-300">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{t('addNewLead')}</h3>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{t('editLead')}</h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -177,11 +190,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               required
             >
               <option value="">{t('selectBudgetRange')}</option>
-              <option value="EGP100,000-300,000">EGP 100,000-300,000</option>
-              <option value="EGP300,000-500,000">EGP 300,000-500,000</option>
-              <option value="EGP500,000-1,000,000">EGP 500,000-1,000,000</option>
-              <option value="EGP1,000,000-2,000,000">EGP 1,000,000-2,000,000</option>
-              <option value="EGP2,000,000+">EGP 2,000,000+</option>
+              <option value="EGP 800,000 - 1,200,000">EGP 800,000 - 1,200,000</option>
+              <option value="EGP 1,200,000 - 1,800,000">EGP 1,200,000 - 1,800,000</option>
+              <option value="EGP 1,500,000 - 2,500,000">EGP 1,500,000 - 2,500,000</option>
+              <option value="EGP 1,800,000 - 2,500,000">EGP 1,800,000 - 2,500,000</option>
+              <option value="EGP 2,000,000 - 3,000,000">EGP 2,000,000 - 3,000,000</option>
+              <option value="EGP 2,500,000 - 3,500,000">EGP 2,500,000 - 3,500,000</option>
+              <option value="EGP 3,000,000 - 4,500,000">EGP 3,000,000 - 4,500,000</option>
+              <option value="EGP 3,500,000 - 5,000,000">EGP 3,500,000 - 5,000,000</option>
+              <option value="EGP 4,000,000 - 6,000,000">EGP 4,000,000 - 6,000,000</option>
+              <option value="EGP 5,500,000 - 8,000,000">EGP 5,500,000 - 8,000,000</option>
             </select>
           </div>
 
@@ -201,7 +219,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('leadSourceRequired')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('sourceRequired')}</label>
             <select
               value={formData.source}
               onChange={(e) => setFormData({ ...formData, source: e.target.value })}
@@ -209,7 +227,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               required
             >
               <option value="">{t('selectSource')}</option>
-              <option value="Social Media">{t('socialMedia')}</option>
+              <option value="Facebook">{t('facebook')}</option>
+              <option value="Instagram">{t('instagram')}</option>
               <option value="Website">{t('website')}</option>
               <option value="Referral">{t('referral')}</option>
               <option value="Cold Call">{t('coldCall')}</option>
@@ -219,32 +238,34 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('statusField')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('statusRequired')}</label>
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+              required
             >
               <option value="Fresh Lead">{t('freshLead')}</option>
               <option value="Follow Up">{t('followUp')}</option>
               <option value="Scheduled Visit">{t('scheduledVisit')}</option>
               <option value="Open Deal">{t('openDeal')}</option>
+              <option value="Cancellation">{t('cancellation')}</option>
             </select>
           </div>
 
-          <div className="col-span-1 sm:col-span-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
+          <div className="col-span-2 flex gap-3 mt-4">
+            <button
+              type="submit"
+              className="flex-1 bg-blue-600 text-white py-2.5 sm:py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              {t('updateLead')}
+            </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-4 sm:px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors text-sm"
+              className="flex-1 bg-gray-300 text-gray-700 py-2.5 sm:py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium"
             >
               {t('cancel')}
-            </button>
-            <button
-              type="submit"
-              className="px-4 sm:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors text-sm"
-            >
-              {t('addLeadButton')}
             </button>
           </div>
         </form>
@@ -253,4 +274,4 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   );
 };
 
-export default AddLeadModal;
+export default EditLeadModal; 

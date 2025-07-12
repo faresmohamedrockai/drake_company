@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { 
   Search, 
   Download, 
@@ -63,6 +65,8 @@ interface PerformanceMetrics {
 const Reports: React.FC = () => {
   const { leads, meetings, users } = useData();
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation('reports');
+  const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -324,6 +328,26 @@ const Reports: React.FC = () => {
     }
   };
 
+  // Helper function to translate user roles
+  const translateUserRole = (role: string) => {
+    const roleMap: { [key: string]: string } = {
+      'Sales Rep': t('roles.salesRep'),
+      'Team Leader': t('roles.teamLeader'),
+      'Sales Admin': t('roles.salesAdmin'),
+      'Admin': t('roles.admin'),
+    };
+    return roleMap[role] || role;
+  };
+
+  // Helper function to translate user statuses
+  const translateUserStatus = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'Active': t('statuses.active'),
+      'Inactive': t('statuses.inactive'),
+    };
+    return statusMap[status] || status;
+  };
+
   const selectedDateRange = getDateRange();
   const performances = getFilteredPerformances();
   const metrics = calculateOverallMetrics();
@@ -411,8 +435,8 @@ const Reports: React.FC = () => {
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <Award className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to view reports.</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('accessDenied')}</h2>
+          <p className="text-gray-600">{t('noPermission')}</p>
         </div>
       </div>
     );
@@ -421,8 +445,8 @@ const Reports: React.FC = () => {
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Performance Reports</h1>
-        <p className="text-sm sm:text-base text-gray-600">Track team performance, conversion rates, and activity metrics</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{t('title')}</h1>
+        <p className="text-sm sm:text-base text-gray-600">{t('description')}</p>
       </div>
 
       {/* Controls */}
@@ -434,7 +458,7 @@ const Reports: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search users..."
+                placeholder={t('controls.searchUsers')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -445,7 +469,7 @@ const Reports: React.FC = () => {
               onChange={(e) => setSelectedUser(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
-              <option value="">All Users</option>
+              <option value="">{t('controls.allUsers')}</option>
               {getAccessibleUsers().map(user => (
                 <option key={user.id} value={user.id}>{user.name}</option>
               ))}
@@ -458,7 +482,7 @@ const Reports: React.FC = () => {
                 onChange={(e) => setShowInactive(e.target.checked)}
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <label htmlFor="showInactive" className="text-sm text-gray-700">Show Inactive</label>
+              <label htmlFor="showInactive" className="text-sm text-gray-700">{t('controls.showInactive')}</label>
             </div>
           </div>
           
@@ -473,8 +497,8 @@ const Reports: React.FC = () => {
               }`}
             >
               <BarChart3 className="h-4 w-4 inline mr-2" />
-              <span className="hidden xs:inline">Dashboard</span>
-              <span className="xs:hidden">Dash</span>
+              <span className="hidden xs:inline">{t('controls.dashboard')}</span>
+              <span className="xs:hidden">{t('controls.dash')}</span>
             </button>
             <button
               onClick={() => setViewMode('detailed')}
@@ -485,8 +509,8 @@ const Reports: React.FC = () => {
               }`}
             >
               <FileText className="h-4 w-4 inline mr-2" />
-              <span className="hidden xs:inline">Detailed</span>
-              <span className="xs:hidden">List</span>
+              <span className="hidden xs:inline">{t('controls.detailed')}</span>
+              <span className="xs:hidden">{t('controls.list')}</span>
             </button>
           </div>
         </div>
@@ -497,28 +521,28 @@ const Reports: React.FC = () => {
         <div className="flex flex-col gap-4">
           {/* Export Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <span className="text-sm font-medium text-gray-700">Export Data:</span>
+            <span className="text-sm font-medium text-gray-700">{t('export.exportData')}</span>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleExport('csv')}
                 className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
               >
                 <Download className="h-4 w-4 inline mr-1" />
-                CSV
+                {t('export.csv')}
               </button>
               <button
                 onClick={() => handleExport('json')}
                 className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
               >
                 <Download className="h-4 w-4 inline mr-1" />
-                JSON
+                {t('export.json')}
               </button>
               <button
                 onClick={() => handleExport('excel')}
                 className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
               >
                 <Download className="h-4 w-4 inline mr-1" />
-                Excel
+                {t('export.excel')}
               </button>
             </div>
           </div>
@@ -541,10 +565,10 @@ const Reports: React.FC = () => {
                 onChange={(e) => setSelectedTimeframe(e.target.value as any)}
                 className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
-                <option value="custom">Custom Range</option>
+                <option value="today">{t('timeframes.today')}</option>
+                <option value="week">{t('timeframes.thisWeek')}</option>
+                <option value="month">{t('timeframes.thisMonth')}</option>
+                <option value="custom">{t('timeframes.customRange')}</option>
               </select>
               
               {/* Custom Date Range Picker */}
@@ -557,7 +581,7 @@ const Reports: React.FC = () => {
                     className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
                     placeholder="Start Date"
                   />
-                  <span className="text-gray-400 text-sm hidden sm:inline">to</span>
+                  <span className="text-gray-400 text-sm hidden sm:inline">{t('timeframes.to')}</span>
                   <input
                     type="date"
                     value={customDateRange.endDate}
@@ -579,17 +603,17 @@ const Reports: React.FC = () => {
                 }`}
               >
                 <Activity className="h-4 w-4 inline mr-1" />
-                <span className="hidden xs:inline">Activity Feed</span>
-                <span className="xs:hidden">Feed</span>
+                <span className="hidden xs:inline">{t('filters.activityFeed')}</span>
+                <span className="xs:hidden">{t('filters.feed')}</span>
               </button>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as any)}
                 className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="performance">Sort by Performance</option>
-                <option value="name">Sort by Name</option>
-                <option value="activity">Sort by Activity</option>
+                <option value="performance">{t('filters.sortByPerformance')}</option>
+                <option value="name">{t('filters.sortByName')}</option>
+                <option value="activity">{t('filters.sortByActivity')}</option>
               </select>
               <button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
@@ -607,14 +631,14 @@ const Reports: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Activity className="h-5 w-5 mr-2" />
-            Recent Activity Feed
+            {t('activityFeed.recentActivityFeed')}
           </h3>
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {(() => {
               const allActivities = [
                 ...leads.map(lead => ({
                   type: 'lead',
-                  action: 'Lead Updated',
+                  action: t('activityFeed.leadUpdated'),
                   user: lead.assignedTo,
                   details: `${lead.name} - ${lead.status}`,
                   date: lead.lastCallDate || lead.createdAt,
@@ -622,7 +646,7 @@ const Reports: React.FC = () => {
                 })),
                 ...meetings.map(meeting => ({
                   type: 'meeting',
-                  action: 'Meeting',
+                  action: t('activityFeed.meeting'),
                   user: meeting.assignedTo,
                   details: `${meeting.title} with ${meeting.client} - ${meeting.status}`,
                   date: meeting.date,
@@ -644,7 +668,7 @@ const Reports: React.FC = () => {
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900">{activity.action}</div>
                     <div className="text-xs text-gray-600">{activity.details}</div>
-                    <div className="text-xs text-gray-500">by {activity.user} • {activity.date}</div>
+                    <div className="text-xs text-gray-500">{t('activityFeed.by')} {activity.user} • {activity.date}</div>
                   </div>
                 </div>
               ));
@@ -660,9 +684,9 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Users</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.totalUsers')}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalUsers}</p>
-                  <p className="text-xs text-gray-500">{metrics.activeUsers} active</p>
+                  <p className="text-xs text-gray-500">{metrics.activeUsers} {t('metrics.active')}</p>
                 </div>
                 <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
               </div>
@@ -670,9 +694,9 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Leads</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.totalLeads')}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalLeads}</p>
-                  <p className="text-xs text-gray-500">Assigned</p>
+                  <p className="text-xs text-gray-500">{t('metrics.assigned')}</p>
                 </div>
                 <Target className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
@@ -680,9 +704,9 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Avg Conversion</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.avgConversion')}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.averageConversionRate}%</p>
-                  <p className="text-xs text-gray-500">Rate</p>
+                  <p className="text-xs text-gray-500">{t('metrics.rate')}</p>
                 </div>
                 <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
               </div>
@@ -690,9 +714,9 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">Call Completion</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.callCompletion')}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.averageCallCompletionRate}%</p>
-                  <p className="text-xs text-gray-500">Rate</p>
+                  <p className="text-xs text-gray-500">{t('metrics.rate')}</p>
                 </div>
                 <Phone className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
               </div>
@@ -703,7 +727,7 @@ const Reports: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8">
             {/* Performance Chart */}
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.performanceMetrics')}</h3>
               <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={performanceChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -718,7 +742,7 @@ const Reports: React.FC = () => {
 
             {/* Role Distribution */}
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Role Distribution</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.roleDistribution')}</h3>
               <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <RechartsPieChart>
                   <Pie
@@ -743,33 +767,33 @@ const Reports: React.FC = () => {
 
           {/* Performance Trends */}
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Performance Trends</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.performanceTrends')}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-blue-600">{metrics.averageConversionRate}%</div>
-                <div className="text-xs sm:text-sm text-gray-600">Avg Conversion Rate</div>
+                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgConversionRate')}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageConversionRate > 50 ? 'Excellent' : 
-                   metrics.averageConversionRate > 30 ? 'Good' : 
-                   metrics.averageConversionRate > 15 ? 'Fair' : 'Needs Improvement'}
+                  {metrics.averageConversionRate > 50 ? t('performance.excellent') : 
+                   metrics.averageConversionRate > 30 ? t('performance.good') : 
+                   metrics.averageConversionRate > 15 ? t('performance.fair') : t('performance.needsImprovement')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-green-600">{metrics.averageCallCompletionRate}%</div>
-                <div className="text-xs sm:text-sm text-gray-600">Avg Call Completion</div>
+                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgCallCompletion')}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageCallCompletionRate > 80 ? 'Outstanding' : 
-                   metrics.averageCallCompletionRate > 60 ? 'Good' : 
-                   metrics.averageCallCompletionRate > 40 ? 'Fair' : 'Needs Work'}
+                  {metrics.averageCallCompletionRate > 80 ? t('performance.outstanding') : 
+                   metrics.averageCallCompletionRate > 60 ? t('performance.good') : 
+                   metrics.averageCallCompletionRate > 40 ? t('performance.fair') : t('performance.needsWork')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-purple-600">{metrics.averageMeetingCompletionRate}%</div>
-                <div className="text-xs sm:text-sm text-gray-600">Avg Meeting Completion</div>
+                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgMeetingCompletion')}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageMeetingCompletionRate > 90 ? 'Perfect' : 
-                   metrics.averageMeetingCompletionRate > 70 ? 'Good' : 
-                   metrics.averageMeetingCompletionRate > 50 ? 'Fair' : 'Needs Attention'}
+                  {metrics.averageMeetingCompletionRate > 90 ? t('performance.perfect') : 
+                   metrics.averageMeetingCompletionRate > 70 ? t('performance.good') : 
+                   metrics.averageMeetingCompletionRate > 50 ? t('performance.fair') : t('performance.needsAttention')}
                 </div>
               </div>
             </div>
@@ -783,16 +807,16 @@ const Reports: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leads</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calls</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meetings</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deals</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Activity</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.user')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.role')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.leads')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.calls')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.visits')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.meetings')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.deals')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.conversion')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.lastActivity')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.status')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -805,7 +829,7 @@ const Reports: React.FC = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{performance.name}</div>
-                          <div className="text-sm text-gray-500">{performance.role}</div>
+                          <div className="text-sm text-gray-500">{translateUserRole(performance.role)}</div>
                         </div>
                       </div>
                     </td>
@@ -848,7 +872,7 @@ const Reports: React.FC = () => {
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {performance.isActive ? 'Active' : 'Inactive'}
+                        {translateUserStatus(performance.isActive ? 'Active' : 'Inactive')}
                       </span>
                     </td>
                   </tr>
@@ -870,7 +894,7 @@ const Reports: React.FC = () => {
                       </div>
                       <div className="ml-3">
                         <div className="text-sm font-medium text-gray-900">{performance.name}</div>
-                        <div className="text-xs text-gray-500">{performance.role}</div>
+                        <div className="text-xs text-gray-500">{translateUserRole(performance.role)}</div>
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
@@ -880,12 +904,12 @@ const Reports: React.FC = () => {
                         performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
                         'bg-green-100 text-green-800'
                       }`}>
-                        {performance.role}
+                        {translateUserRole(performance.role)}
                       </span>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
                         performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {performance.isActive ? 'Active' : 'Inactive'}
+                        {translateUserStatus(performance.isActive ? 'Active' : 'Inactive')}
                       </span>
                     </div>
                   </div>

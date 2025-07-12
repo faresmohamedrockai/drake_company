@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { 
   Home, 
   Users, 
@@ -25,22 +27,23 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
   const { user, logout } = useAuth();
   const { settings } = useSettings();
+  const { language, setLanguage, isRTL } = useLanguage();
+  const { t } = useTranslation('common');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'ar'>('en');
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'en' ? 'ar' : 'en');
+    setLanguage(language === 'en' ? 'ar' : 'en');
   };
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'leads', label: 'Leads', icon: Users },
-    { id: 'inventory', label: 'Inventory', icon: Building2 },
-    { id: 'meetings', label: 'Meetings', icon: Calendar },
-    { id: 'contracts', label: 'Contracts', icon: FileText },
-    { id: 'reports', label: 'Reports', icon: BarChart3, adminOnly: true },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'dashboard', label: t('navigation.dashboard'), icon: Home },
+    { id: 'leads', label: t('navigation.leads'), icon: Users },
+    { id: 'inventory', label: t('navigation.inventory'), icon: Building2 },
+    { id: 'meetings', label: t('navigation.meetings'), icon: Calendar },
+    { id: 'contracts', label: t('navigation.contracts'), icon: FileText },
+    { id: 'reports', label: t('navigation.reports'), icon: BarChart3, adminOnly: true },
+    { id: 'settings', label: t('navigation.settings'), icon: Settings },
   ];
 
   // Sidebar content for reuse

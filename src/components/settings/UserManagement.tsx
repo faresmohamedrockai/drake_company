@@ -3,6 +3,8 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Search, Plus, Edit, Trash2, User, Shield, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '../../types';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const UserManagement: React.FC = () => {
   const { users, addUser, updateUser, deleteUser } = useData();
@@ -23,8 +25,15 @@ const UserManagement: React.FC = () => {
     avatar: '', // <-- add avatar field
   });
 
+  const { t } = useTranslation('settings');
+  const { language } = useLanguage();
+
   // Get all team leaders for the dropdown
   const teamLeaders = users.filter(user => user.role === 'Team Leader' && user.isActive);
+  
+  // Check if there's already an admin user
+  const existingAdmin = users.find(user => user.role === 'Admin' && user.isActive);
+  const canCreateAdmin = !existingAdmin || (editingUser && editingUser.role === 'Admin');
 
   // Role-based permissions
   const canManageUsers = currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin';
@@ -40,6 +49,12 @@ const UserManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent creating additional admin users
+    if (!editingUser && formData.role === 'Admin' && existingAdmin) {
+      alert(t('user.cannotCreateAdditionalAdmin'));
+      return;
+    }
     
     if (editingUser) {
       updateUser(editingUser.id, formData);
@@ -97,8 +112,8 @@ const UserManagement: React.FC = () => {
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to manage users.</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('accessDenied')}</h2>
+          <p className="text-gray-600">{t('noPermissionToManageUsers')}</p>
         </div>
       </div>
     );
@@ -108,8 +123,13 @@ const UserManagement: React.FC = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-          <p className="text-gray-600">Manage system users and their permissions</p>
+          <h2 className="text-2xl font-bold text-gray-900">{t('userManagement')}</h2>
+          <p className="text-gray-600">{t('manageSystemUsers')}</p>
+          {existingAdmin && (
+            <p className="text-sm text-orange-600 mt-1">
+              {t('user.adminExists')}: {existingAdmin.name}
+            </p>
+          )}
         </div>
         {canCreateUsers && (
           <button
@@ -130,7 +150,7 @@ const UserManagement: React.FC = () => {
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Add User
+            {t('actions.addUser')}
           </button>
         )}
       </div>
@@ -141,7 +161,7 @@ const UserManagement: React.FC = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder={t('user.searchUsers')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -155,13 +175,13 @@ const UserManagement: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.user')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.email')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.username')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.role')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.status')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.created')}</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.actions')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -178,7 +198,7 @@ const UserManagement: React.FC = () => {
                       </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                        {user.teamId && <div className="text-sm text-gray-500">Team: {user.teamId}</div>}
+                        {user.teamId && <div className="text-sm text-gray-500">{t('team')}: {user.teamId}</div>}
                       </div>
                     </div>
                   </td>
@@ -193,7 +213,7 @@ const UserManagement: React.FC = () => {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      {user.isActive ? t('user.active') : t('user.inactive')}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -205,7 +225,7 @@ const UserManagement: React.FC = () => {
                         <button
                           onClick={() => handleEdit(user)}
                           className="text-blue-600 hover:text-blue-800"
-                          title="Edit user"
+                          title={t('actions.editUser')}
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -214,7 +234,7 @@ const UserManagement: React.FC = () => {
                         <button
                           onClick={() => handleDelete(user.id)}
                           className="text-red-600 hover:text-red-800"
-                          title="Delete user"
+                          title={t('actions.deleteUser')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -233,7 +253,7 @@ const UserManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              {editingUser ? 'Edit User' : 'Add New User'}
+              {editingUser ? t('actions.editUser') : t('addNewUser')}
             </h3>
             
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -246,7 +266,7 @@ const UserManagement: React.FC = () => {
                       <span className="text-2xl text-blue-600 font-bold">{formData.name.charAt(0)}</span>
                     )}
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
-                      <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                      <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('actions.edit')}</span>
                     </div>
                   </div>
                   <input
@@ -268,7 +288,7 @@ const UserManagement: React.FC = () => {
                 </label>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.fullName')}</label>
                 <input
                   type="text"
                   value={formData.name}
@@ -289,7 +309,7 @@ const UserManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.email')}</label>
                 <input
                   type="email"
                   value={formData.email}
@@ -300,7 +320,7 @@ const UserManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.username')}</label>
                 <input
                   type="text"
                   value={formData.username}
@@ -311,7 +331,7 @@ const UserManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.password')}</label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -331,7 +351,7 @@ const UserManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.role')}</label>
                 <select
                   value={formData.role}
                   onChange={(e) => {
@@ -351,31 +371,34 @@ const UserManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={!canEditUserRoles}
                 >
-                  <option value="Sales Rep">Sales Rep</option>
-                  <option value="Team Leader">Team Leader</option>
-                  {currentUser?.role === 'Admin' && <option value="Sales Admin">Sales Admin</option>}
-                  {currentUser?.role === 'Admin' && <option value="Admin">Admin</option>}
+                  <option value="Sales Rep">{t('salesRep')}</option>
+                  <option value="Team Leader">{t('teamLeader')}</option>
+                  {currentUser?.role === 'Admin' && <option value="Sales Admin">{t('salesAdmin')}</option>}
+                  {currentUser?.role === 'Admin' && canCreateAdmin && <option value="Admin">{t('admin')}</option>}
                 </select>
                 {!canEditUserRoles && (
-                  <p className="text-xs text-gray-500 mt-1">Only Admins can change user roles</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('user.onlyAdminsCanChangeRoles')}</p>
+                )}
+                {!canCreateAdmin && existingAdmin && (
+                  <p className="text-xs text-orange-600 mt-1">{t('user.onlyOneAdminAllowed')}</p>
                 )}
               </div>
 
               {formData.role === 'Team Leader' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Team ID</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.teamId')}</label>
                   <input
                     type="text"
                     value={formData.teamId}
                     onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
-                    placeholder="Auto-set to user's name"
+                    placeholder={t('user.autoSetToUserName')}
                     readOnly={formData.name === formData.teamId}
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     {formData.name === formData.teamId 
-                      ? "Team ID automatically set to user's name" 
-                      : "You can manually override the Team ID if needed"
+                      ? t('user.teamIdAutoSet') 
+                      : t('user.canManuallyOverrideTeamId')
                     }
                   </p>
                 </div>
@@ -383,21 +406,21 @@ const UserManagement: React.FC = () => {
 
               {formData.role === 'Sales Rep' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Team Leader</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.teamLeader')}</label>
                   <select
                     value={formData.teamId}
                     onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   >
-                    <option value="">Select Team Leader</option>
+                    <option value="">{t('user.selectTeamLeader')}</option>
                     {teamLeaders.map(leader => (
                       <option key={leader.id} value={leader.name}>
                         {leader.name}
                       </option>
                     ))}
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">Select the team leader this sales rep will work under</p>
+                  <p className="text-xs text-gray-500 mt-1">{t('user.selectTeamLeaderForSalesRep')}</p>
                 </div>
               )}
 
@@ -409,9 +432,7 @@ const UserManagement: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
-                  Active User
-                </label>
+                <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">{t('user.activeUser')}</label>
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
@@ -420,13 +441,13 @@ const UserManagement: React.FC = () => {
                   onClick={() => setShowAddModal(false)}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
                 >
-                  Cancel
+                  {t('actions.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  {editingUser ? 'Update User' : 'Add User'}
+                  {editingUser ? t('actions.updateUser') : t('actions.addUser')}
                 </button>
               </div>
             </form>

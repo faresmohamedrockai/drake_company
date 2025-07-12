@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
+import { useTranslation } from 'react-i18next';
 import { 
   Users, 
   TrendingUp, 
@@ -58,6 +59,7 @@ const useCountAnimation = (endValue: number, duration: number = 2000, delay: num
 const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { user } = useAuth();
   const { getStatistics, getPreviousStats, getChangeForStat, activities } = useData();
+  const { t } = useTranslation('dashboard');
   
   const stats = getStatistics();
   const prevStats = getPreviousStats() || stats; // fallback to current if none
@@ -75,40 +77,40 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   const kpiCards = [
     {
-      title: 'Total Prospects',
+      title: t('totalLeads'),
       value: animatedTotalProspects.toString(),
       change: getChangeForStat(stats.totalProspects, prevStats.totalProspects),
       icon: Users,
-      description: 'All prospects in the system'
+      description: t('overview')
     },
     {
-      title: 'Active Leads',
+      title: t('activeLeads'),
       value: animatedActiveLeads.toString(),
       change: getChangeForStat(stats.activeLeads, prevStats.activeLeads),
       icon: TrendingUp,
-      description: 'Fresh, Follow Up, Scheduled Visit'
+      description: t('overview')
     },
     {
-      title: "Today's Meetings",
+      title: t('meetingScheduled'),
       value: animatedTodayMeetings.toString(),
       change: getChangeForStat(stats.todayMeetings, prevStats.todayMeetings),
       icon: Calendar,
-      description: 'go to view all meetings ',
+      description: t('overview'),
       info: true
     },
     {
-      title: 'Follow Up Leads',
+      title: t('followUpLeads'),
       value: animatedFollowUpLeads.toString(),
       change: getChangeForStat(followUpLeads, Math.round((prevStats.conversionRates.leadsToFollowUp / 100) * prevStats.totalProspects)),
       icon: CheckCircle,
-      description: 'Leads currently in follow up status'
+      description: t('overview')
     }
   ];
 
   const conversionRates = [
-    { stage: 'Leads to Follow Up', rate: stats.conversionRates.leadsToFollowUp, color: 'bg-blue-500' },
-    { stage: 'Calls to Meetings', rate: stats.conversionRates.callsToMeetings, color: 'bg-gray-400' },
-    { stage: 'Meetings to Deals', rate: stats.conversionRates.meetingsToDeals, color: 'bg-gray-300' }
+    { stage: t('leadsToFollowUp'), rate: stats.conversionRates.leadsToFollowUp, color: 'bg-blue-500' },
+    { stage: t('callsToMeetings'), rate: stats.conversionRates.callsToMeetings, color: 'bg-gray-400' },
+    { stage: t('meetingsToDeals'), rate: stats.conversionRates.meetingsToDeals, color: 'bg-gray-300' }
   ];
 
   // Animated conversion rates
@@ -124,27 +126,27 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   const conversionMetrics = [
     {
-      label: 'Lead Follow-up Rate',
+      label: t('leadFollowUpRate'),
       value: `${animatedLeadsToFollowUp}%`,
       change: getChangeForStat(stats.conversionRates.leadsToFollowUp, prevStats.conversionRates.leadsToFollowUp)
     },
     {
-      label: 'Call Completion Rate',
+      label: t('callCompletionRate'),
       value: `${animatedCallCompletion}%`,
       change: getChangeForStat(stats.conversionRates.callCompletionRate, prevStats.conversionRates.callCompletionRate)
     },
     {
-      label: 'Meeting Success Rate',
+      label: t('meetingSuccessRate'),
       value: `${animatedMeetingSuccess}%`,
       change: getChangeForStat(stats.conversionRates.meetingsToDeals, prevStats.conversionRates.meetingsToDeals)
     },
     {
-      label: 'Calls to Meetings Rate',
+      label: t('callsToMeetingsRate'),
       value: `${animatedCallsToMeetings}%`,
       change: getChangeForStat(stats.conversionRates.callsToMeetings, prevStats.conversionRates.callsToMeetings)
     },
     {
-      label: 'Active Leads Rate',
+      label: t('activeLeadsRate'),
       value: `${animatedActiveLeadsRate}%`,
       change: getChangeForStat(
         Math.round((stats.activeLeads / Math.max(stats.totalProspects, 1)) * 100),
@@ -155,9 +157,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   // Prepare data for Recharts
   const conversionChartData = [
-    { stage: 'Leads to Follow Up', value: stats.conversionRates.leadsToFollowUp },
-    { stage: 'Calls to Meetings', value: stats.conversionRates.callsToMeetings },
-    { stage: 'Meetings to Deals', value: stats.conversionRates.meetingsToDeals }
+    { stage: t('leadsToFollowUp'), value: stats.conversionRates.leadsToFollowUp },
+    { stage: t('callsToMeetings'), value: stats.conversionRates.callsToMeetings },
+    { stage: t('meetingsToDeals'), value: stats.conversionRates.meetingsToDeals }
   ];
 
   return (
@@ -170,9 +172,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     >
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome back, {user?.name}! 👋
+          {t('title')}, {user?.name}! 👋
         </h1>
-        <p className="text-gray-600">Here's what's happening with your real estate business today.</p>
+        <p className="text-gray-600">{t('overview')}</p>
       </div>
 
       {/* KPI Cards */}
@@ -210,7 +212,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
                       }
                     }}
                   >
-                    go to view all meetings
+                    {t('goToViewAllMeetings')}
                   </a>
                 ) : (
                   <span className={`text-sm font-medium ${
@@ -239,9 +241,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Target className="h-5 w-5 mr-2" />
-            Conversion Rates
+            {t('conversionRates')}
           </h3>
-          <p className="text-sm text-gray-600 mb-6">Visualize your sales funnel efficiency</p>
+          <p className="text-sm text-gray-600 mb-6">{t('visualizeSalesFunnel')}</p>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={conversionChartData} barCategoryGap={40}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -259,9 +261,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
         <div className="bg-white p-6 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <CheckCircle className="h-5 w-5 mr-2" />
-            Conversion Metrics
+            {t('conversionMetrics')}
           </h3>
-          <p className="text-sm text-gray-600 mb-6">Monitor your key sales performance indicators</p>
+          <p className="text-sm text-gray-600 mb-6">{t('monitorSalesPerformance')}</p>
           
           <div className="space-y-4">
             {conversionMetrics.map((metric, index) => {
@@ -305,9 +307,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
       <div className="bg-white p-6 rounded-lg shadow-md">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
           <Clock className="h-5 w-5 mr-2" />
-          Recent Activity Feed
+          {t('recentActivityFeed')}
         </h3>
-        <p className="text-sm text-gray-600 mb-6">Latest actions and updates in your system</p>
+        <p className="text-sm text-gray-600 mb-6">{t('latestActionsUpdates')}</p>
         
         <div className="space-y-4">
           {activities.slice(0, 10).map((activity) => (
@@ -322,7 +324,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
             </div>
           ))}
           {activities.length === 0 && (
-            <p className="text-gray-500 text-center py-4">No recent activities</p>
+            <p className="text-gray-500 text-center py-4">{t('noRecentActivities')}</p>
           )}
         </div>
       </div>

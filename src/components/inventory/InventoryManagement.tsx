@@ -5,9 +5,13 @@ import ProjectsTab from './ProjectsTab';
 import ZonesTab from './ZonesTab';
 import DevelopersTab from './DevelopersTab';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 
 const InventoryManagement: React.FC = () => {
   const { user } = useAuth();
+  const { language } = useLanguage(); // Add language context
+  const { t } = useTranslation('inventory');
   const [activeTab, setActiveTab] = useState('properties');
 
   // Role-based access control
@@ -15,10 +19,10 @@ const InventoryManagement: React.FC = () => {
   const canViewInventory = user?.role === 'Sales Rep' || canManageInventory;
 
   const tabs = [
-    { id: 'properties', label: 'Properties', icon: Building2, adminOnly: false },
-    { id: 'projects', label: 'Projects', icon: Wrench, adminOnly: false },
-    { id: 'zones', label: 'Zones', icon: MapPin, adminOnly: true },
-    { id: 'developers', label: 'Developers', icon: Users, adminOnly: true }
+    { id: 'properties', label: t('properties'), icon: Building2, adminOnly: false },
+    { id: 'projects', label: t('projects'), icon: Wrench, adminOnly: false },
+    { id: 'zones', label: t('zones'), icon: MapPin, adminOnly: true },
+    { id: 'developers', label: t('developers'), icon: Users, adminOnly: true }
   ];
 
   // Filter tabs based on user role
@@ -26,17 +30,42 @@ const InventoryManagement: React.FC = () => {
     !tab.adminOnly || canManageInventory
   );
 
+  // Function to get the appropriate title based on active tab and language
+  const getTitle = () => {
+    const titles = {
+      properties: {
+        en: 'Properties',
+        ar: 'العقارات'
+      },
+      projects: {
+        en: 'Projects',
+        ar: 'المشاريع'
+      },
+      zones: {
+        en: 'Zones',
+        ar: 'المناطق'
+      },
+      developers: {
+        en: 'Developers',
+        ar: 'المطورين'
+      }
+    };
+
+    const currentTitle = titles[activeTab as keyof typeof titles];
+    return currentTitle ? currentTitle[language as keyof typeof currentTitle] : 'Inventory';
+  };
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Inventory Management</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">{getTitle()}</h1>
         <p className="text-gray-600">
-          {canManageInventory ? 'Manage properties, projects, zones, and developers' : 'View inventory information'}
+          {canManageInventory ? t('description') : t('viewOnlyDescription')}
         </p>
         {!canManageInventory && (
           <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
-              <strong>View Only Mode:</strong> You can view inventory information but cannot make changes.
+              <strong>{t('viewOnlyMode')}:</strong> {t('viewOnlyMessage')}
             </p>
           </div>
         )}

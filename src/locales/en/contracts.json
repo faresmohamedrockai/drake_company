@@ -1,0 +1,74 @@
+{
+  "title": "Contracts Management",
+  "description": "Track and manage all your property contracts and deals",
+  "addContract": "Add Contract",
+  "editContract": "Edit Contract",
+  "addNewContract": "Add New Contract",
+  "contractDetails": "Contract Details",
+  "contractNumber": "Contract Number",
+  "contractType": "Contract Type",
+  "contractStatus": "Contract Status",
+  "contractValue": "Contract Value",
+  "contractDate": "Contract Date",
+  "contractExpiry": "Contract Expiry",
+  "contractNotes": "Contract Notes",
+  "searchContracts": "Search contracts...",
+  "deleteConfirm": "Are you sure you want to delete this contract?",
+  "contractTypeOptions": {
+    "sale": "Sale Contract",
+    "rental": "Rental Contract",
+    "management": "Management Contract",
+    "brokerage": "Brokerage Contract"
+  },
+  "contractStatusOptions": {
+    "draft": "Draft",
+    "pending": "Pending",
+    "active": "Active",
+    "expired": "Expired",
+    "terminated": "Terminated"
+  },
+  "tableHeaders": {
+    "contractId": "Contract ID",
+    "leadName": "Lead Name",
+    "propertyProject": "Property/Project",
+    "dealValue": "Deal Value",
+    "contractDate": "Contract Date",
+    "status": "Status",
+    "createdBy": "Created By",
+    "actions": "Actions"
+  },
+  "form": {
+    "lead": "Lead",
+    "propertyProject": "Property/Project",
+    "dealValue": "Deal Value",
+    "contractDate": "Contract Date",
+    "status": "Status",
+    "notes": "Notes",
+    "selectLead": "Select Lead",
+    "selectProperty": "Select Property"
+  },
+  "statuses": {
+    "pending": "Pending",
+    "signed": "Signed",
+    "cancelled": "Cancelled"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "update": "Update",
+    "add": "Add"
+  },
+  "modal": {
+    "editContract": "Edit Contract",
+    "addNewContract": "Add New Contract",
+    "close": "Close"
+  },
+  "cardLabels": {
+    "client": "Client",
+    "property": "Property",
+    "dealValue": "Deal Value",
+    "date": "Date",
+    "notes": "Notes"
+  }
+} 

@@ -1,0 +1,87 @@
+{
+  "title": "Meetings Management",
+  "description": "Organize, schedule, and track all your client meetings and visits",
+  "addMeeting": "Add Meeting",
+  "editMeeting": "Edit Meeting",
+  "meetingDetails": "Meeting Details",
+  "meetingTitle": "Meeting Title",
+  "meetingDate": "Meeting Date",
+  "meetingTime": "Meeting Time",
+  "meetingLocation": "Meeting Location",
+  "meetingType": "Meeting Type",
+  "meetingStatus": "Meeting Status",
+  "meetingNotes": "Meeting Notes",
+  "meetingAttendees": "Meeting Attendees",
+  "searchMeetings": "Search meetings...",
+  "scheduleMeeting": "Schedule Meeting",
+  "deleteConfirm": "Are you sure you want to delete this meeting?",
+  "meetingTypeOptions": {
+    "client": "Client Meeting",
+    "internal": "Internal Meeting",
+    "presentation": "Presentation",
+    "negotiation": "Negotiation",
+    "followUp": "Follow Up"
+  },
+  "meetingStatusOptions": {
+    "scheduled": "Scheduled",
+    "confirmed": "Confirmed",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "rescheduled": "Rescheduled"
+  },
+  "tableHeaders": {
+    "meeting": "Meeting",
+    "client": "Client",
+    "dateTime": "Date&Time",
+    "duration": "Duration",
+    "type": "Type",
+    "status": "Status",
+    "location": "Location",
+    "actions": "Actions"
+  },
+  "form": {
+    "title": "Title",
+    "client": "Client",
+    "date": "Date",
+    "time": "Time",
+    "duration": "Duration",
+    "type": "Type",
+    "status": "Status",
+    "locationType": "Location Type",
+    "location": "Location",
+    "assignedTo": "Assigned To",
+    "notes": "Notes",
+    "assignment": "Assignment",
+    "selectType": "Select Type",
+    "selectUser": "Select User",
+    "selectLocationType": "Select Location Type"
+  },
+  "locationTypes": {
+    "online": "Online",
+    "offline": "Offline"
+  },
+  "meetingTypes": {
+    "proposal": "Proposal",
+    "siteVisit": "Site Visit",
+    "negotiation": "Negotiation"
+  },
+  "statuses": {
+    "scheduled": "Scheduled",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "actions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "update": "Update",
+    "schedule": "Schedule"
+  },
+  "modal": {
+    "editMeeting": "Edit Meeting",
+    "scheduleMeeting": "Schedule Meeting",
+    "close": "Close"
+  },
+  "with": "with",
+  "online": "Online"
+} 

@@ -14,6 +14,8 @@ export interface User {
 export interface Lead {
   id: string;
   name: string;
+  nameEn?: string; // English name
+  nameAr?: string; // Arabic name
   phone: string;
   email?: string;
   budget: string;
@@ -63,6 +65,8 @@ export interface Note {
 export interface Property {
   id: string;
   title: string;
+  titleEn?: string; // English title
+  titleAr?: string; // Arabic title
   type: string;
   price: number;
   location: string;
@@ -92,6 +96,8 @@ export interface Property {
 export interface Project {
   id: string;
   name: string;
+  nameEn?: string; // English name
+  nameAr?: string; // Arabic name
   developer: string;
   zone: string;
   type: string;
@@ -116,6 +122,8 @@ export interface Project {
 export interface Zone {
   id: string;
   name: string;
+  nameEn?: string; // English name
+  nameAr?: string; // Arabic name
   description: string;
   latitude: number;
   longitude: number;
@@ -129,6 +137,8 @@ export interface Zone {
 export interface Developer {
   id: string;
   name: string;
+  nameEn?: string; // English name
+  nameAr?: string; // Arabic name
   email: string;
   phone: string;
   projects: number;
