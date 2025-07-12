@@ -160,10 +160,18 @@ const PropertiesTab: React.FC = () => {
       if (selectedProject && Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0) {
         paymentPlanIndex = 0;
       }
+      
+      // Handle zone selection based on project
+      let zoneId = '';
+      if (selectedProject?.zoneId) {
+        zoneId = selectedProject.zoneId;
+      }
+      
       setForm((prev) => ({
         ...prev,
         [name]: value,
         developerId: selectedProject?.developerId || '',
+        zoneId: zoneId, // Auto-set zone if project has one
         typeOther: '', // Clear other type
         amenitiesOther: '', // Clear other amenities
         paymentPlanIndex,
@@ -629,15 +637,39 @@ const PropertiesTab: React.FC = () => {
                     </select>
                   </div>
                   {/* Zone */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                    <select name="zoneId" value={form.zoneId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
-                      <option value="">Select Zone</option>
-                      {zones.map(zone => (
-                        <option key={zone.id} value={zone.id}>{zone.name}</option>
-                      ))}
-                    </select>
-                  </div>
+                  {(() => {
+                    const selectedProject = projects.find(p => p.id === form.projectId);
+                    const projectHasZone = selectedProject?.zoneId;
+                    
+                    // If project has a zone, show it as read-only
+                    if (projectHasZone) {
+                      const zone = zones.find(z => z.id === projectHasZone);
+                      return (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Zone (from project)</label>
+                          <input 
+                            type="text" 
+                            value={zone?.name || 'Unknown Zone'} 
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-base cursor-not-allowed" 
+                            readOnly 
+                          />
+                        </div>
+                      );
+                    }
+                    
+                    // If project doesn't have a zone, show zone selection
+                    return (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                        <select name="zoneId" value={form.zoneId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
+                          <option value="">Select Zone</option>
+                          {zones.map(zone => (
+                            <option key={zone.id} value={zone.id}>{zone.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })()}
                   {/* Status (last) */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
@@ -992,16 +1024,46 @@ const PropertiesTab: React.FC = () => {
                   );
                 })()}
                 {/* Images */}
-                {reportProperty && Array.isArray(reportProperty.images) && reportProperty.images.length > 0 && (
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Property Images</h3>
-                    <div className="flex gap-2">
-                      {reportProperty.images.map((img: string, idx: number) => (
-                        <img key={idx} src={img} alt="Property" className="h-24 w-32 object-cover rounded border" />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {(() => {
+                  // Get property images
+                  const propertyImages = reportProperty && Array.isArray(reportProperty.images) ? reportProperty.images : [];
+                  
+                  // Get project images
+                  const project = projects.find(p => p.id === reportProperty?.projectId);
+                  const projectImages = project && Array.isArray(project.images) ? project.images : [];
+                  
+                  // Combine all images
+                  const allImages = [...propertyImages, ...projectImages];
+                  
+                  if (allImages.length > 0) {
+                    return (
+                      <div className="mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-1">Images</h3>
+                        {propertyImages.length > 0 && (
+                          <div className="mb-3">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Property Images ({propertyImages.length})</h4>
+                            <div className="flex gap-2 flex-wrap">
+                              {propertyImages.map((img: string, idx: number) => (
+                                <img key={idx} src={img} alt="Property" className="h-24 w-32 object-cover rounded border shadow-sm" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {projectImages.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Project Images ({projectImages.length})</h4>
+                            <div className="flex gap-2 flex-wrap">
+                              {projectImages.map((img: string, idx: number) => (
+                                <img key={idx} src={img} alt="Project" className="h-24 w-32 object-cover rounded border shadow-sm" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 {/* Notes */}
                 {reportNotes && (
                   <div className="mb-4">

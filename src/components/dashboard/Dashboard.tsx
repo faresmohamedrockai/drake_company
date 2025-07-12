@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { 
@@ -17,6 +17,44 @@ interface DashboardProps {
   setCurrentView?: (view: string) => void;
 }
 
+// Custom hook for counting animation
+const useCountAnimation = (endValue: number, duration: number = 2000, delay: number = 0) => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    const startTime = Date.now();
+    const startValue = 0;
+    
+    const animate = () => {
+      const currentTime = Date.now();
+      const elapsed = currentTime - startTime - delay;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Smoother easing function for more fluid animation
+      const easeOutCubic = 1 - Math.pow(1 - progress, 3);
+      const currentValue = Math.floor(startValue + (endValue - startValue) * easeOutCubic);
+      
+      setCount(currentValue);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setCount(endValue);
+      }
+    };
+    
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(animate);
+    }, delay);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [endValue, duration, delay]);
+
+  return count;
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { user } = useAuth();
   const { getStatistics, getPreviousStats, getChangeForStat, activities } = useData();
@@ -29,24 +67,30 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     ? Math.round((stats.conversionRates.leadsToFollowUp / 100) * stats.totalProspects)
     : 0;
 
+  // Animated counts for KPI cards
+  const animatedTotalProspects = useCountAnimation(stats.totalProspects, 1200, 0);
+  const animatedActiveLeads = useCountAnimation(stats.activeLeads, 1200, 100);
+  const animatedTodayMeetings = useCountAnimation(stats.todayMeetings, 1200, 200);
+  const animatedFollowUpLeads = useCountAnimation(followUpLeads, 1200, 300);
+
   const kpiCards = [
     {
       title: 'Total Prospects',
-      value: stats.totalProspects.toString(),
+      value: animatedTotalProspects.toString(),
       change: getChangeForStat(stats.totalProspects, prevStats.totalProspects),
       icon: Users,
       description: 'All prospects in the system'
     },
     {
       title: 'Active Leads',
-      value: stats.activeLeads.toString(),
+      value: animatedActiveLeads.toString(),
       change: getChangeForStat(stats.activeLeads, prevStats.activeLeads),
       icon: TrendingUp,
       description: 'Fresh, Follow Up, Scheduled Visit'
     },
     {
       title: "Today's Meetings",
-      value: stats.todayMeetings.toString(),
+      value: animatedTodayMeetings.toString(),
       change: getChangeForStat(stats.todayMeetings, prevStats.todayMeetings),
       icon: Calendar,
       description: 'go to view all meetings ',
@@ -54,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     },
     {
       title: 'Follow Up Leads',
-      value: followUpLeads.toString(),
+      value: animatedFollowUpLeads.toString(),
       change: getChangeForStat(followUpLeads, Math.round((prevStats.conversionRates.leadsToFollowUp / 100) * prevStats.totalProspects)),
       icon: CheckCircle,
       description: 'Leads currently in follow up status'
@@ -67,30 +111,41 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     { stage: 'Meetings to Deals', rate: stats.conversionRates.meetingsToDeals, color: 'bg-gray-300' }
   ];
 
+  // Animated conversion rates
+  const animatedLeadsToFollowUp = useCountAnimation(stats.conversionRates.leadsToFollowUp, 1000, 400);
+  const animatedCallCompletion = useCountAnimation(stats.conversionRates.callCompletionRate, 1000, 500);
+  const animatedMeetingSuccess = useCountAnimation(stats.conversionRates.meetingsToDeals, 1000, 600);
+  const animatedCallsToMeetings = useCountAnimation(stats.conversionRates.callsToMeetings, 1000, 700);
+  const animatedActiveLeadsRate = useCountAnimation(
+    Math.round((stats.activeLeads / Math.max(stats.totalProspects, 1)) * 100), 
+    1000, 
+    800
+  );
+
   const conversionMetrics = [
     {
       label: 'Lead Follow-up Rate',
-      value: `${stats.conversionRates.leadsToFollowUp}%`,
+      value: `${animatedLeadsToFollowUp}%`,
       change: getChangeForStat(stats.conversionRates.leadsToFollowUp, prevStats.conversionRates.leadsToFollowUp)
     },
     {
       label: 'Call Completion Rate',
-      value: `${stats.conversionRates.callCompletionRate}%`,
+      value: `${animatedCallCompletion}%`,
       change: getChangeForStat(stats.conversionRates.callCompletionRate, prevStats.conversionRates.callCompletionRate)
     },
     {
       label: 'Meeting Success Rate',
-      value: `${stats.conversionRates.meetingsToDeals}%`,
+      value: `${animatedMeetingSuccess}%`,
       change: getChangeForStat(stats.conversionRates.meetingsToDeals, prevStats.conversionRates.meetingsToDeals)
     },
     {
       label: 'Calls to Meetings Rate',
-      value: `${stats.conversionRates.callsToMeetings}%`,
+      value: `${animatedCallsToMeetings}%`,
       change: getChangeForStat(stats.conversionRates.callsToMeetings, prevStats.conversionRates.callsToMeetings)
     },
     {
       label: 'Active Leads Rate',
-      value: `${Math.round((stats.activeLeads / Math.max(stats.totalProspects, 1)) * 100)}%`,
+      value: `${animatedActiveLeadsRate}%`,
       change: getChangeForStat(
         Math.round((stats.activeLeads / Math.max(stats.totalProspects, 1)) * 100),
         Math.round((prevStats.activeLeads / Math.max(prevStats.totalProspects, 1)) * 100)

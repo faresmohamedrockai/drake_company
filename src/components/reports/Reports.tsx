@@ -38,6 +38,7 @@ interface UserPerformance {
   totalVisits: number;
   completedMeetings: number;
   totalMeetings: number;
+  closedDeals: number;
   conversionRate: number;
   callCompletionRate: number;
   visitCompletionRate: number;
@@ -170,6 +171,7 @@ const Reports: React.FC = () => {
       totalVisits,
       completedMeetings,
       totalMeetings,
+      closedDeals,
       conversionRate: Math.round(conversionRate * 10) / 10,
       callCompletionRate: Math.round(enhancedCallCompletionRate * 10) / 10,
       visitCompletionRate: Math.round(enhancedVisitCompletionRate * 10) / 10,
@@ -325,6 +327,7 @@ const Reports: React.FC = () => {
       'Completed Meetings': p.completedMeetings,
       'Total Meetings': p.totalMeetings,
       'Meeting Completion Rate (%)': p.meetingCompletionRate,
+      'Closed Deals': p.closedDeals,
       'Conversion Rate (%)': p.conversionRate,
       'Last Activity': p.lastActivity,
       'Status': p.isActive ? 'Active' : 'Inactive'
@@ -677,6 +680,7 @@ const Reports: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Calls</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visits</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Meetings</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deals</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Activity</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -720,6 +724,10 @@ const Reports: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{performance.completedMeetings}/{performance.totalMeetings}</div>
                       <div className="text-xs text-gray-500">{performance.meetingCompletionRate}%</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-green-600">{performance.closedDeals}</div>
+                      <div className="text-xs text-gray-500">Closed</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{performance.conversionRate}%</div>

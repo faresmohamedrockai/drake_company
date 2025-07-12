@@ -110,6 +110,7 @@ export interface Project {
   zoneId?: string;
   developerId?: string;
   propertyIds?: string[];
+  images?: string[]; // Array of image URLs or data URLs
 }
 
 export interface Zone {
