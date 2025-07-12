@@ -71,7 +71,11 @@ const Reports: React.FC = () => {
   const [sortBy, setSortBy] = useState<'name' | 'performance' | 'activity'>('performance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showActivityFeed, setShowActivityFeed] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month'>('week');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month' | 'custom'>('week');
+  const [customDateRange, setCustomDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
 
   // Check if user has access to reports
   const canAccessReports = currentUser?.role === 'Admin' || 
@@ -216,6 +220,18 @@ const Reports: React.FC = () => {
     };
   };
 
+  // Filter data by date range
+  const filterDataByDateRange = (data: any[]) => {
+    if (!selectedDateRange.startDate || !selectedDateRange.endDate) {
+      return data;
+    }
+    
+    return data.filter(item => {
+      const itemDate = new Date(item.createdAt || item.date || item.lastActivity);
+      return itemDate >= selectedDateRange.startDate! && itemDate <= selectedDateRange.endDate!;
+    });
+  };
+
   // Get filtered and sorted performances
   const getFilteredPerformances = () => {
     let performances = getAccessibleUsers().map(calculateUserPerformance);
@@ -231,6 +247,15 @@ const Reports: React.FC = () => {
     // Filter by selected user
     if (selectedUser) {
       performances = performances.filter(p => p.id === selectedUser);
+    }
+    
+    // Filter by date range
+    if (selectedDateRange.startDate && selectedDateRange.endDate) {
+      performances = performances.filter(p => {
+        if (p.lastActivity === 'No activity') return true;
+        const lastActivityDate = new Date(p.lastActivity);
+        return lastActivityDate >= selectedDateRange.startDate! && lastActivityDate <= selectedDateRange.endDate!;
+      });
     }
     
     // Sort
@@ -265,6 +290,41 @@ const Reports: React.FC = () => {
     return performances;
   };
 
+  // Get date range based on selected timeframe
+  const getDateRange = () => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    switch (selectedTimeframe) {
+      case 'today':
+        return {
+          startDate: startOfDay,
+          endDate: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+        };
+      case 'week':
+        const startOfWeek = new Date(startOfDay);
+        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        return {
+          startDate: startOfWeek,
+          endDate: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000)
+        };
+      case 'month':
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        return {
+          startDate: startOfMonth,
+          endDate: new Date(today.getFullYear(), today.getMonth() + 1, 0)
+        };
+      case 'custom':
+        return {
+          startDate: customDateRange.startDate ? new Date(customDateRange.startDate) : null,
+          endDate: customDateRange.endDate ? new Date(customDateRange.endDate) : null
+        };
+      default:
+        return { startDate: null, endDate: null };
+    }
+  };
+
+  const selectedDateRange = getDateRange();
   const performances = getFilteredPerformances();
   const metrics = calculateOverallMetrics();
 
@@ -359,30 +419,31 @@ const Reports: React.FC = () => {
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Performance Reports</h1>
-        <p className="text-gray-600">Track team performance, conversion rates, and activity metrics</p>
+    <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Performance Reports</h1>
+        <p className="text-sm sm:text-base text-gray-600">Track team performance, conversion rates, and activity metrics</p>
       </div>
 
       {/* Controls */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1">
-            <div className="relative">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+        <div className="flex flex-col gap-4">
+          {/* Search and User Filter */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
             <select
               value={selectedUser}
               onChange={(e) => setSelectedUser(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
             >
               <option value="">All Users</option>
               {getAccessibleUsers().map(user => (
@@ -400,28 +461,32 @@ const Reports: React.FC = () => {
               <label htmlFor="showInactive" className="text-sm text-gray-700">Show Inactive</label>
             </div>
           </div>
+          
+          {/* View Mode Buttons */}
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('dashboard')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                 viewMode === 'dashboard' 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
               <BarChart3 className="h-4 w-4 inline mr-2" />
-              Dashboard
+              <span className="hidden xs:inline">Dashboard</span>
+              <span className="xs:hidden">Dash</span>
             </button>
             <button
               onClick={() => setViewMode('detailed')}
-              className={`px-4 py-2 rounded-lg transition-colors ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
                 viewMode === 'detailed' 
                   ? 'bg-blue-600 text-white' 
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
               <FileText className="h-4 w-4 inline mr-2" />
-              Detailed
+              <span className="hidden xs:inline">Detailed</span>
+              <span className="xs:hidden">List</span>
             </button>
           </div>
         </div>
@@ -429,75 +494,118 @@ const Reports: React.FC = () => {
 
       {/* Export Controls */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4">
+          {/* Export Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
             <span className="text-sm font-medium text-gray-700">Export Data:</span>
-            <button
-              onClick={() => handleExport('csv')}
-              className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
-            >
-              <Download className="h-4 w-4 inline mr-1" />
-              CSV
-            </button>
-            <button
-              onClick={() => handleExport('json')}
-              className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-            >
-              <Download className="h-4 w-4 inline mr-1" />
-              JSON
-            </button>
-            <button
-              onClick={() => handleExport('excel')}
-              className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
-            >
-              <Download className="h-4 w-4 inline mr-1" />
-              Excel
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => handleExport('csv')}
+                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
+              >
+                <Download className="h-4 w-4 inline mr-1" />
+                CSV
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+              >
+                <Download className="h-4 w-4 inline mr-1" />
+                JSON
+              </button>
+              <button
+                onClick={() => handleExport('excel')}
+                className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
+              >
+                <Download className="h-4 w-4 inline mr-1" />
+                Excel
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedTimeframe}
-              onChange={(e) => setSelectedTimeframe(e.target.value as any)}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="today">Today</option>
-              <option value="week">This Week</option>
-              <option value="month">This Month</option>
-            </select>
-            <button
-              onClick={() => setShowActivityFeed(!showActivityFeed)}
-              className={`px-3 py-1 rounded text-sm transition-colors ${
-                showActivityFeed 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <Activity className="h-4 w-4 inline mr-1" />
-              Activity Feed
-            </button>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="performance">Sort by Performance</option>
-              <option value="name">Sort by Name</option>
-              <option value="activity">Sort by Activity</option>
-            </select>
-            <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="p-1 rounded hover:bg-gray-100"
-            >
-              {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingUp className="h-4 w-4 rotate-180" />}
-            </button>
+          
+          {/* Date Range Display */}
+          {selectedDateRange.startDate && selectedDateRange.endDate && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+              <Calendar className="h-4 w-4" />
+              <span className="text-xs sm:text-sm">
+                {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
+              </span>
+            </div>
+          )}
+          
+          {/* Filters and Controls */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-2 flex-1">
+              <select
+                value={selectedTimeframe}
+                onChange={(e) => setSelectedTimeframe(e.target.value as any)}
+                className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              
+              {/* Custom Date Range Picker */}
+              {selectedTimeframe === 'custom' && (
+                <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-1">
+                  <input
+                    type="date"
+                    value={customDateRange.startDate}
+                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                    className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
+                    placeholder="Start Date"
+                  />
+                  <span className="text-gray-400 text-sm hidden sm:inline">to</span>
+                  <input
+                    type="date"
+                    value={customDateRange.endDate}
+                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                    className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
+                    placeholder="End Date"
+                  />
+                </div>
+              )}
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowActivityFeed(!showActivityFeed)}
+                className={`px-3 py-1 rounded text-sm transition-colors ${
+                  showActivityFeed 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <Activity className="h-4 w-4 inline mr-1" />
+                <span className="hidden xs:inline">Activity Feed</span>
+                <span className="xs:hidden">Feed</span>
+              </button>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="performance">Sort by Performance</option>
+                <option value="name">Sort by Name</option>
+                <option value="activity">Sort by Activity</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="p-1 rounded hover:bg-gray-100"
+              >
+                {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingUp className="h-4 w-4 rotate-180" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Activity Feed */}
       {showActivityFeed && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Activity className="h-5 w-5 mr-2" />
             Recent Activity Feed
           </h3>
@@ -548,59 +656,59 @@ const Reports: React.FC = () => {
       {viewMode === 'dashboard' ? (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-2xl font-bold text-gray-900">{metrics.totalUsers}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Users</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalUsers}</p>
                   <p className="text-xs text-gray-500">{metrics.activeUsers} active</p>
                 </div>
-                <Users className="h-8 w-8 text-blue-600" />
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Leads</p>
-                  <p className="text-2xl font-bold text-gray-900">{metrics.totalLeads}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Total Leads</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalLeads}</p>
                   <p className="text-xs text-gray-500">Assigned</p>
                 </div>
-                <Target className="h-8 w-8 text-green-600" />
+                <Target className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Conversion</p>
-                  <p className="text-2xl font-bold text-gray-900">{metrics.averageConversionRate}%</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Avg Conversion</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.averageConversionRate}%</p>
                   <p className="text-xs text-gray-500">Rate</p>
                 </div>
-                <TrendingUp className="h-8 w-8 text-purple-600" />
+                <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Call Completion</p>
-                  <p className="text-2xl font-bold text-gray-900">{metrics.averageCallCompletionRate}%</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">Call Completion</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.averageCallCompletionRate}%</p>
                   <p className="text-xs text-gray-500">Rate</p>
                 </div>
-                <Phone className="h-8 w-8 text-orange-600" />
+                <Phone className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
               </div>
             </div>
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8">
             {/* Performance Chart */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
-              <ResponsiveContainer width="100%" height={300}>
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Performance Metrics</h3>
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={performanceChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
                   <Bar dataKey="conversionRate" fill="#8884d8" name="Conversion Rate (%)" />
                   <Bar dataKey="callCompletionRate" fill="#82ca9d" name="Call Completion (%)" />
@@ -609,9 +717,9 @@ const Reports: React.FC = () => {
             </div>
 
             {/* Role Distribution */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Role Distribution</h3>
-              <ResponsiveContainer width="100%" height={300}>
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Role Distribution</h3>
+              <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <RechartsPieChart>
                   <Pie
                     data={roleDistributionData}
@@ -619,7 +727,7 @@ const Reports: React.FC = () => {
                     cy="50%"
                     labelLine={false}
                     label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                    outerRadius={80}
+                    outerRadius={60}
                     fill="#8884d8"
                     dataKey="value"
                   >
@@ -634,30 +742,30 @@ const Reports: React.FC = () => {
           </div>
 
           {/* Performance Trends */}
-          <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Trends</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{metrics.averageConversionRate}%</div>
-                <div className="text-sm text-gray-600">Avg Conversion Rate</div>
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Performance Trends</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-blue-600">{metrics.averageConversionRate}%</div>
+                <div className="text-xs sm:text-sm text-gray-600">Avg Conversion Rate</div>
                 <div className="text-xs text-gray-500 mt-1">
                   {metrics.averageConversionRate > 50 ? 'Excellent' : 
                    metrics.averageConversionRate > 30 ? 'Good' : 
                    metrics.averageConversionRate > 15 ? 'Fair' : 'Needs Improvement'}
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{metrics.averageCallCompletionRate}%</div>
-                <div className="text-sm text-gray-600">Avg Call Completion</div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">{metrics.averageCallCompletionRate}%</div>
+                <div className="text-xs sm:text-sm text-gray-600">Avg Call Completion</div>
                 <div className="text-xs text-gray-500 mt-1">
                   {metrics.averageCallCompletionRate > 80 ? 'Outstanding' : 
                    metrics.averageCallCompletionRate > 60 ? 'Good' : 
                    metrics.averageCallCompletionRate > 40 ? 'Fair' : 'Needs Work'}
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{metrics.averageMeetingCompletionRate}%</div>
-                <div className="text-sm text-gray-600">Avg Meeting Completion</div>
+              <div className="text-center p-3 bg-gray-50 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-purple-600">{metrics.averageMeetingCompletionRate}%</div>
+                <div className="text-xs sm:text-sm text-gray-600">Avg Meeting Completion</div>
                 <div className="text-xs text-gray-500 mt-1">
                   {metrics.averageMeetingCompletionRate > 90 ? 'Perfect' : 
                    metrics.averageMeetingCompletionRate > 70 ? 'Good' : 
@@ -670,7 +778,8 @@ const Reports: React.FC = () => {
       ) : (
         /* Detailed View */
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
@@ -746,6 +855,82 @@ const Reports: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden">
+            <div className="p-4 space-y-4">
+              {performances.map((performance) => (
+                <div key={performance.id} className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  {/* User Info */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-semibold">
+                        {performance.name.charAt(0)}
+                      </div>
+                      <div className="ml-3">
+                        <div className="text-sm font-medium text-gray-900">{performance.name}</div>
+                        <div className="text-xs text-gray-500">{performance.role}</div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        performance.role === 'Admin' ? 'bg-red-100 text-red-800' :
+                        performance.role === 'Sales Admin' ? 'bg-purple-100 text-purple-800' :
+                        performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {performance.role}
+                      </span>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
+                        performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {performance.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white rounded p-3">
+                      <div className="text-xs text-gray-500">Leads</div>
+                      <div className="text-sm font-medium text-gray-900">{performance.totalLeads}</div>
+                    </div>
+                    <div className="bg-white rounded p-3">
+                      <div className="text-xs text-gray-500">Calls</div>
+                      <div className="text-sm font-medium text-gray-900">{performance.completedCalls}/{performance.totalCalls}</div>
+                      <div className="text-xs text-gray-500">{performance.callCompletionRate}%</div>
+                    </div>
+                    <div className="bg-white rounded p-3">
+                      <div className="text-xs text-gray-500">Visits</div>
+                      <div className="text-sm font-medium text-gray-900">{performance.completedVisits}/{performance.totalVisits}</div>
+                      <div className="text-xs text-gray-500">{performance.visitCompletionRate}%</div>
+                    </div>
+                    <div className="bg-white rounded p-3">
+                      <div className="text-xs text-gray-500">Meetings</div>
+                      <div className="text-sm font-medium text-gray-900">{performance.completedMeetings}/{performance.totalMeetings}</div>
+                      <div className="text-xs text-gray-500">{performance.meetingCompletionRate}%</div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Row */}
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <div>
+                      <div className="text-xs text-gray-500">Closed Deals</div>
+                      <div className="text-sm font-medium text-green-600">{performance.closedDeals}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Conversion Rate</div>
+                      <div className="text-sm font-medium text-gray-900">{performance.conversionRate}%</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500">Last Activity</div>
+                      <div className="text-xs text-gray-600">{performance.lastActivity}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
