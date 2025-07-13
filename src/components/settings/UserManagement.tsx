@@ -189,7 +189,7 @@ const UserManagement: React.FC = () => {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 rounded-full flex items-center justify-center mr-3 bg-blue-600 text-white font-semibold overflow-hidden border-2 border-blue-200">
+                      <div className="h-10 w-10 rounded-full flex items-center justify-center mr-6 bg-blue-600 text-white font-semibold overflow-hidden border-2 border-blue-200">
                         {user.avatar ? (
                           <img src={user.avatar} alt="avatar" className="object-cover w-full h-full" />
                         ) : (
