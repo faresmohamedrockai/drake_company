@@ -70,10 +70,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     : 0;
 
   // Animated counts for KPI cards
-  const animatedTotalProspects = useCountAnimation(stats.totalProspects, 1200, 0);
-  const animatedActiveLeads = useCountAnimation(stats.activeLeads, 1200, 100);
-  const animatedTodayMeetings = useCountAnimation(stats.todayMeetings, 1200, 200);
-  const animatedFollowUpLeads = useCountAnimation(followUpLeads, 1200, 300);
+  const animatedTotalProspects = useCountAnimation(stats.totalProspects, 1000, 0);
+  const animatedActiveLeads = useCountAnimation(stats.activeLeads, 1000, 100);
+  const animatedTodayMeetings = useCountAnimation(stats.todayMeetings, 1000, 200);
+  const animatedFollowUpLeads = useCountAnimation(followUpLeads, 1000, 300);
 
   const kpiCards = [
     {

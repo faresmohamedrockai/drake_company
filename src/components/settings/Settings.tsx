@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, Shield, Settings as SettingsIcon, Database, ChevronDown, ChevronLeft, ChevronRight, Lock, AlertTriangle } from 'lucide-react';
+import { Users, Shield, Settings as SettingsIcon, Database, ChevronDown, ChevronLeft, ChevronRight, Lock, AlertTriangle, Bell, Mail, Calendar, FileText, Volume2, Smartphone, Monitor } from 'lucide-react';
 import UserManagement from './UserManagement';
 import { useData } from '../../contexts/DataContext';
 import Papa from 'papaparse'; 
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
+import notificationService from '../../utils/notificationService';
 
 const SYSTEM_SETTINGS_KEY = 'propai_system_settings';
 const BACKUP_DATE_KEY = 'propai_last_backup_date';
@@ -17,11 +18,33 @@ const defaultSettings = {
   companyWebsite: 'www.propai.com',
   companyEmail: 'info@propai.com',
   companyAddress: '123 Main St, Alexandria, Egypt',
-  notifications: {
-    email: true,
-    meeting: true,
-    contract: true,
-  },
+      notifications: {
+      // Email notifications with mirror functionality
+      email: {
+        enabled: true,
+        smtpHost: import.meta.env.VITE_SMTP_HOST || 'smtp.gmail.com',
+        smtpPort: parseInt(import.meta.env.VITE_SMTP_PORT || '587'),
+        smtpUser: import.meta.env.VITE_SMTP_USER || '',
+        smtpPass: import.meta.env.VITE_SMTP_PASS || '',
+        fromEmail: import.meta.env.VITE_FROM_EMAIL || 'notifications@propai.com',
+        fromName: import.meta.env.VITE_FROM_NAME || 'Propai CRM',
+        mirrorEnabled: true,
+        mirrorEmail: import.meta.env.VITE_MIRROR_EMAIL || 'admin@propai.com',
+      },
+      // Push notifications
+      push: {
+        enabled: true,
+        meetingReminders: true,
+        contractAlerts: true,
+        soundEnabled: true,
+      },
+      // Contract alerts
+      contract: {
+        statusAlerts: true,
+        expiryAlerts: true,
+        paymentReminders: true,
+      },
+    },
 };
 
 const Settings: React.FC = () => {
@@ -37,7 +60,18 @@ const Settings: React.FC = () => {
   // System Settings State
   const [settings, setSettings] = useState(() => {
     const saved = localStorage.getItem(SYSTEM_SETTINGS_KEY);
-    return saved ? JSON.parse(saved) : defaultSettings;
+    if (saved) {
+      // Deep merge with defaultSettings to ensure all keys exist
+      return {
+        ...defaultSettings,
+        ...JSON.parse(saved),
+        notifications: {
+          ...defaultSettings.notifications,
+          ...(JSON.parse(saved).notifications || {})
+        }
+      };
+    }
+    return defaultSettings;
   });
   const [settingsChanged, setSettingsChanged] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -93,9 +127,20 @@ const Settings: React.FC = () => {
       return updated;
     });
   };
-  const handleNotificationChange = (type: string, value: boolean) => {
+  const handleNotificationChange = (path: string, value: any) => {
     setSettings((prev: any) => {
-      const updated = { ...prev, notifications: { ...prev.notifications, [type]: value } };
+      const updated = { ...prev };
+      const pathArray = path.split('.');
+      let current = updated.notifications;
+      
+      for (let i = 0; i < pathArray.length - 1; i++) {
+        if (!current[pathArray[i]]) {
+          current[pathArray[i]] = {};
+        }
+        current = current[pathArray[i]];
+      }
+      
+      current[pathArray[pathArray.length - 1]] = value;
       setSettingsChanged(true);
       return updated;
     });
@@ -111,10 +156,19 @@ const Settings: React.FC = () => {
   };
   const handleSaveSettings = () => {
     localStorage.setItem(SYSTEM_SETTINGS_KEY, JSON.stringify(settings));
+    
+    // Sync notification settings with notification service
+    notificationService.updateSettings(settings.notifications);
+    
     setSaveSuccess(true);
     setSettingsChanged(false);
     setGlobalSettings(settings);
     setTimeout(() => setSaveSuccess(false), 2000);
+  };
+
+  // Test notification function
+  const testNotification = (type: 'email' | 'push' | 'contract') => {
+    notificationService.testNotification(type);
   };
 
   // Data Export Helpers
@@ -393,38 +447,283 @@ const Settings: React.FC = () => {
                   </div>
                 </div>
               </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">{t('notificationSettings')}</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="emailNotifications"
-                      checked={settings.notifications.email}
-                      onChange={e => handleNotificationChange('email', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="emailNotifications" className="ml-2 text-sm text-gray-700">{t('emailNotifications')}</label>
+              {/* Email Notifications Section */}
+              <div className="bg-blue-50 rounded-lg p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Mail className="h-5 w-5 mr-2 text-blue-600" />
+                  {t('emailNotifications')}
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('enableEmailNotifications')}</label>
+                      <p className="text-xs text-gray-500">{t('emailNotificationsDescription')}</p>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="emailEnabled"
+                        checked={settings.notifications.email.enabled}
+                        onChange={e => handleNotificationChange('email.enabled', e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="meetingReminders"
-                      checked={settings.notifications.meeting}
-                      onChange={e => handleNotificationChange('meeting', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="meetingReminders" className="ml-2 text-sm text-gray-700">{t('meetingReminders')}</label>
+                  
+                  {settings.notifications.email.enabled && (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('smtpHost')}</label>
+                          <input
+                            type="text"
+                            value={settings.notifications.email.smtpHost}
+                            onChange={e => handleNotificationChange('email.smtpHost', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('smtpPort')}</label>
+                          <input
+                            type="number"
+                            value={settings.notifications.email.smtpPort}
+                            onChange={e => handleNotificationChange('email.smtpPort', parseInt(e.target.value))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('smtpUser')}</label>
+                          <input
+                            type="text"
+                            value={settings.notifications.email.smtpUser}
+                            onChange={e => handleNotificationChange('email.smtpUser', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('smtpPass')}</label>
+                          <input
+                            type="password"
+                            value={settings.notifications.email.smtpPass}
+                            onChange={e => handleNotificationChange('email.smtpPass', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('fromEmail')}</label>
+                          <input
+                            type="email"
+                            value={settings.notifications.email.fromEmail}
+                            onChange={e => handleNotificationChange('email.fromEmail', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('fromName')}</label>
+                          <input
+                            type="text"
+                            value={settings.notifications.email.fromName}
+                            onChange={e => handleNotificationChange('email.fromName', e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          />
+                        </div>
+                      </div>
+                      
+                      {/* Mirror Email Settings */}
+                      <div className="border-t pt-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('mirrorEmail')}</label>
+                            <p className="text-xs text-gray-500">{t('mirrorEmailDescription')}</p>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id="mirrorEnabled"
+                              checked={settings.notifications.email.mirrorEnabled}
+                              onChange={e => handleNotificationChange('email.mirrorEnabled', e.target.checked)}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                          </div>
+                        </div>
+                        {settings.notifications.email.mirrorEnabled && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">{t('mirrorEmailAddress')}</label>
+                            <input
+                              type="email"
+                              value={settings.notifications.email.mirrorEmail}
+                              onChange={e => handleNotificationChange('email.mirrorEmail', e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="pt-2">
+                        <button
+                          onClick={() => testNotification('email')}
+                          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        >
+                          {t('testEmailNotification')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Push Notifications Section */}
+              <div className="bg-green-50 rounded-lg p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Smartphone className="h-5 w-5 mr-2 text-green-600" />
+                  {t('pushNotifications')}
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('enablePushNotifications')}</label>
+                      <p className="text-xs text-gray-500">{t('pushNotificationsDescription')}</p>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="pushEnabled"
+                        checked={settings.notifications.push.enabled}
+                        onChange={e => handleNotificationChange('push.enabled', e.target.checked)}
+                        className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                      />
+                    </div>
                   </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="contractAlerts"
-                      checked={settings.notifications.contract}
-                      onChange={e => handleNotificationChange('contract', e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="contractAlerts" className="ml-2 text-sm text-gray-700">{t('contractAlerts')}</label>
+                  
+                  {settings.notifications.push.enabled && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('meetingReminders')}</label>
+                          <p className="text-xs text-gray-500">{t('meetingRemindersDescription')}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="meetingReminders"
+                            checked={settings.notifications.push.meetingReminders}
+                            onChange={e => handleNotificationChange('push.meetingReminders', e.target.checked)}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('contractAlerts')}</label>
+                          <p className="text-xs text-gray-500">{t('contractAlertsDescription')}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="contractAlerts"
+                            checked={settings.notifications.push.contractAlerts}
+                            onChange={e => handleNotificationChange('push.contractAlerts', e.target.checked)}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">{t('soundNotifications')}</label>
+                          <p className="text-xs text-gray-500">{t('soundNotificationsDescription')}</p>
+                        </div>
+                        <div className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id="soundEnabled"
+                            checked={settings.notifications.push.soundEnabled}
+                            onChange={e => handleNotificationChange('push.soundEnabled', e.target.checked)}
+                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="pt-2">
+                        <button
+                          onClick={() => testNotification('push')}
+                          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm"
+                        >
+                          {t('testPushNotification')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Contract Alerts Section */}
+              <div className="bg-purple-50 rounded-lg p-4 sm:p-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <FileText className="h-5 w-5 mr-2 text-purple-600" />
+                  {t('contractAlerts')}
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('statusAlerts')}</label>
+                      <p className="text-xs text-gray-500">{t('statusAlertsDescription')}</p>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="statusAlerts"
+                        checked={settings.notifications.contract.statusAlerts}
+                        onChange={e => handleNotificationChange('contract.statusAlerts', e.target.checked)}
+                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('expiryAlerts')}</label>
+                      <p className="text-xs text-gray-500">{t('expiryAlertsDescription')}</p>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="expiryAlerts"
+                        checked={settings.notifications.contract.expiryAlerts}
+                        onChange={e => handleNotificationChange('contract.expiryAlerts', e.target.checked)}
+                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('paymentReminders')}</label>
+                      <p className="text-xs text-gray-500">{t('paymentRemindersDescription')}</p>
+                    </div>
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="paymentReminders"
+                        checked={settings.notifications.contract.paymentReminders}
+                        onChange={e => handleNotificationChange('contract.paymentReminders', e.target.checked)}
+                        className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <button
+                      onClick={() => testNotification('contract')}
+                      className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                    >
+                      {t('testContractAlert')}
+                    </button>
                   </div>
                 </div>
               </div>
