@@ -35,6 +35,13 @@ const ContractsManagement: React.FC = () => {
     notes: ''
   });
 
+
+
+
+  
+
+
+
   // Helper function to translate contract statuses
   const translateContractStatus = (status: string) => {
     const statusMap: { [key: string]: string } = {

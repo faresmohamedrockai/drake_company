@@ -447,7 +447,14 @@ const ProjectsTab: React.FC = () => {
             <div className="flex items-center justify-center mb-6">
               {addSteps.map((label, idx) => (
                 <div key={label} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-200 ${addStep === idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{idx + 1}</div>
+                  <button
+                    type="button"
+                    onClick={() => setAddStep(idx)}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${addStep === idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}
+                    aria-current={addStep === idx ? 'step' : undefined}
+                  >
+                    {idx + 1}
+                  </button>
                   {idx < addSteps.length - 1 && <div className="w-8 h-1 bg-gray-300 mx-1 rounded" />}
                 </div>
               ))}

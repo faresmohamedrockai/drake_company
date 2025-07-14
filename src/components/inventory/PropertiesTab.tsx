@@ -587,7 +587,14 @@ const PropertiesTab: React.FC = () => {
             <div className="flex items-center justify-center mb-6">
               {formSteps.map((label, idx) => (
                 <div key={label} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-200 ${formStep === idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{idx + 1}</div>
+                  <button
+                    type="button"
+                    onClick={() => setFormStep(idx)}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${formStep === idx ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'}`}
+                    aria-current={formStep === idx ? 'step' : undefined}
+                  >
+                    {idx + 1}
+                  </button>
                   {idx < formSteps.length - 1 && <div className="w-8 h-1 bg-gray-300 mx-1 rounded" />}
                 </div>
               ))}
