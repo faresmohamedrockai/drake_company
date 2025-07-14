@@ -83,5 +83,11 @@
     "close": "Close"
   },
   "with": "with",
-  "online": "Online"
+  "online": "Online",
+  "addToCalendar": "Add to Calendar",
+  "addToCalendarDesc": "Easily add this meeting to your calendar with a 30-minute reminder.",
+  "addToGoogleCalendar": "Add to Google Calendar",
+  "addToAppleCalendar": "Add to Apple Calendar (.ics)",
+  "iosCalendarInstruction": "After downloading, tap the file, then tap the share icon and choose \"Add to Calendar\".",
+  "calendarPrivacy": "Your calendar data is not stored or shared."
 } 

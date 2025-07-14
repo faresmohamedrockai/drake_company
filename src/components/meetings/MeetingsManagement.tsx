@@ -543,7 +543,7 @@ const MeetingsManagement: React.FC = () => {
               </div>
               {isIOS && (
                 <div className="text-xs text-gray-500 mt-2 text-center">
-                  After downloading, tap the file, then tap the share icon and choose "Add to Calendar".
+                  {t('iosCalendarInstruction', { defaultValue: 'After downloading, tap the file, then tap the share icon and choose "Add to Calendar".' })}
                 </div>
               )}
               <div className="mt-6 w-full bg-gray-50 rounded-lg p-4 text-xs text-gray-500 text-center">
