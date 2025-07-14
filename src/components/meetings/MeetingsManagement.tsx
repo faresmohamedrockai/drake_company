@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Search, Plus, Edit, Clock, User, Calendar as CalendarIcon, Trash2 } from 'lucide-react';
+import { 
+  Search, Plus, Edit, Clock, User, Calendar as CalendarIcon, Trash2,
+  CalendarPlus, Apple, CalendarDays
+} from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -41,6 +44,8 @@ const MeetingsManagement: React.FC = () => {
     locationType: 'Online',
     location: '',
   });
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
 
   // Helper function to translate meeting types
   const translateMeetingType = (type: string) => {
@@ -69,6 +74,75 @@ const MeetingsManagement: React.FC = () => {
       'Offline': t('locationTypes.offline'),
     };
     return locationMap[locationType] || locationType;
+  };
+
+  // Helper to format date/time for Google Calendar (UTC, YYYYMMDDTHHmmssZ)
+  const formatGoogleDate = (date: string, time: string, duration: string) => {
+    // Parse date and time
+    const [year, month, day] = date.split('-').map(Number);
+    const [hour, minute] = time.split(':').map(Number);
+    const start = new Date(Date.UTC(year, month - 1, day, hour, minute));
+    // Parse duration (assume format like '1h', '30m', '1h 30m')
+    let durMins = 0;
+    const hMatch = duration.match(/(\d+)h/);
+    const mMatch = duration.match(/(\d+)m/);
+    if (hMatch) durMins += parseInt(hMatch[1], 10) * 60;
+    if (mMatch) durMins += parseInt(mMatch[1], 10);
+    if (durMins === 0) durMins = 60; // default 1h
+    const end = new Date(start.getTime() + durMins * 60000);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const fmt = (d: Date) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+    return { start: fmt(start), end: fmt(end) };
+  };
+
+  // Helper to generate Google Calendar link
+  const getGoogleCalendarUrl = (meeting: Meeting) => {
+    const { start, end } = formatGoogleDate(meeting.date, meeting.time, meeting.duration);
+    const details = [
+      `Client: ${meeting.client}`,
+      `Type: ${meeting.type}`,
+      `Status: ${meeting.status}`,
+      meeting.location ? `Location: ${meeting.location}` : '',
+    ].filter(Boolean).join('\n');
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(meeting.title)}&dates=${start}%2F${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(meeting.location || '')}&trp=false`;
+  };
+
+  // Helper to generate .ics file content for Apple Calendar
+  const getICSContent = (meeting: Meeting) => {
+    const { start, end } = formatGoogleDate(meeting.date, meeting.time, meeting.duration);
+    // Convert to iCal format (YYYYMMDDTHHmmssZ)
+    const uid = `${meeting.id}@propai-crm`;
+    const description = [
+      `Client: ${meeting.client}`,
+      `Type: ${meeting.type}`,
+      `Status: ${meeting.status}`,
+      meeting.location ? `Location: ${meeting.location}` : '',
+    ].filter(Boolean).join('\\n');
+    return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Propai CRM//EN\nBEGIN:VEVENT\nUID:${uid}\nDTSTAMP:${start}\nDTSTART:${start}\nDTEND:${end}\nSUMMARY:${meeting.title}\nDESCRIPTION:${description}\nLOCATION:${meeting.location || ''}\nBEGIN:VALARM\nTRIGGER:-PT30M\nACTION:DISPLAY\nDESCRIPTION:Reminder\nEND:VALARM\nEND:VEVENT\nEND:VCALENDAR`;
+  };
+
+  // Download .ics file
+  const downloadICS = (meeting: Meeting) => {
+    const icsContent = getICSContent(meeting);
+    const blob = new Blob([icsContent.replace(/\\n/g, '\r\n')], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${meeting.title.replace(/\s+/g, '_')}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 100);
+  };
+
+  // Row click handler (ignore clicks on action buttons)
+  const handleRowClick = (e: React.MouseEvent, meeting: Meeting) => {
+    // Prevent if clicking on action buttons
+    if ((e.target as HTMLElement).closest('button')) return;
+    setSelectedMeeting(meeting);
+    setCalendarModalOpen(true);
   };
 
   const openAddForm = () => {
@@ -198,6 +272,8 @@ const MeetingsManagement: React.FC = () => {
     }
   }, [userMeetingPerformance, user]);
 
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-8">
@@ -243,7 +319,7 @@ const MeetingsManagement: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredMeetings.map((meeting) => (
-                <tr key={meeting.id} className="hover:bg-gray-50">
+                <tr key={meeting.id} className="hover:bg-gray-50 cursor-pointer" onClick={(e) => handleRowClick(e, meeting)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
@@ -425,6 +501,56 @@ const MeetingsManagement: React.FC = () => {
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editId ? t('actions.update') : t('actions.schedule')} {t('meetingDetails').toLowerCase()}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Calendar Modal */}
+      {calendarModalOpen && selectedMeeting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 sm:mx-8 relative flex flex-col animate-fade-in">
+            {/* Close Button */}
+            <button
+              type="button"
+              aria-label={t('modal.close')}
+              onClick={() => setCalendarModalOpen(false)}
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 bg-white shadow"
+            >
+              <span className="sr-only">{t('modal.close')}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <div className="flex flex-col items-center px-8 pt-8 pb-6">
+              <CalendarPlus className="h-10 w-10 text-blue-600 mb-2" />
+              <h3 className="text-2xl font-bold text-gray-900 mb-1">{t('addToCalendar', { defaultValue: 'Add to Calendar' })}</h3>
+              <p className="text-gray-500 text-center mb-6 text-sm">{t('addToCalendarDesc', { defaultValue: 'Easily add this meeting to your calendar with a 30-minute reminder.' })}</p>
+              <div className="w-full flex flex-col gap-4">
+                <button
+                  className="flex items-center justify-center gap-3 w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  onClick={() => window.open(getGoogleCalendarUrl(selectedMeeting), '_blank')}
+                >
+                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-6 w-6" />
+                  {t('addToGoogleCalendar', { defaultValue: 'Add to Google Calendar' })}
+                </button>
+                <button
+                  className="flex items-center justify-center gap-3 w-full bg-gray-900 text-white px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  onClick={() => downloadICS(selectedMeeting)}
+                >
+                  <Apple className="h-6 w-6 text-white" />
+                  {t('addToAppleCalendar', { defaultValue: 'Add to Apple Calendar (.ics)' })}
+                </button>
+              </div>
+              {isIOS && (
+                <div className="text-xs text-gray-500 mt-2 text-center">
+                  After downloading, tap the file, then tap the share icon and choose "Add to Calendar".
+                </div>
+              )}
+              <div className="mt-6 w-full bg-gray-50 rounded-lg p-4 text-xs text-gray-500 text-center">
+                <CalendarDays className="inline-block h-4 w-4 mr-1 text-blue-400 align-text-bottom" />
+                {t('calendarPrivacy', { defaultValue: 'Your calendar data is not stored or shared.' })}
+              </div>
+            </div>
           </div>
         </div>
       )}
