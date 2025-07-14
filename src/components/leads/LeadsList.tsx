@@ -74,14 +74,57 @@ const LeadsList: React.FC = () => {
     lastVisitDate: '',
   });
 
-  // KPI calculations
-  const allLeadsCount = leads.length;
+  // Filter leads based on user role
+  const getFilteredLeads = () => {
+    let userLeads = leads;
+    
+    // Role-based filtering
+    if (user?.role === 'Sales Rep') {
+      // Sales Reps can only see their own leads
+      userLeads = leads.filter(lead => lead.assignedTo === user.name);
+    } else if (user?.role === 'Team Leader') {
+      // Team leaders see their own leads and their sales reps' leads
+      const salesReps = users.filter(u => u.role === 'Sales Rep' && u.teamId === user.name).map(u => u.name);
+      userLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
+    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+      // Sales Admin and Admin can see all leads
+      userLeads = leads;
+    }
+    
+    // Search filtering - now includes both English and Arabic names
+    let filtered = userLeads.filter(lead => {
+      const searchableName = getSearchableName(lead);
+      return searchableName.includes(searchTerm.toLowerCase()) ||
+        lead.phone.includes(searchTerm) ||
+        lead.inventoryInterest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.source.toLowerCase().includes(searchTerm.toLowerCase());
+    });
+
+    // Column filters
+    filtered = filtered.filter(lead => {
+      const displayName = getDisplayName(lead);
+      return (filters.name === '' || displayName.toLowerCase().includes(filters.name.toLowerCase())) &&
+        (filters.phone === '' || lead.phone.includes(filters.phone)) &&
+        (filters.budget === '' || lead.budget === filters.budget) &&
+        (filters.inventoryInterest === '' || lead.inventoryInterest === filters.inventoryInterest) &&
+        (filters.source === '' || lead.source === filters.source) &&
+        (filters.status === '' || lead.status === filters.status) &&
+        (filters.assignedTo === '' || lead.assignedTo === filters.assignedTo) &&
+        (filters.lastCallDate === '' || lead.lastCallDate.includes(filters.lastCallDate)) &&
+        (filters.lastVisitDate === '' || lead.lastVisitDate.includes(filters.lastVisitDate));
+    });
+    return filtered;
+  };
+
+  // KPI calculations (moved here)
+  const filteredLeads = getFilteredLeads();
+  const allLeadsCount = filteredLeads.length;
   // Duplicate: same phone or email (excluding empty values)
-  const duplicateLeadsCount = leads.filter((lead, idx, arr) =>
+  const duplicateLeadsCount = filteredLeads.filter((lead, idx, arr) =>
     arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx
   ).length;
-  const freshLeadsCount = leads.filter(lead => lead.status === 'Fresh Lead').length;
-  const coldCallsCount = leads.filter(lead => lead.source === 'Cold Call').length;
+  const freshLeadsCount = filteredLeads.filter(lead => lead.status === 'Fresh Lead').length;
+  const coldCallsCount = filteredLeads.filter(lead => lead.source === 'Cold Call').length;
 
   // Performance tracking for reports
   const userPerformance = React.useMemo(() => {
@@ -142,51 +185,6 @@ const LeadsList: React.FC = () => {
     }));
   }, [allLeadsCount, duplicateLeadsCount, freshLeadsCount, coldCallsCount]);
 
-  // Filter leads based on user role
-  const getFilteredLeads = () => {
-    let userLeads = leads;
-    
-    // Role-based filtering
-    if (user?.role === 'Sales Rep') {
-      // Sales Reps can only see their own leads
-      userLeads = leads.filter(lead => lead.assignedTo === user.name);
-    } else if (user?.role === 'Team Leader') {
-      // Team leaders can see their team's leads and assign leads to team members
-      userLeads = leads.filter(lead => 
-        lead.assignedTo === user.name || 
-        (user.teamId && lead.assignedTo.includes(user.teamId)) ||
-        lead.assignedTo === '' // Unassigned leads
-      );
-    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
-      // Sales Admin and Admin can see all leads
-      userLeads = leads;
-    }
-    
-    // Search filtering - now includes both English and Arabic names
-    let filtered = userLeads.filter(lead => {
-      const searchableName = getSearchableName(lead);
-      return searchableName.includes(searchTerm.toLowerCase()) ||
-        lead.phone.includes(searchTerm) ||
-        lead.inventoryInterest.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        lead.source.toLowerCase().includes(searchTerm.toLowerCase());
-    });
-
-    // Column filters
-    filtered = filtered.filter(lead => {
-      const displayName = getDisplayName(lead);
-      return (filters.name === '' || displayName.toLowerCase().includes(filters.name.toLowerCase())) &&
-        (filters.phone === '' || lead.phone.includes(filters.phone)) &&
-        (filters.budget === '' || lead.budget === filters.budget) &&
-        (filters.inventoryInterest === '' || lead.inventoryInterest === filters.inventoryInterest) &&
-        (filters.source === '' || lead.source === filters.source) &&
-        (filters.status === '' || lead.status === filters.status) &&
-        (filters.assignedTo === '' || lead.assignedTo === filters.assignedTo) &&
-        (filters.lastCallDate === '' || lead.lastCallDate.includes(filters.lastCallDate)) &&
-        (filters.lastVisitDate === '' || lead.lastVisitDate.includes(filters.lastVisitDate));
-    });
-    return filtered;
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Fresh Lead': return 'bg-blue-100 text-blue-800';
@@ -197,8 +195,6 @@ const LeadsList: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
-  const filteredLeads = getFilteredLeads();
 
   const handleLeadClick = (lead: Lead) => {
     setSelectedLead(lead);

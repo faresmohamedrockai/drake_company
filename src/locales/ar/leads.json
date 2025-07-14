@@ -113,7 +113,7 @@
   "selectUser": "اختر المستخدم",
   "budgetRequired": "الميزانية *",
   "selectBudgetRange": "اختر نطاق الميزانية",
-  "inventoryInterestRequired": "اهتمام المخزون *",
+      "inventoryInterestRequired": "اهتمام المتاحات *",
   "selectPropertyType": "اختر نوع العقار",
   "leadSourceRequired": "مصدر العميل المحتمل *",
   "selectSource": "اختر المصدر",

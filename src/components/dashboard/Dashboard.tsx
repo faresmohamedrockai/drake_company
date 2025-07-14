@@ -61,8 +61,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { getStatistics, getPreviousStats, getChangeForStat, activities } = useData();
   const { t } = useTranslation('dashboard');
   
-  const stats = getStatistics();
-  const prevStats = getPreviousStats() || stats; // fallback to current if none
+  const stats = getStatistics(user ? { name: user.name, role: user.role, teamId: user.teamId } : undefined);
+  const prevStats = getPreviousStats ? getPreviousStats() || stats : stats; // fallback to current if none
 
   // Get real number of follow up leads
   const followUpLeads = typeof stats.totalProspects === 'number' && stats.totalProspects > 0

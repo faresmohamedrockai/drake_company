@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 const UserManagement: React.FC = () => {
-  const { users, addUser, updateUser, deleteUser } = useData();
+  const { users, leads, addUser, updateUser, deleteUser } = useData();
   const { user: currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -24,9 +24,16 @@ const UserManagement: React.FC = () => {
     isActive: true,
     avatar: '', // <-- add avatar field
   });
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const { t } = useTranslation('settings');
   const { language } = useLanguage();
+
+  // Fallbacks for translation
+  const setNewPasswordLabel = t('user.setNewPassword', 'Set New Password');
+  const confirmPasswordLabel = t('user.confirmPassword', 'Confirm New Password');
 
   // Get all team leaders for the dropdown
   const teamLeaders = users.filter(user => user.role === 'Team Leader' && user.isActive);
@@ -47,6 +54,11 @@ const UserManagement: React.FC = () => {
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Add this helper for Team Leaders to count leads for each Sales Rep
+  const getSalesRepLeadsCount = (salesRepName: string) => {
+    return leads ? leads.filter((lead: any) => lead.assignedTo === salesRepName).length : 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -56,11 +68,29 @@ const UserManagement: React.FC = () => {
       return;
     }
     
+    // If editing, handle new password logic
     if (editingUser) {
-      updateUser(editingUser.id, formData);
+      if (newPassword || confirmPassword) {
+        if (newPassword !== confirmPassword) {
+          setPasswordError(t('user.passwordsDoNotMatch') || 'Passwords do not match');
+          return;
+        }
+        updateUser(editingUser.id, { ...formData, password: newPassword });
+      } else {
+        updateUser(editingUser.id, formData);
+      }
       setEditingUser(null);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPasswordError('');
     } else {
+      // New user: require password
+      if (!formData.password) {
+        setPasswordError(t('user.passwordRequired') || 'Password is required');
+        return;
+      }
       addUser(formData);
+      setPasswordError('');
     }
     
     setFormData({
@@ -181,6 +211,9 @@ const UserManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.role')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.status')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.created')}</th>
+                {currentUser?.role === 'Team Leader' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.leadsCount')}</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.actions')}</th>
               </tr>
             </thead>
@@ -219,6 +252,9 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
+                  {currentUser?.role === 'Team Leader' && user.role === 'Sales Rep' && user.teamId === currentUser.name && (
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{getSalesRepLeadsCount(user.name)}</td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex space-x-2">
                       {canManageUsers && (
@@ -330,25 +366,54 @@ const UserManagement: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.password')}</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
+              {!editingUser ? (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.password')}</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                      className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      required
+                      placeholder={t('user.password', 'Password')}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{setNewPasswordLabel}</label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={setNewPasswordLabel}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{confirmPasswordLabel}</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={confirmPasswordLabel}
+                    />
+                  </div>
+                </>
+              )}
+              {passwordError && (
+                <div className="text-red-600 text-sm mt-1">{passwordError}</div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.role')}</label>

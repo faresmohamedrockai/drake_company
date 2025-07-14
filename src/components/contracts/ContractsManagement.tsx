@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Plus, Edit, FileText, DollarSign, Calendar, User, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit, FileText, DollarSign, Calendar, User, Trash2, Shield } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -19,7 +19,7 @@ interface Contract {
 const ContractsManagement: React.FC = () => {
   const { contracts, addContract, updateContract, deleteContract, leads, properties } = useData();
   const { user } = useAuth();
-  const { t } = useTranslation('contracts');
+  const { t, i18n } = useTranslation('contracts');
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -113,6 +113,33 @@ const ContractsManagement: React.FC = () => {
     contract.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contract.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Role-based access control
+  const canAccessContracts = user?.role === 'Admin' || user?.role === 'Sales Admin';
+
+  if (!canAccessContracts) {
+    const isArabic = i18n.language === 'ar';
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-50 to-blue-50"
+        dir={isArabic ? 'rtl' : 'ltr'}>
+        <div className="bg-white rounded-2xl shadow-2xl px-8 py-12 max-w-md w-full flex flex-col items-center border border-blue-100">
+          <Shield className="h-16 w-16 text-blue-400 mb-6" />
+          <h2 className={`text-2xl font-bold text-gray-900 mb-2 text-center ${isArabic ? 'font-arabic' : ''}`}>
+            {t('accessDenied', isArabic ? 'تم رفض الوصول' : 'Access Denied')}
+          </h2>
+          <p className={`text-gray-500 mb-6 text-center ${isArabic ? 'font-arabic leading-relaxed' : ''}`}>
+            {t('noPermissionToManageContracts', isArabic
+              ? 'ليس لديك إذن لعرض أو إدارة العقود. يرجى التواصل مع المسؤول إذا كنت تعتقد أن هذا خطأ.'
+              : 'You do not have permission to view or manage contracts. Please contact your administrator if you believe this is a mistake.'
+            )}
+          </p>
+          <div className="w-full border-t border-gray-200 pt-6 mt-6 text-center">
+            <span className="text-sm text-gray-400">Propai CRM &copy; {new Date().getFullYear()}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">

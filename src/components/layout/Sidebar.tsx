@@ -46,7 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     { id: 'leads', label: t('navigation.leads'), icon: Users },
     { id: 'inventory', label: t('navigation.inventory'), icon: Building2 },
     { id: 'meetings', label: t('navigation.meetings'), icon: Calendar },
-    { id: 'contracts', label: t('navigation.contracts'), icon: FileText },
+    { id: 'contracts', label: t('navigation.contracts'), icon: FileText, adminOnly: true, salesAdminOnly: true },
     { id: 'reports', label: t('navigation.reports'), icon: BarChart3, adminOnly: true },
     { id: 'settings', label: t('navigation.settings'), icon: Settings },
   ];
@@ -128,10 +128,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
         <ul className="space-y-2">
           {menuItems.map((item) => {
             // Check if user has access to this menu item
-            const hasAccess = !item.adminOnly || 
-              user?.role === 'Admin' || 
-              user?.role === 'Sales Admin' || 
-              user?.role === 'Team Leader';
+            let hasAccess = true;
+            if (item.adminOnly && user?.role !== 'Admin') hasAccess = false;
+            if (item.salesAdminOnly && user?.role !== 'Sales Admin' && user?.role !== 'Admin') hasAccess = false;
             
             if (!hasAccess) return null;
             
