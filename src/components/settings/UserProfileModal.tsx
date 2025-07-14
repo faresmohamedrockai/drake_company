@@ -27,8 +27,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const [showHomeScreenConfig, setShowHomeScreenConfig] = useState(false);
   const [homeScreenConfig, setHomeScreenConfig] = useState({
     appName: settings?.companyName || 'Propai CRM',
-    appLogo: settings?.companyImage || '',
-    appLogoPreview: settings?.companyImage || '',
+    appLogo: '/src/aspects/propai logo.png',
+    appLogoPreview: '/src/aspects/propai logo.png',
   });
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
@@ -290,13 +290,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
               <div className="flex items-center space-x-3">
                 <label htmlFor="app-logo-upload" className="cursor-pointer">
                   <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-300 hover:border-blue-500 transition-colors">
-                    {homeScreenConfig.appLogoPreview ? (
-                      <img src={homeScreenConfig.appLogoPreview} alt="app logo" className="object-cover w-full h-full" />
-                    ) : (
-                      <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                      </svg>
-                    )}
+                                      {homeScreenConfig.appLogoPreview ? (
+                    <img src={homeScreenConfig.appLogoPreview} alt="app logo" className="object-cover w-full h-full" />
+                  ) : (
+                    <img src="/src/aspects/propai logo.png" alt="Propai logo" className="object-cover w-full h-full" />
+                  )}
                   </div>
                   <input
                     id="app-logo-upload"
@@ -308,21 +306,19 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 </label>
                 <div className="flex-1">
                   <p className="text-xs text-gray-500">{t('profile.appLogoDesc')}</p>
-                  {settings?.companyImage && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setHomeScreenConfig(prev => ({
-                          ...prev,
-                          appLogo: settings.companyImage,
-                          appLogoPreview: settings.companyImage
-                        }));
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-                    >
-                      {t('profile.useCompanyLogo')}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHomeScreenConfig(prev => ({
+                        ...prev,
+                        appLogo: '/src/aspects/propai logo.png',
+                        appLogoPreview: '/src/aspects/propai logo.png'
+                      }));
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                  >
+                    {t('profile.resetToPropaiLogo')}
+                  </button>
                 </div>
               </div>
             </div>
@@ -334,7 +330,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                   {homeScreenConfig.appLogoPreview ? (
                     <img src={homeScreenConfig.appLogoPreview} alt="preview" className="object-cover w-full h-full" />
                   ) : (
-                    <span className="text-blue-600 font-bold text-lg">P</span>
+                    <img src="/src/aspects/propai logo.png" alt="Propai logo" className="object-cover w-full h-full" />
                   )}
                 </div>
                 <div>

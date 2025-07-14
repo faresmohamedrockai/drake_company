@@ -174,7 +174,7 @@
     "preview": "Preview",
     "back": "Back",
     "createShortcut": "Create Shortcut",
-    "useCompanyLogo": "Use Company Logo",
+    "resetToPropaiLogo": "Reset to Propai Logo",
     "installSuccess": "App installed successfully! You can now find it on your home screen.",
     "installCancelled": "Installation was cancelled. You can try again later.",
     "iosInstructions": "To add this app to your home screen on iOS:",
