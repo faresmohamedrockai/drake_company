@@ -3,7 +3,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { Building2, User, Lock, Eye, EyeOff, Calendar, Briefcase } from 'lucide-react';
-import axios from 'axios';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -21,20 +20,12 @@ const Login: React.FC = () => {
     setError('');
 
     try {
-      // Send login request to backend
-      const response = await axios.post('http://localhost:5000/api/login', { email, password });
-      // You may want to store user data or token here
-      // For example: localStorage.setItem('user', JSON.stringify(response.data));
-      // Or call a context method to set the user
-      // login(response.data); // if you have a context method
-      // For now, just simulate success:
-      // window.location.reload(); // or redirect as needed
-    } catch (err: any) {
-      if (err.response && err.response.data && err.response.data.message) {
-        setError(err.response.data.message);
-      } else {
+      const success = await login(email, password);
+      if (!success) {
         setError(t('invalidCredentials'));
       }
+    } catch (err) {
+      setError(t('errorOccurred'));
     } finally {
       setIsLoading(false);
     }
