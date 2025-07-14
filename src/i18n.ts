@@ -12,7 +12,6 @@ import enContracts from './locales/en/contracts.json';
 import enReports from './locales/en/reports.json';
 import enSettings from './locales/en/settings.json';
 import enAuth from './locales/en/auth.json';
-
 import arCommon from './locales/ar/common.json';
 import arDashboard from './locales/ar/dashboard.json';
 import arLeads from './locales/ar/leads.json';
