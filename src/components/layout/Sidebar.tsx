@@ -3,14 +3,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
-import { 
-  Home, 
-  Users, 
-  Building2, 
-  Calendar, 
-  FileText, 
-  Settings, 
-  LogOut,
+import {
+  Home,
+  Users,
+  Building2,
+  Calendar,
+  FileText,
+  Settings,
   Building,
   Menu,
   BarChart3,
@@ -25,9 +24,9 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const { settings } = useSettings();
-  const { language, setLanguage, isRTL, rtlClass, rtlPosition } = useLanguage();
+  const { language, setLanguage, isRTL, rtlPosition } = useLanguage();
   const { t } = useTranslation('common');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -59,9 +58,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
         <div className="flex items-center justify-between">
           <div className="flex items-center">
             {settings?.companyImage ? (
-              <img 
-                src={settings.companyImage} 
-                alt="Company Logo" 
+              <img
+                src={settings.companyImage}
+                alt="Company Logo"
                 className="h-8 w-8 rounded-lg mr-3 object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
@@ -71,25 +70,25 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
             ) : null}
             <Building className={`h-8 w-8 text-blue-600 mr-3 ${settings?.companyImage ? 'hidden' : ''}`} />
             {(() => {
-  const companyName = settings?.companyName || 'Propai';
-  const words = companyName.split(' ');
-  const firstLine = words.slice(0, 2).join(' ');
-  const secondLine = words.length > 2 ? words.slice(2).join(' ') : null;
-  return (
-    <h1
-      className="text-base font-semibold text-gray-900 max-w-[120px] leading-tight"
-      title={companyName}
-      style={{ wordBreak: 'break-word' }}
-    >
-      <span className="block truncate">{firstLine}</span>
-      {secondLine && (
-        <span className="block truncate text-xs text-gray-500">{secondLine}</span>
-      )}
-    </h1>
-  );
-})()}
+              const companyName = settings?.companyName || 'Propai';
+              const words = companyName.split(' ');
+              const firstLine = words.slice(0, 2).join(' ');
+              const secondLine = words.length > 2 ? words.slice(2).join(' ') : null;
+              return (
+                <h1
+                  className="text-base font-semibold text-gray-900 max-w-[120px] leading-tight"
+                  title={companyName}
+                  style={{ wordBreak: 'break-word' }}
+                >
+                  <span className="block truncate">{firstLine}</span>
+                  {secondLine && (
+                    <span className="block truncate text-xs text-gray-500">{secondLine}</span>
+                  )}
+                </h1>
+              );
+            })()}
           </div>
-          
+
           {/* Language Toggle */}
           <div className="flex items-center">
             <button
@@ -102,21 +101,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
             >
               <span className="sr-only">Toggle language</span>
               <span
-                className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 ease-in-out ${
-                  language === 'ar' ? 'translate-x-13' : 'translate-x-1'
-                }`}
+                className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 ease-in-out ${language === 'ar' ? 'translate-x-13' : 'translate-x-1'
+                  }`}
               >
-                <Globe className={`h-3.5 w-3.5 text-blue-600 transition-opacity duration-150 ${
-                  isSwitching ? 'opacity-0' : 'opacity-100'
-                }`} />
+                <Globe className={`h-3.5 w-3.5 text-blue-600 transition-opacity duration-150 ${isSwitching ? 'opacity-0' : 'opacity-100'
+                  }`} />
               </span>
               <div className="absolute inset-0 flex items-center justify-between px-2">
-                <span className={`text-xs font-bold transition-all duration-300 ${
-                  language === 'en' ? 'text-blue-100 opacity-0' : 'text-white opacity-100'
-                }`}>EN</span>
-                <span className={`text-xs font-bold transition-all duration-300 ${
-                  language === 'ar' ? 'text-blue-100 opacity-0' : 'text-white opacity-100'
-                }`}>عربي</span>
+                <span className={`text-xs font-bold transition-all duration-300 ${language === 'en' ? 'text-blue-100 opacity-0' : 'text-white opacity-100'
+                  }`}>EN</span>
+                <span className={`text-xs font-bold transition-all duration-300 ${language === 'ar' ? 'text-blue-100 opacity-0' : 'text-white opacity-100'
+                  }`}>عربي</span>
               </div>
             </button>
           </div>
@@ -128,13 +123,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
         <ul className="space-y-2">
           {menuItems.map((item) => {
             // Check if user has access to this menu item
-            const hasAccess = !item.adminOnly || 
-              user?.role === 'Admin' || 
-              user?.role === 'Sales Admin' || 
-              user?.role === 'Team Leader';
-            
+            const hasAccess = !item.adminOnly ||
+              user?.role === 'admin' ||
+              user?.role === 'sales_admin' ||
+              user?.role === 'team_leader';
+
             if (!hasAccess) return null;
-            
+
             return (
               <li key={item.id}>
                 <button
@@ -142,11 +137,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
                     setCurrentView(item.id);
                     setSidebarOpen(false); // close sidebar on mobile after click
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${
-                    currentView === item.id
+                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${currentView === item.id
                       ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                    }`}
                 >
                   <item.icon className="h-5 w-5 mr-3" />
                   {item.label}
@@ -169,7 +163,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
               {(user as UserType)?.avatar ? (
                 <img src={(user as UserType)?.avatar} alt="avatar" className="object-cover w-full h-full rounded-full" />
               ) : (
-                user?.name ? user.name.charAt(0) : '?' 
+                user?.name ? user.name.charAt(0) : '?'
               )}
             </button>
             <div className="ml-3">
@@ -191,9 +185,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
     <>
       {/* Hamburger menu for mobile */}
       <button
-        className={`md:hidden fixed top-4 z-50 bg-white p-2 rounded-full shadow-lg border border-gray-200 transition-all duration-300 ${
-          sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        } ${rtlPosition('left-4', 'right-4')}`}
+        className={`md:hidden fixed top-4 z-50 bg-white p-2 rounded-full shadow-lg border border-gray-200 transition-all duration-300 ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          } ${rtlPosition('left-4', 'right-4')}`}
         onClick={() => setSidebarOpen(true)}
         aria-label="Open sidebar"
       >

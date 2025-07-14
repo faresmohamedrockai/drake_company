@@ -4,32 +4,33 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { Building2, User, Lock, Eye, EyeOff, Calendar, Briefcase } from 'lucide-react';
 
+// import { a } from 'framer-motion/client';
+
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  // const { login } = useAuth();
   const { settings } = useSettings();
   const { t } = useTranslation('auth');
+const { login } = useAuth(); // ✅ استدعاء الـ context
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
 
-    try {
-      const success = await login(email, password);
-      if (!success) {
-        setError(t('invalidCredentials'));
-      }
-    } catch (err) {
-      setError(t('errorOccurred'));
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+  setError('');
+
+  const success = await login(email, password);
+
+  if (!success) {
+    setError(t('errorOccurred'));
+  }
+
+  setIsLoading(false);
+};
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">

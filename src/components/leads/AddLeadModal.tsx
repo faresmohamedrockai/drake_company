@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { LeadStatus } from '../../types';
+import { getCookie } from '../../lib/cookieHelper';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -10,62 +12,102 @@ interface AddLeadModalProps {
 }
 
 const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
-  const { addLead, leads, projects, users } = useData(); // Add users from DataContext
+  const { users } = useData(); // Remove projects since we're using inventory from API
   const { user } = useAuth();
+  const [inventory, setInventory] = useState([]);
   const { t, i18n } = useTranslation('leads');
+  const BaseUrl = import.meta.env.VITE_API_URL;
   const [formData, setFormData] = useState({
     nameEn: '',
     nameAr: '',
     phone: '',
     email: '',
     budget: '',
-    inventoryInterest: '',
+    inventoryInterest: '', // will store project.id (UUID)
     source: '',
-    status: 'Fresh Lead' as const,
+    status: LeadStatus.FRESH_LEAD as LeadStatus,
     assignedTo: ''
   });
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        const accessToken = getCookie('access_token');
+        const res = await fetch(`${BaseUrl}/inventory`, {
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+          }
+        });
+        const data = await res.json();
+        setInventory(data);
+      } catch (error) {
+        console.error('Error fetching inventory:', error);
+      }
+    };
+
+    fetchInventory();
+  }, [BaseUrl]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    // Check for duplicate phone number
-    const existingLead = leads.find(lead => lead.phone === formData.phone);
-    if (existingLead) {
-      setError(t('duplicatePhoneError'));
-      return;
-    }
-
     // Create combined name based on current language
-    const combinedName = i18n.language === 'ar' 
+    const combinedName = i18n.language === 'ar'
       ? (formData.nameAr || formData.nameEn)
       : (formData.nameEn || formData.nameAr);
 
-    addLead({
-      ...formData,
+    const leadPayload = {
       name: combinedName,
       nameEn: formData.nameEn,
       nameAr: formData.nameAr,
-      lastCallDate: '------',
-      lastVisitDate: '------',
-      assignedTo: formData.assignedTo || user?.name || '',
-      createdBy: user?.name || ''
-    });
+      contact: formData.phone,
+      budget: formData.budget, // Convert to number for backend
+      ...(formData.inventoryInterest ? { inventoryInterestId: formData.inventoryInterest } : {}),
+      leadSource: formData.status, // Use status (enum values) not source
+      status: formData.status
+    };
 
-    setFormData({
-      nameEn: '',
-      nameAr: '',
-      phone: '',
-      email: '',
-      budget: '',
-      inventoryInterest: '',
-      source: '',
-      status: 'Fresh Lead',
-      assignedTo: ''
-    });
-    onClose();
+    try {
+      const accessToken = getCookie('access_token');
+
+      const res = await fetch(`${BaseUrl}/leads`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+        },
+        body: JSON.stringify(leadPayload)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        setError(errorData.message || "Something went wrong");
+        return;
+      }
+
+      // Reset form and close modal
+      setFormData({
+        nameEn: '',
+        nameAr: '',
+        phone: '',
+        email: '',
+        budget: '',
+        inventoryInterest: '',
+        source: '',
+        status: LeadStatus.FRESH_LEAD,
+        assignedTo: ''
+      });
+      onClose();
+    } catch (err: any) {
+      setError("Network error: " + err.message);
+    }
   };
+
+
+
 
   if (!isOpen) return null;
 
@@ -146,21 +188,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               {(() => {
                 // Role-based user filtering for assignment
                 let assignableUsers = users;
-                
+
                 if (user?.role === 'Sales Rep') {
                   // Sales Reps can only assign to themselves
                   assignableUsers = users.filter(u => u.name === user.name);
                 } else if (user?.role === 'Team Leader') {
                   // Team Leaders can assign to their team members and themselves
-                  assignableUsers = users.filter(u => 
-                    u.name === user.name || 
+                  assignableUsers = users.filter(u =>
+                    u.name === user.name ||
                     (u.role === 'Sales Rep' && u.teamId === user.teamId)
                   );
                 } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
                   // Sales Admin and Admin can assign to anyone
                   assignableUsers = users.filter(u => u.role !== 'Admin' || user?.role === 'Admin');
                 }
-                
+
                 return assignableUsers.map(user => (
                   <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
                 ));
@@ -170,32 +212,29 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
 
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('budgetRequired')}</label>
-            <select
+            <input
+              type="text"
               value={formData.budget}
-              onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
+              onChange={e => setFormData({ ...formData, budget: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+              placeholder="Enter budget (EGP)"
               required
-            >
-              <option value="">{t('selectBudgetRange')}</option>
-              <option value="EGP100,000-300,000">EGP 100,000-300,000</option>
-              <option value="EGP300,000-500,000">EGP 300,000-500,000</option>
-              <option value="EGP500,000-1,000,000">EGP 500,000-1,000,000</option>
-              <option value="EGP1,000,000-2,000,000">EGP 1,000,000-2,000,000</option>
-              <option value="EGP2,000,000+">EGP 2,000,000+</option>
-            </select>
+              min={0}
+            />
           </div>
 
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterestRequired')}</label>
             <select
               value={formData.inventoryInterest}
-              onChange={(e) => setFormData({ ...formData, inventoryInterest: e.target.value })}
+              onChange={e => setFormData({ ...formData, inventoryInterest: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
               required
             >
+
               <option value="">{t('selectPropertyType')}</option>
-              {projects.map(project => (
-                <option key={project.id} value={project.name}>{project.name}</option>
+              {inventory.map((item: any) => (
+                <option key={item.id} value={item.id}>{item.title}</option>
               ))}
             </select>
           </div>
@@ -222,13 +261,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('statusField')}</label>
             <select
               value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+              onChange={e => setFormData({ ...formData, status: e.target.value as LeadStatus })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
             >
-              <option value="Fresh Lead">{t('freshLead')}</option>
-              <option value="Follow Up">{t('followUp')}</option>
-              <option value="Scheduled Visit">{t('scheduledVisit')}</option>
-              <option value="Open Deal">{t('openDeal')}</option>
+              <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
+              <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
+              <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
+              <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+              <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
             </select>
           </div>
 

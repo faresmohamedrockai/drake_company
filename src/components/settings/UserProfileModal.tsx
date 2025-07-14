@@ -3,7 +3,7 @@ import { User as UserType } from '../../types';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '../../contexts/LanguageContext';
+// import { useLanguage } from '../../contexts/LanguageContext';
 
 interface UserProfileModalProps {
   user: UserType | null;
@@ -14,7 +14,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const { updateUser } = useData();
   const { logout } = useAuth();
   const { t } = useTranslation('settings');
-  const { language } = useLanguage();
+  // const { language } = useLanguage();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -73,7 +73,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 {imagePreview ? (
                   <img src={imagePreview} alt="avatar" className="object-cover w-full h-full" />
                 ) : (
-                  <span className="text-3xl text-blue-600 font-bold">{user.name.charAt(0)}</span>
+                  <span className="text-3xl text-blue-600 font-bold">{user.name}</span>
                 )}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
                   <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>

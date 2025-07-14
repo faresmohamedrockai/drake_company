@@ -103,7 +103,7 @@ const DASHBOARD_STATS_KEY = 'propai_dashboard_stats';
       email: 'fadel@propai.com',
       username: 'fadel',
       password: 'password',
-      role: 'Admin',
+      role: 'admin',
       createdAt: '2025-01-01',
       isActive: true
     },
@@ -113,7 +113,7 @@ const DASHBOARD_STATS_KEY = 'propai_dashboard_stats';
     email: 'sales@propai.com',
     username: 'sales',
     password: 'password',
-    role: 'Sales Admin',
+    role: 'Sales admin',
     createdAt: '2025-01-01',
     isActive: true
   },
