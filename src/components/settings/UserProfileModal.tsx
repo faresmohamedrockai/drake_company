@@ -2,6 +2,7 @@ import React, { useState, ChangeEvent } from 'react';
 import { User as UserType } from '../../types';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 // import { useLanguage } from '../../contexts/LanguageContext';
 
@@ -13,6 +14,7 @@ interface UserProfileModalProps {
 const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) => {
   const { updateUser } = useData();
   const { logout } = useAuth();
+  const { settings } = useSettings();
   const { t } = useTranslation('settings');
   // const { language } = useLanguage();
   const [formData, setFormData] = useState({
@@ -22,8 +24,29 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   });
   const [imagePreview, setImagePreview] = useState<string | undefined>(user?.avatar);
   const [saving, setSaving] = useState(false);
+  const [showHomeScreenConfig, setShowHomeScreenConfig] = useState(false);
+  const [homeScreenConfig, setHomeScreenConfig] = useState({
+    appName: settings?.companyName || 'Propai CRM',
+    appLogo: '/src/aspects/propai logo.png',
+    appLogoPreview: '/src/aspects/propai logo.png',
+  });
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   if (!user) return null;
+
+  // Listen for the beforeinstallprompt event
+  React.useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -42,6 +65,26 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     }
   };
 
+  const handleHomeScreenConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setHomeScreenConfig((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAppLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setHomeScreenConfig((prev) => ({ 
+          ...prev, 
+          appLogo: reader.result as string,
+          appLogoPreview: reader.result as string 
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -55,9 +98,78 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     onClose();
   };
 
+  const addToHomeScreen = async () => {
+    // Check if we have a deferred prompt (PWA installation)
+    if (deferredPrompt) {
+      try {
+        // Show the install prompt
+        deferredPrompt.prompt();
+        
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+          alert(t('profile.installSuccess'));
+        } else {
+          alert(t('profile.installCancelled'));
+        }
+        
+        // Clear the deferred prompt
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('Error during PWA installation:', error);
+        fallbackAddToHomeScreen();
+      }
+    } else {
+      fallbackAddToHomeScreen();
+    }
+  };
+
+  const fallbackAddToHomeScreen = () => {
+    const url = window.location.href;
+    const title = homeScreenConfig.appName;
+    
+    // Check if it's iOS Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    
+    if (isIOS && isSafari) {
+      // iOS Safari instructions
+      alert(`${t('profile.iosInstructions')}\n\n1. ${t('profile.iosStep1')}\n2. ${t('profile.iosStep2')}\n3. ${t('profile.iosStep3')}`);
+    } else if (navigator.share) {
+      // Use Web Share API if available
+      navigator.share({
+        title: title,
+        url: url,
+        text: t('profile.shareText')
+      }).catch(() => {
+        copyToClipboard(url);
+      });
+    } else {
+      // Fallback to clipboard
+      copyToClipboard(url);
+    }
+  };
+
+  const copyToClipboard = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      alert(`${t('profile.urlCopied')}\n\n${url}\n\n${t('profile.manualInstructions')}`);
+    } catch (error) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert(`${t('profile.urlCopied')}\n\n${url}\n\n${t('profile.manualInstructions')}`);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md relative animate-fadeIn">
+      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md relative animate-fadeIn max-h-[90vh] overflow-y-auto">
         <button
           className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl"
           onClick={onClose}
@@ -73,7 +185,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 {imagePreview ? (
                   <img src={imagePreview} alt="avatar" className="object-cover w-full h-full" />
                 ) : (
-                  <span className="text-3xl text-blue-600 font-bold">{user.name}</span>
+                  <span className="text-3xl text-blue-600 font-bold">{user.name.charAt(0)}</span>
                 )}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
                   <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>

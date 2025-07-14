@@ -219,12 +219,9 @@ const MeetingsManagement: React.FC = () => {
       // Sales Reps can only see their own meetings
       userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
     } else if (user?.role === 'Team Leader') {
-      // Team leaders can see their team's meetings and unassigned meetings
-      userMeetings = meetings.filter(meeting => 
-        meeting.assignedTo === user.name || 
-        (user.teamId && meeting.assignedTo.includes(user.teamId)) ||
-        meeting.assignedTo === '' // Unassigned meetings
-      );
+      // Team leaders see their own meetings and their sales reps' meetings
+      const salesReps = users.filter(u => u.role === 'Sales Rep' && u.teamId === user.name).map(u => u.name);
+      userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
     } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
       // Sales Admin and Admin can see all meetings
       userMeetings = meetings;

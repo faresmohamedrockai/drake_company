@@ -58,7 +58,7 @@ interface DataContextType {
   addActivity: (activity: Omit<Activity, 'id'>) => void;
   
   // Statistics
-  getStatistics: () => {
+  getStatistics: (user?: { name: string; role: string; teamId?: string } | null) => {
     totalProspects: number;
     activeLeads: number;
     todayMeetings: number;
@@ -1283,18 +1283,32 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Statistics
-  const getStatistics = () => {
-    const totalProspects = leads.length;
-    const activeLeads = leads.filter(lead => 
-      ['Fresh Lead', 'Follow Up', 'Scheduled Visit', 'Open Deal'].includes(lead.status)
-    ).length;
-    
+  const getStatistics = (user?: { name: string; role: string; teamId?: string } | null) => {
+    let filteredLeads = leads;
+    let filteredMeetings = meetings;
+    let filteredContracts = contracts;
+    if (user) {
+      if (user.role === 'Sales Rep') {
+        filteredLeads = leads.filter(lead => lead.assignedTo === user.name);
+        filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
+        filteredContracts = contracts.filter(contract => contract.createdBy === user.name);
+      } else if (user.role === 'Team Leader') {
+        // Team leaders see their own and their sales reps' leads/meetings/contracts
+        const salesReps = users.filter(u => u.role === 'Sales Rep' && u.teamId === user.name).map(u => u.name);
+        filteredLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
+        filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
+        filteredContracts = contracts.filter(contract => contract.createdBy === user.name || salesReps.includes(contract.createdBy));
+      } else if (user.role === 'Sales Admin' || user.role === 'Admin') {
+        // See all
+      }
+    }
+    const totalProspects = filteredLeads.length;
+    const activeLeads = filteredLeads.filter(lead => ['Fresh Lead', 'Follow Up', 'Scheduled Visit', 'Open Deal'].includes(lead.status)).length;
     const today = new Date().toISOString().split('T')[0];
-    const todayMeetings = meetings.filter(meeting => meeting.date === today).length;
-    
+    const todayMeetings = filteredMeetings.filter(meeting => meeting.date === today).length;
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
-    const monthlyRevenue = contracts
+    const monthlyRevenue = filteredContracts
       .filter(contract => {
         const contractDate = new Date(contract.contractDate);
         return contractDate.getMonth() === currentMonth && 
@@ -1305,19 +1319,13 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const value = parseFloat(contract.dealValue.replace(/[$,]/g, ''));
         return total + (isNaN(value) ? 0 : value);
       }, 0);
-
-    const followUpLeads = leads.filter(lead => lead.status === 'Follow Up').length;
-    const allCalls = leads.flatMap(lead => lead.calls);
+    const followUpLeads = filteredLeads.filter(lead => lead.status === 'Follow Up').length;
+    const allCalls = filteredLeads.flatMap(lead => lead.calls);
     const totalCalls = allCalls.length;
-    const totalMeetings = meetings.length;
-    const closedDeals = leads.filter(lead => lead.status === 'Closed Deal').length;
-
-    // Dynamic call completion: count only successful outcomes
-    const completedCalls = allCalls.filter(call =>
-      ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)
-    ).length;
+    const totalMeetings = filteredMeetings.length;
+    const closedDeals = filteredLeads.filter(lead => lead.status === 'Closed Deal').length;
+    const completedCalls = allCalls.filter(call => ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)).length;
     const callCompletionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
-
     const stats = {
       totalProspects,
       activeLeads,
@@ -1330,7 +1338,6 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         callCompletionRate,
       }
     };
-
     return stats;
   };
 
