@@ -70,7 +70,24 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
               />
             ) : null}
             <Building className={`h-8 w-8 text-blue-600 mr-3 ${settings?.companyImage ? 'hidden' : ''}`} />
-            <h1 className="text-xl font-bold text-gray-900">{settings?.companyName || 'Propai'}</h1>
+            {(() => {
+  const companyName = settings?.companyName || 'Propai';
+  const words = companyName.split(' ');
+  const firstLine = words.slice(0, 2).join(' ');
+  const secondLine = words.length > 2 ? words.slice(2).join(' ') : null;
+  return (
+    <h1
+      className="text-base font-semibold text-gray-900 max-w-[120px] leading-tight"
+      title={companyName}
+      style={{ wordBreak: 'break-word' }}
+    >
+      <span className="block truncate">{firstLine}</span>
+      {secondLine && (
+        <span className="block truncate text-xs text-gray-500">{secondLine}</span>
+      )}
+    </h1>
+  );
+})()}
           </div>
           
           {/* Language Toggle */}
