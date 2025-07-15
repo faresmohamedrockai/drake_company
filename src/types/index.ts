@@ -4,7 +4,7 @@ export interface User {
   email: string;
   username: string;
   password: string;
-  role: 'Admin' | 'Sales Admin' | 'Team Leader' | 'Sales Rep';
+  role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep';
   teamId?: string;
   createdAt: string;
   isActive: boolean;
@@ -28,6 +28,7 @@ export enum LeadStatus {
   SCHEDULED_VISIT = 'scheduled_visit',
   OPEN_DEAL = 'open_deal',
   CANCELLATION = 'cancellation',
+  ClosedDeal = "ClosedDeal",
 }
 
 

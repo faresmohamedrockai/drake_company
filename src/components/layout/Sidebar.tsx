@@ -124,9 +124,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
           {menuItems.map((item) => {
             // Check if user has access to this menu item
             const hasAccess = !item.adminOnly || 
-              user?.role === 'Admin' || 
-              user?.role === 'Sales Admin' || 
-              user?.role === 'Team Leader';
+              user?.role === 'admin' || 
+              user?.role === 'sales_admin' || 
+              user?.role === 'team_leader';
             
             if (!hasAccess) return null;
 

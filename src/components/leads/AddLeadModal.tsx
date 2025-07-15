@@ -189,18 +189,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                 // Role-based user filtering for assignment
                 let assignableUsers = users;
 
-                if (user?.role === 'Sales Rep') {
+                if (user?.role === 'sales_rep') {
                   // Sales Reps can only assign to themselves
                   assignableUsers = users.filter(u => u.name === user.name);
-                } else if (user?.role === 'Team Leader') {
+                } else if (user?.role === 'team_leader') {
                   // Team Leaders can assign to their team members and themselves
                   assignableUsers = users.filter(u =>
                     u.name === user.name ||
-                    (u.role === 'Sales Rep' && u.teamId === user.teamId)
+                    (u.role === 'sales_rep' && u.teamId === user.teamId)
                   );
-                } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+                } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                   // Sales Admin and Admin can assign to anyone
-                  assignableUsers = users.filter(u => u.role !== 'Admin' || user?.role === 'Admin');
+                  assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin');
                 }
 
                 return assignableUsers.map(user => (

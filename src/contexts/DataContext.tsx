@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, Lead, Property, Project, Zone, Developer, Meeting, Contract, Activity, CallLog, VisitLog, Note } from '../types';
+import { User, Lead, Property, Project, Zone, Developer, Meeting, Contract, Activity, CallLog, VisitLog, Note, LeadStatus } from '../types';
 
 interface DataContextType {
   // Users
@@ -113,7 +113,7 @@ const DASHBOARD_STATS_KEY = 'propai_dashboard_stats';
     email: 'sales@propai.com',
     username: 'sales',
     password: 'password',
-    role: 'Sales admin',
+    role: 'sales_admin',
     createdAt: '2025-01-01',
     isActive: true
   },
@@ -123,7 +123,7 @@ const DASHBOARD_STATS_KEY = 'propai_dashboard_stats';
     email: 'admin@propai.com',
     username: 'Team Leader',
     password: 'password',
-    role: 'Team Leader',
+    role: 'team_leader',
     createdAt: '2025-01-01',
     isActive: true
   }
@@ -140,7 +140,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 2,000,000 - 3,000,000',
     inventoryInterest: 'Madinaty',
     source: 'Facebook',
-    status: 'Fresh Lead',
+    status: LeadStatus.FRESH_LEAD,
     lastCallDate: '2025-02-10',
     lastVisitDate: '------',
     assignedTo: 'Abdullah Sobhy',
@@ -160,7 +160,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 1,500,000 - 2,500,000',
     inventoryInterest: 'Mountain View',
     source: 'Referral',
-    status: 'Follow Up',
+    status: LeadStatus.FOLLOW_UP,
     lastCallDate: '2025-02-12',
     lastVisitDate: '------',
     assignedTo: 'Abdullah Sobhy',
@@ -180,7 +180,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 3,500,000 - 5,000,000',
     inventoryInterest: 'Palm Hills',
     source: 'Cold Call',
-    status: 'Scheduled Visit',
+    status: LeadStatus.SCHEDULED_VISIT,
     lastCallDate: '2025-02-14',
     lastVisitDate: '2025-02-15',
     assignedTo: 'fadel',
@@ -200,7 +200,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 800,000 - 1,200,000',
     inventoryInterest: 'New Cairo',
     source: 'Instagram',
-    status: 'Open Deal',
+    status: LeadStatus.OPEN_DEAL,
     lastCallDate: '2025-02-16',
     lastVisitDate: '2025-02-18',
     assignedTo: 'Sales Manager',
@@ -220,7 +220,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 4,000,000 - 6,000,000',
     inventoryInterest: 'Mountain View',
     source: 'Website',
-    status: 'Fresh Lead',
+    status: LeadStatus.FRESH_LEAD,
     lastCallDate: '2025-02-19',
     lastVisitDate: '------',
     assignedTo: 'Abdullah Sobhy',
@@ -240,7 +240,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 1,800,000 - 2,500,000',
     inventoryInterest: 'Madinaty',
     source: 'Referral',
-    status: 'Follow Up',
+    status: LeadStatus.FOLLOW_UP,
     lastCallDate: '2025-02-20',
     lastVisitDate: '------',
     assignedTo: 'fadel',
@@ -260,7 +260,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 2,500,000 - 3,500,000',
     inventoryInterest: 'Palm Hills',
     source: 'Facebook',
-    status: 'Cancellation',
+    status: LeadStatus.CANCELLATION,
     lastCallDate: '2025-02-21',
     lastVisitDate: '------',
     assignedTo: 'Sales Manager',
@@ -280,7 +280,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 5,500,000 - 8,000,000',
     inventoryInterest: 'Mountain View',
     source: 'Cold Call',
-    status: 'Scheduled Visit',
+    status: LeadStatus.SCHEDULED_VISIT,
     lastCallDate: '2025-02-22',
     lastVisitDate: '2025-02-25',
     assignedTo: 'Abdullah Sobhy',
@@ -300,7 +300,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 1,200,000 - 1,800,000',
     inventoryInterest: 'New Cairo',
     source: 'Instagram',
-    status: 'Open Deal',
+    status: LeadStatus.OPEN_DEAL,
     lastCallDate: '2025-02-23',
     lastVisitDate: '2025-02-26',
     assignedTo: 'fadel',
@@ -320,7 +320,7 @@ const initialLeads: Lead[] = [
     budget: 'EGP 3,000,000 - 4,500,000',
     inventoryInterest: 'Madinaty',
     source: 'Website',
-    status: 'Fresh Lead',
+    status: LeadStatus.FRESH_LEAD,
     lastCallDate: '2025-02-24',
     lastVisitDate: '------',
     assignedTo: 'Sales Manager',
@@ -1294,7 +1294,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         filteredContracts = contracts.filter(contract => contract.createdBy === user.name);
       } else if (user.role === 'Team Leader') {
         // Team leaders see their own and their sales reps' leads/meetings/contracts
-        const salesReps = users.filter(u => u.role === 'Sales Rep' && u.teamId === user.name).map(u => u.name);
+        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
         filteredLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
         filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
         filteredContracts = contracts.filter(contract => contract.createdBy === user.name || salesReps.includes(contract.createdBy));
@@ -1319,11 +1319,11 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const value = parseFloat(contract.dealValue.replace(/[$,]/g, ''));
         return total + (isNaN(value) ? 0 : value);
       }, 0);
-    const followUpLeads = filteredLeads.filter(lead => lead.status === 'Follow Up').length;
+    const followUpLeads = filteredLeads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length;
     const allCalls = filteredLeads.flatMap(lead => lead.calls);
     const totalCalls = allCalls.length;
     const totalMeetings = filteredMeetings.length;
-    const closedDeals = filteredLeads.filter(lead => lead.status === 'Closed Deal').length;
+    const closedDeals = filteredLeads.filter(lead => lead.status === LeadStatus.ClosedDeal).length;
     const completedCalls = allCalls.filter(call => ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)).length;
     const callCompletionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
     const stats = {

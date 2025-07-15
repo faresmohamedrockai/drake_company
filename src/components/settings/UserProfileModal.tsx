@@ -185,7 +185,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 {imagePreview ? (
                   <img src={imagePreview} alt="avatar" className="object-cover w-full h-full" />
                 ) : (
-                  <span className="text-3xl text-blue-600 font-bold">{user.name.charAt(0)}</span>
+                  <span className="text-3xl text-blue-600 font-bold">{user.name}</span>
                 )}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
                   <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>

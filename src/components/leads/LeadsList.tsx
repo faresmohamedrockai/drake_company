@@ -79,14 +79,14 @@ const LeadsList: React.FC = () => {
     let userLeads = leads;
     
     // Role-based filtering
-    if (user?.role === 'Sales Rep') {
+    if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own leads
       userLeads = leads.filter(lead => lead.assignedTo === user.name);
-    } else if (user?.role === 'Team Leader') {
+    } else if (user?.role === 'team_leader') {
       // Team leaders see their own leads and their sales reps' leads
-      const salesReps = users.filter(u => u.role === 'Sales Rep' && u.teamId === user.name).map(u => u.name);
+      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
       userLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
-    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+    } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Sales Admin and Admin can see all leads
       userLeads = leads;
     }
@@ -123,7 +123,7 @@ const LeadsList: React.FC = () => {
   const duplicateLeadsCount = filteredLeads.filter((lead, idx, arr) =>
     arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx
   ).length;
-  const freshLeadsCount = filteredLeads.filter(lead => lead.status === 'Fresh Lead').length;
+  const freshLeadsCount = filteredLeads.filter(lead => lead.status === 'fresh_lead').length;
   const coldCallsCount = filteredLeads.filter(lead => lead.source === 'Cold Call').length;
 
   // Performance tracking for reports
@@ -187,11 +187,11 @@ const LeadsList: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Fresh Lead': return 'bg-blue-100 text-blue-800';
-      case 'Follow Up': return 'bg-yellow-100 text-yellow-800';
-      case 'Scheduled Visit': return 'bg-purple-100 text-purple-800';
-      case 'Open Deal': return 'bg-green-100 text-green-800';
-      case 'Cancellation': return 'bg-red-100 text-red-800';
+      case 'fresh_lead': return 'bg-blue-100 text-blue-800';
+      case 'follow_up': return 'bg-yellow-100 text-yellow-800';
+      case 'scheduled_visit': return 'bg-purple-100 text-purple-800';
+      case 'open_deal': return 'bg-green-100 text-green-800';
+      case 'cancellation': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -353,11 +353,11 @@ const LeadsList: React.FC = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">{t('allStatuses')}</option>
-                <option value="Fresh Lead">{t('freshLead')}</option>
-                <option value="Follow Up">{t('followUp')}</option>
-                <option value="Scheduled Visit">{t('scheduledVisit')}</option>
-                <option value="Open Deal">{t('openDeal')}</option>
-                <option value="Cancellation">{t('cancellation')}</option>
+                <option value="fresh_lead">{t('freshLead')}</option>
+                <option value="follow_up">{t('followUp')}</option>
+                <option value="scheduled_visit">{t('scheduledVisit')}</option>
+                <option value="open_deal">{t('openDeal')}</option>
+                <option value="cancellation">{t('cancellation')}</option>
               </select>
               <select
                 value={filters.assignedTo}

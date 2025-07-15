@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import Papa from 'papaparse';
+import { LeadStatus } from '../../types';
 
 interface UserPerformance {
   id: string;
@@ -82,17 +83,17 @@ const Reports: React.FC = () => {
   });
 
   // Check if user has access to reports
-  const canAccessReports = currentUser?.role === 'Admin' || 
-                          currentUser?.role === 'Sales Admin' || 
-                          currentUser?.role === 'Team Leader';
+  const canAccessReports = currentUser?.role === 'admin' || 
+                          currentUser?.role === 'sales_admin' || 
+                          currentUser?.role === 'team_leader';
 
   // Get users based on hierarchy
   const getAccessibleUsers = () => {
-    if (currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin') {
+    if (currentUser?.role === 'admin' || currentUser?.role === 'sales_admin') {
       return users.filter(u => u.isActive || showInactive);
-    } else if (currentUser?.role === 'Team Leader') {
+    } else if (currentUser?.role === 'team_leader') {
       return users.filter(u => 
-        (u.role === 'Sales Rep' && u.teamId === currentUser.teamId) ||
+        (u.role === 'sales_rep' && u.teamId === currentUser.teamId) ||
         (u.name === currentUser.name)
       ).filter(u => u.isActive || showInactive);
     }
@@ -116,10 +117,9 @@ const Reports: React.FC = () => {
     
     const totalMeetings = userMeetings.length;
     const completedMeetings = userMeetings.filter(meeting => meeting.status === 'Completed').length;
-    
     // Enhanced conversion rate calculation
-    const closedDeals = userLeads.filter(lead => lead.status === 'Closed Deal').length;
-    const openDeals = userLeads.filter(lead => lead.status === 'Open Deal').length;
+    const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.ClosedDeal).length;
+    const openDeals = userLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
     const conversionRate = userLeads.length > 0 ? 
       ((closedDeals + openDeals) / userLeads.length) * 100 : 0;
     
@@ -331,10 +331,10 @@ const Reports: React.FC = () => {
   // Helper function to translate user roles
   const translateUserRole = (role: string) => {
     const roleMap: { [key: string]: string } = {
-      'Sales Rep': t('roles.salesRep'),
-      'Team Leader': t('roles.teamLeader'),
-      'Sales Admin': t('roles.salesAdmin'),
-      'Admin': t('roles.admin'),
+      'sales_rep': t('roles.salesRep'),
+      'team_leader': t('roles.teamLeader'),
+      'sales_admin': t('roles.salesAdmin'),
+      'admin': t('roles.admin'),
     };
     return roleMap[role] || role;
   };
@@ -642,7 +642,7 @@ const Reports: React.FC = () => {
                   user: lead.assignedTo,
                   details: `${lead.name} - ${lead.status}`,
                   date: lead.lastCallDate || lead.createdAt,
-                  priority: lead.status === 'Closed Deal' ? 'high' : 'medium'
+                  priority: lead.status === LeadStatus.ClosedDeal ? 'high' : 'medium'
                 })),
                 ...meetings.map(meeting => ({
                   type: 'meeting',

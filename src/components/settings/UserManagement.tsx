@@ -5,6 +5,8 @@ import { Search, Plus, Edit, Trash2, User, Shield, Eye, EyeOff } from 'lucide-re
 import { User as UserType } from '../../types';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { fetchWithAuth } from '../../lib/fetchWithAuth';
+import { getCookie } from '../../lib/cookieHelper';
 
 const UserManagement: React.FC = () => {
   const { users, leads, addUser, updateUser, deleteUser } = useData();
@@ -36,17 +38,17 @@ const UserManagement: React.FC = () => {
   const confirmPasswordLabel = t('user.confirmPassword', 'Confirm New Password');
 
   // Get all team leaders for the dropdown
-  const teamLeaders = users.filter(user => user.role === 'Team Leader' && user.isActive);
+  const teamLeaders = users.filter(user => user.role === 'team_leader' && user.isActive);
   
   // Check if there's already an admin user
-  const existingAdmin = users.find(user => user.role === 'Admin' && user.isActive);
-  const canCreateAdmin = !existingAdmin || (editingUser && editingUser.role === 'Admin');
+  const existingAdmin = users.find(user => user.role === 'admin' && user.isActive);
+  const canCreateAdmin = !existingAdmin || (editingUser && editingUser.role === 'admin');
 
   // Role-based permissions
-  const canManageUsers = currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin';
-  const canDeleteUsers = currentUser?.role === 'Admin';
-  const canEditUserRoles = currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin';
-  const canCreateUsers = currentUser?.role === 'Admin' || currentUser?.role === 'Sales Admin';
+  const canManageUsers = currentUser?.role === 'admin' || currentUser?.role === 'sales_admin';
+  const canDeleteUsers = currentUser?.role === 'admin';
+  const canEditUserRoles = currentUser?.role === 'admin' || currentUser?.role === 'sales_admin';
+  const canCreateUsers = currentUser?.role === 'admin' || currentUser?.role === 'sales_admin';
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -59,11 +61,11 @@ const UserManagement: React.FC = () => {
     return leads ? leads.filter((lead: any) => lead.assignedTo === salesRepName).length : 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Prevent creating additional admin users
-    if (!editingUser && formData.role === 'Admin' && existingAdmin) {
+    if (!editingUser && formData.role === 'admin' && existingAdmin) {
       alert(t('user.cannotCreateAdditionalAdmin'));
       return;
     }
@@ -89,8 +91,53 @@ const UserManagement: React.FC = () => {
         setPasswordError(t('user.passwordRequired') || 'Password is required');
         return;
       }
-      addUser(formData);
-      setPasswordError('');
+      
+      try {
+        // Get access token
+        const accessToken = getCookie('access_token');
+        if (!accessToken) {
+          alert(t('user.noAccessToken') || 'No access token found. Please login again.');
+          return;
+        }
+
+        // Call API to add user
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/auth/add-user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            email: formData.email,
+            username: formData.username,
+            password: formData.password,
+            role: formData.role,
+            teamId: formData.teamId,
+            isActive: formData.isActive,
+            avatar: formData.avatar
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to add user');
+        }
+
+        const newUser = await response.json();
+        
+        // Add user to local state
+        addUser(formData);
+        setPasswordError('');
+        
+        // Show success message
+        alert(t('user.userAddedSuccessfully') || 'User added successfully');
+        
+      } catch (error) {
+        console.error('Error adding user:', error);
+        alert(t('user.failedToAddUser') || 'Failed to add user. Please try again.');
+        return;
+      }
     }
     
     setFormData({
@@ -98,7 +145,7 @@ const UserManagement: React.FC = () => {
       email: '',
       username: '',
       password: '',
-      role: 'Sales Rep',
+      role: 'sales_rep',
       teamId: '',
       isActive: true,
       avatar: '', // <-- add avatar field
@@ -106,6 +153,20 @@ const UserManagement: React.FC = () => {
     setShowAddModal(false);
   };
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
   const handleEdit = (user: UserType) => {
     setEditingUser(user);
     setFormData({
@@ -170,7 +231,7 @@ const UserManagement: React.FC = () => {
                 email: '',
                 username: '',
                 password: '',
-                role: 'Sales Rep',
+                role: 'sales_rep',
                 teamId: '',
                 isActive: true,
                 avatar: '', // <-- add avatar field
@@ -211,7 +272,7 @@ const UserManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.role')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.status')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.created')}</th>
-                {currentUser?.role === 'Team Leader' && (
+                {currentUser?.role === 'team_leader' && (
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.leadsCount')}</th>
                 )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('user.actions')}</th>
@@ -252,7 +313,7 @@ const UserManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(user.createdAt).toLocaleDateString()}
                   </td>
-                  {currentUser?.role === 'Team Leader' && user.role === 'Sales Rep' && user.teamId === currentUser.name && (
+                  {currentUser?.role === 'team_leader' && user.role === 'sales_rep' && user.teamId === currentUser.name && (
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{getSalesRepLeadsCount(user.name)}</td>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -333,7 +394,7 @@ const UserManagement: React.FC = () => {
                     let newTeamId = formData.teamId;
                     
                     // Auto-update team ID for Team Leaders when name changes
-                    if (formData.role === 'Team Leader') {
+                    if (formData.role === 'team_leader') {
                       newTeamId = newName;
                     }
                     
@@ -424,9 +485,9 @@ const UserManagement: React.FC = () => {
                     let newTeamId = formData.teamId;
                     
                     // Auto-set team ID to user's name for Team Leaders
-                    if (newRole === 'Team Leader') {
+                    if (newRole === 'team_leader') {
                       newTeamId = formData.name;
-                    } else if (newRole === 'Sales Rep') {
+                    } else if (newRole === 'sales_rep') {
                       // Clear team ID for Sales Reps (they'll select from dropdown)
                       newTeamId = '';
                     }
@@ -436,10 +497,10 @@ const UserManagement: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={!canEditUserRoles}
                 >
-                  <option value="Sales Rep">{t('salesRep')}</option>
-                  <option value="Team Leader">{t('teamLeader')}</option>
-                  {currentUser?.role === 'Admin' && <option value="Sales Admin">{t('salesAdmin')}</option>}
-                  {currentUser?.role === 'Admin' && canCreateAdmin && <option value="Admin">{t('admin')}</option>}
+                  <option value="sales_rep">{t('salesRep')}</option>
+                  <option value="team_leader">{t('teamLeader')}</option>
+                  {currentUser?.role === 'admin' && <option value="sales_admin">{t('salesAdmin')}</option>}
+                  {currentUser?.role === 'admin' && canCreateAdmin && <option value="admin">{t('admin')}</option>}
                 </select>
                 {!canEditUserRoles && (
                   <p className="text-xs text-gray-500 mt-1">{t('user.onlyAdminsCanChangeRoles')}</p>
@@ -449,7 +510,7 @@ const UserManagement: React.FC = () => {
                 )}
               </div>
 
-              {formData.role === 'Team Leader' && (
+              {formData.role === 'team_leader' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.teamId')}</label>
                   <input
@@ -469,7 +530,7 @@ const UserManagement: React.FC = () => {
                 </div>
               )}
 
-              {formData.role === 'Sales Rep' && (
+              {formData.role === 'sales_rep' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('user.teamLeader')}</label>
                   <select

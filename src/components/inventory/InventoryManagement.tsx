@@ -15,8 +15,8 @@ const InventoryManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('properties');
 
   // Role-based access control
-  const canManageInventory = user?.role === 'Admin' || user?.role === 'Sales Admin' || user?.role === 'Team Leader';
-  const canViewInventory = user?.role === 'Sales Rep' || canManageInventory;
+  const canManageInventory = user?.role === 'admin' || user?.role === 'sales_admin' || user?.role === 'team_leader';
+  const canViewInventory = user?.role === 'sales_rep' || canManageInventory;
 
   const tabs = [
     { id: 'properties', label: t('properties'), icon: Building2, adminOnly: false },

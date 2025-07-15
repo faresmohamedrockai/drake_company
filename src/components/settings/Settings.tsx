@@ -83,10 +83,10 @@ const Settings: React.FC = () => {
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem(BACKUP_DATE_KEY));
 
   // Check user access permissions
-  const hasAdminAccess = user?.role === 'Admin';
-  const hasSalesAdminAccess = user?.role === 'Sales Admin';
-  const hasTeamLeaderAccess = user?.role === 'Team Leader';
-  const hasSalesRepAccess = user?.role === 'Sales Rep';
+  const hasAdminAccess = user?.role === 'admin';
+  const hasSalesAdminAccess = user?.role === 'sales_admin';
+  const hasTeamLeaderAccess = user?.role === 'team_leader';
+  const hasSalesRepAccess = user?.role === 'sales_rep';
 
   // Define tabs based on role permissions
   const getAvailableTabs = () => {

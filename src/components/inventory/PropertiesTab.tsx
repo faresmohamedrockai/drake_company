@@ -359,11 +359,11 @@ const PropertiesTab: React.FC = () => {
       setReportError('No client found with this number. Please check and try again.');
       return;
     }
-    if (user?.role === 'Sales Rep' && found.assignedTo !== user.name) {
+    if (user?.role === 'sales_rep' && found.assignedTo !== user.name) {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
-    if (user?.role === 'Team Leader' && found.assignedTo !== user.name && !(user.teamId && found.assignedTo.includes(user.teamId))) {
+    if (user?.role === 'team_leader' && found.assignedTo !== user.name && !(user.teamId && found.assignedTo.includes(user.teamId))) {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
@@ -450,7 +450,7 @@ const PropertiesTab: React.FC = () => {
           </select>
         </div>
         <div className="flex flex-row gap-2 items-center">
-          {user?.role !== 'Sales Rep' && (
+          {user?.role !== 'sales_rep' && (
             <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
               <Plus className="h-5 w-5 mr-2" />
               {t('addProperty')}
@@ -554,7 +554,7 @@ const PropertiesTab: React.FC = () => {
                   </td>
                   <td className="px-2 py-4">
                     <div className="flex space-x-1">
-                      {user?.role !== 'Sales Rep' && (
+                      {user?.role !== 'sales_rep' && (
                         <>
                           <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title={t('editProperty')}>
                             <Edit className="h-3 w-3" />
