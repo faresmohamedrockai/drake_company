@@ -267,12 +267,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="Fresh Lead">{t('freshLead')}</option>
-                <option value="Follow Up">{t('followUp')}</option>
-                <option value="Scheduled Visit">{t('scheduledVisit')}</option>
-                <option value="Open Deal">{t('openDeal')}</option>
-                <option value="Closed Deal">{t('closedDeal')}</option>
-                <option value="Cancellation">{t('cancellation')}</option>
+                <option value="fresh_lead">{t('freshLead')}</option>
+                <option value="follow_up">{t('followUp')}</option>
+                <option value="scheduled_visit">{t('scheduledVisit')}</option>
+                <option value="open_deal">{t('openDeal')}</option>
+                <option value="closed_deal">{t('closedDeal')}</option>
+                <option value="cancellation">{t('cancellation')}</option>
               </select>
             )}
           </div>

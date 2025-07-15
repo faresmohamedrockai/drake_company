@@ -4,6 +4,7 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
+import { Download, Smartphone, Globe, Share2, Copy, CheckCircle, AlertCircle } from 'lucide-react';
 // import { useLanguage } from '../../contexts/LanguageContext';
 
 interface UserProfileModalProps {
@@ -13,7 +14,7 @@ interface UserProfileModalProps {
 
 const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) => {
   const { updateUser } = useData();
-  const { logout } = useAuth();
+  const { logout, user: authUser } = useAuth();
   const { settings } = useSettings();
   const { t } = useTranslation('settings');
   // const { language } = useLanguage();
@@ -31,6 +32,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     appLogoPreview: '/src/aspects/propai logo.png',
   });
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallSuccess, setShowInstallSuccess] = useState(false);
+  const [showInstallError, setShowInstallError] = useState(false);
+  const [installMessage, setInstallMessage] = useState('');
 
   if (!user) return null;
 
@@ -88,7 +92,18 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    
+    // Update user in DataContext
     updateUser(user.id, formData);
+    
+    // Also update the current user in AuthContext if it's the same user
+    if (authUser && authUser.id === user.id) {
+      const updatedUser = { ...authUser, ...formData };
+      localStorage.setItem('propai_user', JSON.stringify(updatedUser));
+      // Force a page reload to update the AuthContext
+      window.location.reload();
+    }
+    
     setSaving(false);
     onClose();
   };
@@ -109,9 +124,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
         const { outcome } = await deferredPrompt.userChoice;
         
         if (outcome === 'accepted') {
-          alert(t('profile.installSuccess'));
+          setInstallMessage(t('profile.installSuccess'));
+          setShowInstallSuccess(true);
+          setTimeout(() => setShowInstallSuccess(false), 3000);
         } else {
-          alert(t('profile.installCancelled'));
+          setInstallMessage(t('profile.installCancelled'));
+          setShowInstallError(true);
+          setTimeout(() => setShowInstallError(false), 3000);
         }
         
         // Clear the deferred prompt
@@ -135,7 +154,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     
     if (isIOS && isSafari) {
       // iOS Safari instructions
-      alert(`${t('profile.iosInstructions')}\n\n1. ${t('profile.iosStep1')}\n2. ${t('profile.iosStep2')}\n3. ${t('profile.iosStep3')}`);
+      setInstallMessage(`${t('profile.iosInstructions')}\n\n1. ${t('profile.iosStep1')}\n2. ${t('profile.iosStep2')}\n3. ${t('profile.iosStep3')}`);
+      setShowInstallError(true);
+      setTimeout(() => setShowInstallError(false), 5000);
     } else if (navigator.share) {
       // Use Web Share API if available
       navigator.share({
@@ -154,7 +175,9 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const copyToClipboard = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
-      alert(`${t('profile.urlCopied')}\n\n${url}\n\n${t('profile.manualInstructions')}`);
+      setInstallMessage(`${t('profile.urlCopied')}\n\n${url}\n\n${t('profile.manualInstructions')}`);
+      setShowInstallSuccess(true);
+      setTimeout(() => setShowInstallSuccess(false), 5000);
     } catch (error) {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
@@ -163,94 +186,143 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
       textArea.select();
       document.execCommand('copy');
       document.body.removeChild(textArea);
-      alert(`${t('profile.urlCopied')}\n\n${url}\n\n${t('profile.manualInstructions')}`);
+      setInstallMessage(`${t('profile.urlCopied')}\n\n${url}\n\n${t('profile.manualInstructions')}`);
+      setShowInstallSuccess(true);
+      setTimeout(() => setShowInstallSuccess(false), 5000);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md relative animate-fadeIn max-h-[90vh] overflow-y-auto">
-        <button
-          className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          &times;
-        </button>
-        <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{t('profile.myProfile')}</h2>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="flex flex-col items-center">
-            <label htmlFor="avatar-upload" className="cursor-pointer group relative">
-              <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-4 border-blue-200 shadow-md">
-                {imagePreview ? (
-                  <img src={imagePreview} alt="avatar" className="object-cover w-full h-full" />
-                ) : (
-                  <span className="text-3xl text-blue-600 font-bold">{user.name}</span>
-                )}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
-                  <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>
+    <>
+      {/* Success/Error Notifications */}
+      {showInstallSuccess && (
+        <div className="fixed top-4 right-4 z-60 bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 animate-slideInRight">
+          <CheckCircle className="h-5 w-5" />
+          <div className="whitespace-pre-line">{installMessage}</div>
+        </div>
+      )}
+      
+      {showInstallError && (
+        <div className="fixed top-4 right-4 z-60 bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 animate-slideInRight max-w-md">
+          <AlertCircle className="h-5 w-5" />
+          <div className="whitespace-pre-line">{installMessage}</div>
+        </div>
+      )}
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md relative animate-fadeIn max-h-[90vh] overflow-y-auto">
+          <button
+            className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-xl"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            &times;
+          </button>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{t('profile.myProfile')}</h2>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="flex flex-col items-center">
+              <label htmlFor="avatar-upload" className="cursor-pointer group relative">
+                <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-4 border-blue-200 shadow-md">
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="avatar" className="object-cover w-full h-full" />
+                  ) : (
+                    <span className="text-3xl text-blue-600 font-bold">{user.name}</span>
+                  )}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
+                    <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>
+                  </div>
                 </div>
-              </div>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </label>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.fullName')}</label>
               <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageChange}
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
               />
-            </label>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.fullName')}</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.email')}</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-            >
-              {t('profile.logout')}
-            </button>
-            <div className="flex space-x-3">
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.email')}</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+            
+            {/* Add to Home Screen Section */}
+            <div className="border-t pt-4">
+              <div className="flex items-center space-x-2 mb-3">
+                <Smartphone className="h-5 w-5 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">{t('profile.addToHomeScreen')}</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Install this app on your device for quick access and offline functionality.
+              </p>
+              
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={addToHomeScreen}
+                  className="flex items-center justify-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Download className="h-5 w-5" />
+                  <span>{t('profile.addToHomeScreen')}</span>
+                </button>
+                
+                {deferredPrompt && (
+                  <div className="flex items-center space-x-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>PWA installation available</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between pt-4 border-t">
               <button
                 type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                disabled={saving}
+                onClick={handleLogout}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
               >
-                {t('profile.cancel')}
+                {t('profile.logout')}
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
-                disabled={saving}
-              >
-                {saving ? t('profile.saving') : t('profile.saveChanges')}
-              </button>
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  disabled={saving}
+                >
+                  {t('profile.cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
+                  disabled={saving}
+                >
+                  {saving ? t('profile.saving') : t('profile.saveChanges')}
+                </button>
+              </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

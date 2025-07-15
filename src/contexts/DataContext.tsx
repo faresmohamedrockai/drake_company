@@ -1323,7 +1323,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const allCalls = filteredLeads.flatMap(lead => lead.calls);
     const totalCalls = allCalls.length;
     const totalMeetings = filteredMeetings.length;
-    const closedDeals = filteredLeads.filter(lead => lead.status === LeadStatus.ClosedDeal).length;
+    const closedDeals = filteredLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
     const completedCalls = allCalls.filter(call => ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)).length;
     const callCompletionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
     const stats = {

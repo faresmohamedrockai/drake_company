@@ -98,13 +98,13 @@ const PropertiesTab: React.FC = () => {
   const [showAmenitiesOther, setShowAmenitiesOther] = useState(false);
   const [zoneModal, setZoneModal] = useState<{ name: string, latitude: number, longitude: number } | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [reportStep, setReportStep] = useState<'input'|'preview'>("input");
+  const [reportStep, setReportStep] = useState<'input' | 'preview'>("input");
   const [reportPhone, setReportPhone] = useState('');
   const [reportLead, setReportLead] = useState<any>(null);
   const [reportProperty, setReportProperty] = useState<any>(null);
   const [reportNotes, setReportNotes] = useState('');
   const [reportError, setReportError] = useState('');
-  const userRolesAllowed = ['Admin', 'Sales Admin', 'Team Leader', 'Sales Rep'];
+  const userRolesAllowed = ['admin', 'sales_admin', 'team_leader', 'sales_rep'];
   const canGenerateReport = userRolesAllowed.includes(user?.role || '');
   const [formStep, setFormStep] = useState(0); // Stepper for add/edit form
   const { t } = useTranslation('inventory');
@@ -162,7 +162,7 @@ const PropertiesTab: React.FC = () => {
     if (!projectId) return '';
     const project = projects.find(p => p.id === projectId);
     if (!project) return '';
-    
+
     if (language === 'ar' && project.nameAr) {
       return project.nameAr;
     }
@@ -237,13 +237,13 @@ const PropertiesTab: React.FC = () => {
       if (selectedProject && Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0) {
         paymentPlanIndex = 0;
       }
-      
+
       // Handle zone selection based on project
       let zoneId = '';
       if (selectedProject?.zoneId) {
         zoneId = selectedProject.zoneId;
       }
-      
+
       setForm((prev) => ({
         ...prev,
         [name]: value,
@@ -370,7 +370,7 @@ const PropertiesTab: React.FC = () => {
     setReportLead(found);
     setReportStep('preview');
     // KPI: increment report count
-    const today = new Date().toISOString().slice(0,10);
+    const today = new Date().toISOString().slice(0, 10);
     const kpiKey = `report_kpi_${user?.id || 'unknown'}_${today}`;
     localStorage.setItem(kpiKey, String(Number(localStorage.getItem(kpiKey) || 0) + 1));
   }
@@ -404,7 +404,7 @@ const PropertiesTab: React.FC = () => {
           {language === 'ar' ? 'العقارات' : 'Properties'}
         </h2>
       </div>
-      
+
       {/* Search and Actions + Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-2 flex-1">
@@ -483,7 +483,7 @@ const PropertiesTab: React.FC = () => {
               return (
                 <tr key={property.id} className="hover:bg-gray-50">
                   <td className="px-2 py-4">
-                    <button 
+                    <button
                       className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer truncate block w-full text-left text-xs"
                       title={getPropertyName(property)}
                       onClick={() => {
@@ -530,7 +530,7 @@ const PropertiesTab: React.FC = () => {
                   </td>
                   <td className="px-2 py-4">
                     {zone ? (
-                      <button 
+                      <button
                         className="text-xs text-blue-600 underline cursor-pointer truncate block w-full text-left flex items-center"
                         title={zone.name}
                         onClick={() => setZoneModal(zone)}
@@ -747,23 +747,23 @@ const PropertiesTab: React.FC = () => {
                   {(() => {
                     const selectedProject = projects.find(p => p.id === form.projectId);
                     const projectHasZone = selectedProject?.zoneId;
-                    
+
                     // If project has a zone, show it as read-only
                     if (projectHasZone) {
                       const zone = zones.find(z => z.id === projectHasZone);
                       return (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">{t('zoneFromProject')}</label>
-                          <input 
-                            type="text" 
-                            value={zone?.name || t('unknownZone')} 
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-base cursor-not-allowed" 
-                            readOnly 
+                          <input
+                            type="text"
+                            value={zone?.name || t('unknownZone')}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-base cursor-not-allowed"
+                            readOnly
                           />
                         </div>
                       );
                     }
-                    
+
                     // If project doesn't have a zone, show zone selection
                     return (
                       <div>
@@ -1001,14 +1001,14 @@ const PropertiesTab: React.FC = () => {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <img 
-                      src={settings?.companyImage || "/src/RockaidevLogo.jpg"} 
-                      alt={t('companyLogo')} 
-                      className="h-12 w-12 rounded-lg ml-2" 
-                      style={{borderRadius: '12px'}} 
+                    <img
+                      src={settings?.companyImage || "/src/RockaidevLogo.jpg"}
+                      alt={t('companyLogo')}
+                      className="h-12 w-12 rounded-lg ml-2"
+                      style={{ borderRadius: '12px' }}
                       onError={e => {
                         e.currentTarget.src = "/src/RockaidevLogo.jpg";
-                      }} 
+                      }}
                     />
                   </div>
                 </div>
@@ -1106,22 +1106,22 @@ const PropertiesTab: React.FC = () => {
                           {t('deliveryDate')}: <span className="ml-1">{deliveryDateStr}</span>
                         </div>
                       </div>
-                                              {/* Table */}
-                        <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="bg-blue-600 text-white">
-                                <th className="border px-3 py-2 font-bold">
-                                  {language === 'ar' ? 'الدفعة' : 'Payment'}
-                                </th>
-                                <th className="border px-3 py-2 font-bold">
-                                  {language === 'ar' ? 'التاريخ' : 'Date'}
-                                </th>
-                                <th className="border px-3 py-2 font-bold">
-                                  {language === 'ar' ? 'المبلغ' : 'Amount'}
-                                </th>
-                              </tr>
-                            </thead>
+                      {/* Table */}
+                      <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-blue-600 text-white">
+                              <th className="border px-3 py-2 font-bold">
+                                {language === 'ar' ? 'الدفعة' : 'Payment'}
+                              </th>
+                              <th className="border px-3 py-2 font-bold">
+                                {language === 'ar' ? 'التاريخ' : 'Date'}
+                              </th>
+                              <th className="border px-3 py-2 font-bold">
+                                {language === 'ar' ? 'المبلغ' : 'Amount'}
+                              </th>
+                            </tr>
+                          </thead>
                           <tbody>
                             {schedule.map((item, idx) => (
                               <tr key={idx} className={
@@ -1155,14 +1155,14 @@ const PropertiesTab: React.FC = () => {
                 {(() => {
                   // Get property images
                   const propertyImages = reportProperty && Array.isArray(reportProperty.images) ? reportProperty.images : [];
-                  
+
                   // Get project images
                   const project = projects.find(p => p.id === reportProperty?.projectId);
                   const projectImages = project && Array.isArray(project.images) ? project.images : [];
-                  
+
                   // Combine all images
                   const allImages = [...propertyImages, ...projectImages];
-                  
+
                   if (allImages.length > 0) {
                     return (
                       <div className="mb-4">
@@ -1234,7 +1234,7 @@ const PropertiesTab: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">{showImageModal.title} - {t('images')}</h3>
-              <button 
+              <button
                 onClick={() => setShowImageModal(null)}
                 className="text-gray-400 hover:text-gray-600 text-2xl font-bold"
               >
@@ -1244,8 +1244,8 @@ const PropertiesTab: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {showImageModal.images.map((img: string, idx: number) => (
                 <div key={idx} className="relative group">
-                  <img 
-                    src={img} 
+                  <img
+                    src={img}
                     alt={`${showImageModal.title} ${idx + 1}`}
                     className="w-full h-48 object-cover rounded-lg border shadow-sm hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => {

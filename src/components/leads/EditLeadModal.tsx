@@ -249,6 +249,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
               <option value="follow_up">{t('followUp')}</option>
               <option value="scheduled_visit">{t('scheduledVisit')}</option>
               <option value="open_deal">{t('openDeal')}</option>
+              <option value="closed_deal">{t('closedDeal')}</option>
               <option value="cancellation">{t('cancellation')}</option>
             </select>
           </div>

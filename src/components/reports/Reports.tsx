@@ -118,7 +118,7 @@ const Reports: React.FC = () => {
     const totalMeetings = userMeetings.length;
     const completedMeetings = userMeetings.filter(meeting => meeting.status === 'Completed').length;
     // Enhanced conversion rate calculation
-    const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.ClosedDeal).length;
+    const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
     const openDeals = userLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
     const conversionRate = userLeads.length > 0 ?
       ((closedDeals + openDeals) / userLeads.length) * 100 : 0;
@@ -639,7 +639,7 @@ const Reports: React.FC = () => {
                   user: lead.assignedTo,
                   details: `${lead.name} - ${lead.status}`,
                   date: lead.lastCallDate || lead.createdAt,
-                  priority: lead.status === LeadStatus.ClosedDeal ? 'high' : 'medium'
+                  priority: lead.status === LeadStatus.CLOSED_DEAL ? 'high' : 'medium'
                 })),
                 ...meetings.map(meeting => ({
                   type: 'meeting',

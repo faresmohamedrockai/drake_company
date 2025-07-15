@@ -1,12 +1,17 @@
 import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useTranslation } from 'react-i18next';
 import { Search, Plus, Edit, Trash2, User, Shield, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '../../types';
 
 const UserManagement: React.FC = () => {
   const { users, addUser, updateUser, deleteUser } = useData();
   const { user: currentUser } = useAuth();
+  const { isRTL, rtlClass, rtlMargin } = useLanguage();
+  const { t } = useTranslation('settings');
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
@@ -20,7 +25,7 @@ const UserManagement: React.FC = () => {
     role: 'Sales Rep' as UserType['role'],
     teamId: '',
     isActive: true,
-    avatar: '', // <-- add avatar field
+    avatar: '',
   });
 
   const canManageUsers = currentUser?.role === 'admin';
@@ -35,11 +40,21 @@ const UserManagement: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // For team leaders, set their team ID to their own user ID (will be generated)
+    const submitData = { ...formData };
+    if (submitData.role === 'team_leader') {
+      // For new users, we'll set this after user creation
+      // For editing, we'll keep the existing team ID
+      if (!editingUser) {
+        submitData.teamId = 'auto-assign'; // Will be set to user ID after creation
+      }
+    }
+
     if (editingUser) {
-      updateUser(editingUser.id, formData);
+      updateUser(editingUser.id, submitData);
       setEditingUser(null);
     } else {
-      addUser(formData);
+      addUser(submitData);
     }
 
     setFormData({
@@ -50,7 +65,7 @@ const UserManagement: React.FC = () => {
       role: 'sales_rep',
       teamId: '',
       isActive: true,
-      avatar: '', // <-- add avatar field
+      avatar: '',
     });
     setShowAddModal(false);
   };
@@ -65,13 +80,13 @@ const UserManagement: React.FC = () => {
       role: user.role,
       teamId: user.teamId || '',
       isActive: user.isActive,
-      avatar: user.avatar || '', // <-- add avatar field
+      avatar: user.avatar || '',
     });
     setShowAddModal(true);
   };
 
   const handleDelete = (userId: string) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    if (window.confirm(isRTL ? 'هل أنت متأكد من حذف هذا المستخدم؟' : 'Are you sure you want to delete this user?')) {
       deleteUser(userId);
     }
   };
@@ -86,24 +101,34 @@ const UserManagement: React.FC = () => {
     }
   };
 
+  const getRoleText = (role: string) => {
+    switch (role) {
+      case 'admin': return t('role.admin');
+      case 'sales_admin': return t('role.salesAdmin');
+      case 'team_leader': return t('role.teamLeader');
+      case 'sales_rep': return t('role.salesRep');
+      default: return role;
+    }
+  };
+
   if (!canManageUsers) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen">
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <Shield className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You don't have permission to manage users.</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{t('accessDenied')}</h2>
+          <p className="text-gray-600">{t('noPermissionToManageUsers')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">User Management</h2>
-          <p className="text-gray-600">Manage system users and their permissions</p>
+    <div className={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`flex items-center justify-between mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'font-arabic' : ''}`}>{t('userManagement')}</h2>
+          <p className={`text-gray-600 ${isRTL ? 'font-arabic' : ''}`}>{t('manageSystemUsers')}</p>
         </div>
         <button
           onClick={() => {
@@ -116,27 +141,28 @@ const UserManagement: React.FC = () => {
               role: 'sales_rep',
               teamId: '',
               isActive: true,
-              avatar: '', // <-- add avatar field
+              avatar: '',
             });
             setShowAddModal(true);
           }}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+          className={`bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}
         >
-          <Plus className="h-5 w-5 mr-2" />
-          Add User
+          <Plus className={`h-5 w-5 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+          <span className={isRTL ? 'font-arabic' : ''}>{t('actions.addUser')}</span>
         </button>
       </div>
 
       {/* Search */}
       <div className="mb-6">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+        <div className={`relative max-w-md ${isRTL ? 'ml-auto' : 'mr-auto'}`}>
+          <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400`} />
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder={t('user.searchUsers')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isRTL ? 'font-arabic' : ''}`}
+            dir={isRTL ? 'rtl' : 'ltr'}
           />
         </div>
       </div>
@@ -147,61 +173,77 @@ const UserManagement: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
+                  {t('user.user')}
+                </th>
+                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
+                  {t('user.email')}
+                </th>
+                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
+                  {t('user.username')}
+                </th>
+                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
+                  {t('user.role')}
+                </th>
+                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
+                  {t('user.status')}
+                </th>
+                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
+                  {t('user.created')}
+                </th>
+                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
+                  {t('user.actions')}
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-full flex items-center justify-center mr-3 bg-blue-600 text-white font-semibold overflow-hidden border-2 border-blue-200">
+                  <td className={`px-6 py-4 whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isRTL ? 'ml-3' : 'mr-3'} bg-blue-600 text-white font-semibold overflow-hidden border-2 border-blue-200`}>
                           {user.avatar ? (
                             <img src={user.avatar} alt="avatar" className="object-cover w-full h-full" />
                           ) : (
                             user.name.charAt(0)
                           )}
                         </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                          {user.teamId && <div className="text-sm text-gray-500">Team: {user.teamId}</div>}
+                        <div className={isRTL ? 'text-right' : 'text-left'}>
+                          <div className={`text-sm font-medium text-gray-900 ${isRTL ? 'font-arabic' : ''}`}>{user.name}</div>
+                          {user.teamId && <div className={`text-sm text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>{t('team')}: {user.teamId}</div>}
                         </div>
                       </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.username}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)}`}>
-                      {user.role}
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{user.email}</td>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{user.username}</td>
+                  <td className={`px-6 py-4 whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)} ${isRTL ? 'font-arabic' : ''}`}>
+                      {getRoleText(user.role)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className={`px-6 py-4 whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                      {user.isActive ? 'Active' : 'Inactive'}
+                      } ${isRTL ? 'font-arabic' : ''}`}>
+                      {user.isActive ? t('user.active') : t('user.inactive')}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(user.createdAt).toLocaleDateString()}
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {new Date(user.createdAt).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex space-x-2">
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className={`flex space-x-2 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}`}>
                       <button
                         onClick={() => handleEdit(user)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                        title={t('user.edit')}
                       >
                         <Edit className="h-4 w-4" />
                       </button>
                       {canDeleteUsers && user.id !== currentUser?.id && (
                         <button
                           onClick={() => handleDelete(user.id)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                          title={t('user.delete')}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -218,9 +260,9 @@ const UserManagement: React.FC = () => {
       {/* Add/Edit User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              {editingUser ? 'Edit User' : 'Add New User'}
+          <div className={`bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto ${isRTL ? 'text-right' : 'text-left'}`}>
+            <h3 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'font-arabic' : ''}`}>
+              {editingUser ? t('user.edit') : t('addNewUser')}
             </h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -233,7 +275,9 @@ const UserManagement: React.FC = () => {
                       <span className="text-2xl text-blue-600 font-bold">{formData.name.charAt(0)}</span>
                     )}
                     <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
-                      <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">Edit</span>
+                      <span className={`text-white opacity-0 group-hover:opacity-100 transition-opacity ${isRTL ? 'font-arabic' : ''}`}>
+                        {isRTL ? 'تعديل' : 'Edit'}
+                      </span>
                     </div>
                   </div>
                   <input
@@ -255,52 +299,56 @@ const UserManagement: React.FC = () => {
                 </label>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.fullName')}</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                   required
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.email')}</label>
                 <input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                   required
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.username')}</label>
                 <input
                   type="text"
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                   required
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.password')}</label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-3 py-2 ${isRTL ? 'pr-10 pl-3' : 'pl-3 pr-10'} border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                     required
+                    dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className={`absolute ${isRTL ? 'left-3' : 'right-3'} top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors duration-200`}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -308,34 +356,78 @@ const UserManagement: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.role')}</label>
                 <select
                   value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as UserType['role'] })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    const newRole = e.target.value as UserType['role'];
+                    let newTeamId = formData.teamId;
+                    
+                    // If changing to team leader, set team ID to auto-assign
+                    if (newRole === 'team_leader') {
+                      newTeamId = editingUser ? editingUser.id : 'auto-assign';
+                    } else if (newRole === 'sales_rep') {
+                      // If changing to sales rep, clear team ID
+                      newTeamId = '';
+                    }
+                    
+                    setFormData({ ...formData, role: newRole, teamId: newTeamId });
+                  }}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 >
-                  <option value="sales_rep">Sales Rep</option>
-                  <option value="team_leader">Team Leader</option>
-                  <option value="sales_admin">Sales Admin</option>
-                  <option value="admin">Admin</option>
+                  <option value="sales_rep">{t('role.salesRep')}</option>
+                  <option value="team_leader">{t('role.teamLeader')}</option>
+                  <option value="sales_admin">{t('role.salesAdmin')}</option>
+                  <option value="admin">{t('role.admin')}</option>
                 </select>
               </div>
 
-              {/* Team ID */}
-              {(formData.role === 'team_leader' || formData.role === 'sales_rep') && (
+              {/* Team Leader ID */}
+              {formData.role === 'team_leader' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Team ID</label>
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>
+                    {isRTL ? 'معرف قائد الفريق' : 'Team Leader ID'}
+                  </label>
                   <input
                     type="text"
                     value={formData.teamId}
                     onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter team identifier"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''} bg-gray-100`}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                    placeholder={isRTL ? "سيتم تعيين معرف الفريق تلقائياً" : "Team ID will be auto-assigned"}
+                    readOnly
                   />
                 </div>
               )}
 
-              <div className="flex items-center">
+              {/* Team ID for Sales Rep */}
+              {formData.role === 'sales_rep' && (
+                <div>
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>
+                    {t('user.teamId')}
+                  </label>
+                  <select
+                    value={formData.teamId}
+                    onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
+                    dir={isRTL ? 'rtl' : 'ltr'}
+                    required
+                  >
+                    <option value="">{isRTL ? "اختر معرف الفريق" : "Select team identifier"}</option>
+                    {users
+                      .filter(user => user.role === 'team_leader' && user.isActive)
+                      .map(teamLeader => (
+                        <option key={teamLeader.id} value={teamLeader.id}>
+                          {teamLeader.name} ({teamLeader.username})
+                        </option>
+                      ))
+                    }
+                  </select>
+                </div>
+              )}
+
+              <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <input
                   type="checkbox"
                   id="isActive"
@@ -343,24 +435,24 @@ const UserManagement: React.FC = () => {
                   onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
-                  Active User
+                <label htmlFor="isActive" className={`text-sm text-gray-700 ${isRTL ? 'mr-2 font-arabic' : 'ml-2'}`}>
+                  {t('user.activeUser')}
                 </label>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className={`flex justify-end space-x-3 pt-4 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  className={`px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors duration-200 ${isRTL ? 'font-arabic' : ''}`}
                 >
-                  Cancel
+                  {t('actions.cancel')}
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 ${isRTL ? 'font-arabic' : ''}`}
                 >
-                  {editingUser ? 'Update User' : 'Add User'}
+                  {editingUser ? t('actions.updateUser') : t('actions.addUser')}
                 </button>
               </div>
             </form>

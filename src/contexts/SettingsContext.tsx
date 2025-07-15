@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const defaultSettings = {
-  companyName: 'Propai Real Estate',
+  companyName: 'Red Ocean Real Estate',
   companyImage: 'https://www.dpreview.com/files/p/articles/7952219469/google-imagen-lead-image.jpeg',
   companyWebsite: 'www.propai.com',
   companyEmail: 'info@propai.com',

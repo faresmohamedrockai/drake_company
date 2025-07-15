@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -12,11 +12,9 @@ interface AddLeadModalProps {
 }
 
 const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
-  const { users } = useData();
+  const { users, properties, addLead } = useData();
   const { user } = useAuth();
-  const [inventory, setInventory] = useState([]);
   const { t, i18n } = useTranslation('leads');
-  const BaseUrl = import.meta.env.VITE_API_URL;
   const [formData, setFormData] = useState({
     nameEn: '',
     nameAr: '',
@@ -31,64 +29,37 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        const accessToken = getCookie('access_token');
-        const res = await fetch(`${BaseUrl}/inventory`, {
-          headers: {
-            "Content-Type": "application/json",
-            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-          }
-        });
-        const data = await res.json();
-        setInventory(data);
-      } catch (error) {
-        console.error('Error fetching inventory:', error);
-      }
-    };
-
-    fetchInventory();
-  }, [BaseUrl]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
 
-    // Create combined name based on current language
-    const combinedName = i18n.language === 'ar'
-      ? (formData.nameAr || formData.nameEn)
-      : (formData.nameEn || formData.nameAr);
-
-    const leadPayload = {
-      name: combinedName,
-      nameEn: formData.nameEn,
-      nameAr: formData.nameAr,
-      contact: formData.phone,
-      budget: formData.budget,
-      ...(formData.inventoryInterest ? { inventoryInterestId: formData.inventoryInterest } : {}),
-      leadSource: formData.status,
-      status: formData.status
-    };
-
     try {
-      const accessToken = getCookie('access_token');
+      // Create combined name based on current language
+      const combinedName = i18n.language === 'ar'
+        ? (formData.nameAr || formData.nameEn)
+        : (formData.nameEn || formData.nameAr);
 
-      const res = await fetch(`${BaseUrl}/leads`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-        },
-        body: JSON.stringify(leadPayload)
+      // Get the selected property title if inventoryInterest is selected
+      const selectedProperty = properties.find(p => p.id === formData.inventoryInterest);
+      const inventoryInterest = selectedProperty ? selectedProperty.title : '';
+
+      // Add the new lead using DataContext
+      addLead({
+        name: combinedName,
+        nameEn: formData.nameEn,
+        nameAr: formData.nameAr,
+        phone: formData.phone,
+        email: formData.email,
+        budget: formData.budget,
+        inventoryInterest: inventoryInterest,
+        source: formData.source,
+        status: formData.status as LeadStatus,
+        lastCallDate: '------',
+        lastVisitDate: '------',
+        assignedTo: formData.assignedTo,
+        createdBy: user?.name || 'Unknown'
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        setError(errorData.message || "Something went wrong");
-        return;
-      }
 
       // Reset form and close modal
       setFormData({
@@ -104,7 +75,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       });
       onClose();
     } catch (err: any) {
-      setError("Network error: " + err.message);
+      setError("Error adding lead: " + err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -259,7 +230,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('budgetRequired')}</label>
+                <label className="block text-sm font-medium text-gray-700">{t('budget')}</label>
                 <div className="relative">
                   <input
                     type="text"
@@ -267,7 +238,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                     onChange={e => setFormData({ ...formData, budget: e.target.value })}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
                     placeholder="Enter budget (EGP)"
-                    required
                     min={0}
                   />
                   <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -275,16 +245,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('inventoryInterestRequired')}</label>
+                <label className="block text-sm font-medium text-gray-700">{t('inventoryInterest')}</label>
                 <div className="relative">
                   <select
                     value={formData.inventoryInterest}
                     onChange={e => setFormData({ ...formData, inventoryInterest: e.target.value })}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
-                    required
                   >
                     <option value="">{t('selectPropertyType')}</option>
-                    {inventory.map((item: any) => (
+                    {properties.map((item: any) => (
                       <option key={item.id} value={item.id}>{item.title}</option>
                     ))}
                   </select>
@@ -302,12 +271,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                     required
                   >
                     <option value="">{t('selectSource')}</option>
-                    <option value="Social Media">{t('socialMedia')}</option>
-                    <option value="Website">{t('website')}</option>
-                    <option value="Referral">{t('referral')}</option>
-                    <option value="Cold Call">{t('coldCall')}</option>
-                    <option value="Walk-in">{t('walkIn')}</option>
-                    <option value="Advertisement">{t('advertisement')}</option>
+                    <option value="social_media">{t('socialMedia')}</option>
+                    <option value="website">{t('website')}</option>
+                    <option value="referral">{t('referral')}</option>
+                    <option value="cold_call">{t('coldCall')}</option>
+                    <option value="walk_in">{t('walkIn')}</option>
+                    <option value="advertisement">{t('advertisement')}</option>
                   </select>
                   <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
@@ -333,6 +302,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
                   <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
                   <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+                  <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
                   <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
                 </select>
                 <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

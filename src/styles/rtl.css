@@ -4,6 +4,19 @@
   text-align: right;
 }
 
+/* Arabic Font Support */
+.font-arabic {
+  font-family: 'Segoe UI', 'Tahoma', 'Arial', 'Noto Sans Arabic', 'Cairo', sans-serif;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+/* Enhanced Arabic text rendering */
+[dir="rtl"] .font-arabic {
+  font-feature-settings: "liga" 1, "kern" 1;
+  text-rendering: optimizeLegibility;
+}
+
 /* RTL Responsive Wrapper */
 .rtl-responsive-wrapper {
   direction: ltr;

@@ -28,7 +28,7 @@ export enum LeadStatus {
   SCHEDULED_VISIT = 'scheduled_visit',
   OPEN_DEAL = 'open_deal',
   CANCELLATION = 'cancellation',
-  ClosedDeal = "ClosedDeal",
+  CLOSED_DEAL = "closed_deal",
 }
 
 
