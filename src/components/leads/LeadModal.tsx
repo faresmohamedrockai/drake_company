@@ -50,19 +50,19 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     setIsUpdating(false);
   }, [refreshKey]);
 
-  const canEdit = user?.role === 'Admin' || user?.role === 'Sales Admin' || 
-                  user?.role === 'Team Leader' || 
-                  (user?.role === 'Sales Rep' && currentLead.assignedTo === user.name);
+  const canEdit = user?.role === 'admin' || user?.role === 'sales_admin' || 
+                  user?.role === 'team_leader' || 
+                  (user?.role === 'sales_rep' && currentLead.assignedTo === user.name);
 
   // Dynamic stages based on status order (remove Cancellation)
   const statusStages = [
-    { id: 'fresh', label: t('freshLead'), value: 'Fresh Lead' },
-    { id: 'follow', label: t('followUp'), value: 'Follow Up' },
-    { id: 'visit', label: t('scheduledVisit'), value: 'Scheduled Visit' },
-    { id: 'open', label: t('openDeal'), value: 'Open Deal' },
-    { id: 'closed', label: t('closedDeal'), value: 'Closed Deal' }
+    { id: 'fresh', label: t('freshLead'), value: 'fresh_lead' },
+    { id: 'follow', label: t('followUp'), value: 'follow_up' },
+    { id: 'visit', label: t('scheduledVisit'), value: 'scheduled_visit' },
+    { id: 'open', label: t('openDeal'), value: 'open_deal' },
+    { id: 'closed', label: t('closedDeal'), value: 'closed_deal' }
   ];
-  const isCancelled = currentLead.status === 'Cancellation';
+  const isCancelled = currentLead.status === 'cancellation';
   const currentStatusIndex = isCancelled ? -1 : statusStages.findIndex(s => s.value === currentLead.status);
 
   const handleStatusUpdate = (newStatus: Lead['status']) => {

@@ -3,7 +3,7 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { Lead } from '../../types';
+import { Lead, LeadStatus } from '../../types';
 
 interface EditLeadModalProps {
   isOpen: boolean;
@@ -23,7 +23,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     budget: '',
     inventoryInterest: '',
     source: '',
-    status: 'Fresh Lead' as 'Fresh Lead' | 'Follow Up' | 'Scheduled Visit' | 'Open Deal' | 'Closed Deal' | 'Cancellation',
+    status: 'fresh_lead' as LeadStatus,
     assignedTo: ''
   });
   const [error, setError] = useState('');
@@ -39,7 +39,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
         budget: lead.budget || '',
         inventoryInterest: lead.inventoryInterest || '',
         source: lead.source || '',
-        status: lead.status || 'Fresh Lead',
+        status: lead.status || 'fresh_lead',
         assignedTo: lead.assignedTo || ''
       });
       setError('');
@@ -73,7 +73,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       budget: formData.budget,
       inventoryInterest: formData.inventoryInterest,
       source: formData.source,
-      status: formData.status,
+      status: formData.status as LeadStatus,
       assignedTo: formData.assignedTo
     });
 
@@ -160,18 +160,18 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                 // Role-based user filtering for assignment
                 let assignableUsers = users;
                 
-                if (user?.role === 'Sales Rep') {
+                if (user?.role === 'sales_rep') {
                   // Sales Reps can only assign to themselves
                   assignableUsers = users.filter(u => u.name === user.name);
-                } else if (user?.role === 'Team Leader') {
+                } else if (user?.role === 'team_leader') {
                   // Team Leaders can assign to their team members and themselves
                   assignableUsers = users.filter(u => 
                     u.name === user.name || 
-                    (u.role === 'Sales Rep' && u.teamId === user.teamId)
+                    (u.role === 'sales_rep' && u.teamId === user.teamId)
                   );
-                } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+                } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                   // Sales Admin and Admin can assign to anyone
-                  assignableUsers = users.filter(u => u.role !== 'Admin' || user?.role === 'Admin');
+                  assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin');
                 }
                 
                 return assignableUsers.map(user => (
@@ -245,11 +245,11 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
               required
             >
-              <option value="Fresh Lead">{t('freshLead')}</option>
-              <option value="Follow Up">{t('followUp')}</option>
-              <option value="Scheduled Visit">{t('scheduledVisit')}</option>
-              <option value="Open Deal">{t('openDeal')}</option>
-              <option value="Cancellation">{t('cancellation')}</option>
+              <option value="fresh_lead">{t('freshLead')}</option>
+              <option value="follow_up">{t('followUp')}</option>
+              <option value="scheduled_visit">{t('scheduledVisit')}</option>
+              <option value="open_deal">{t('openDeal')}</option>
+              <option value="cancellation">{t('cancellation')}</option>
             </select>
           </div>
 

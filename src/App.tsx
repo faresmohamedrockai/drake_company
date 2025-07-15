@@ -19,7 +19,7 @@ import './styles/rtl.css';
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
-  const { isRTL, rtlMargin } = useLanguage();
+  const {  rtlMargin } = useLanguage();
   const [currentView, setCurrentView] = useState('dashboard');
 
   // Update page title with company name

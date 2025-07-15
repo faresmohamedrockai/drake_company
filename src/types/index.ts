@@ -4,12 +4,38 @@ export interface User {
   email: string;
   username: string;
   password: string;
-  role: 'Admin' | 'Sales Admin' | 'Team Leader' | 'Sales Rep';
+  role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep';
   teamId?: string;
   createdAt: string;
   isActive: boolean;
   avatar?: string; // base64 or URL for profile image
 }
+
+
+
+
+
+
+
+
+
+
+
+
+export enum LeadStatus {
+  FRESH_LEAD = 'fresh_lead',
+  FOLLOW_UP = 'follow_up',
+  SCHEDULED_VISIT = 'scheduled_visit',
+  OPEN_DEAL = 'open_deal',
+  CANCELLATION = 'cancellation',
+  ClosedDeal = "ClosedDeal",
+}
+
+
+
+
+
+
 
 export interface Lead {
   id: string;
@@ -21,7 +47,7 @@ export interface Lead {
   budget: string;
   inventoryInterest: string;
   source: string;
-  status: 'Fresh Lead' | 'Follow Up' | 'Scheduled Visit' | 'Open Deal' | 'Closed Deal' | 'Cancellation';
+  status: LeadStatus;
   lastCallDate: string;
   lastVisitDate: string;
   assignedTo: string;

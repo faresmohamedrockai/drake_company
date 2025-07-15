@@ -215,14 +215,14 @@ const MeetingsManagement: React.FC = () => {
     let userMeetings = meetings;
     
     // Role-based filtering
-    if (user?.role === 'Sales Rep') {
+    if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own meetings
       userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
-    } else if (user?.role === 'Team Leader') {
+    } else if (user?.role === 'team_leader') {
       // Team leaders see their own meetings and their sales reps' meetings
-      const salesReps = users.filter(u => u.role === 'Sales Rep' && u.teamId === user.name).map(u => u.name);
+      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
       userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
-    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+    } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Sales Admin and Admin can see all meetings
       userMeetings = meetings;
     }
@@ -469,18 +469,18 @@ const MeetingsManagement: React.FC = () => {
                     // Role-based user filtering for assignment
                     let assignableUsers = users;
                     
-                    if (user?.role === 'Sales Rep') {
+                    if (user?.role === 'sales_rep') {
                       // Sales Reps can only assign to themselves
                       assignableUsers = users.filter(u => u.name === user.name);
-                    } else if (user?.role === 'Team Leader') {
+                    } else if (user?.role === 'team_leader') {
                       // Team Leaders can assign to their team members and themselves
                       assignableUsers = users.filter(u => 
                         u.name === user.name || 
-                        (u.role === 'Sales Rep' && u.teamId === user.teamId)
+                        (u.role === 'sales_rep' && u.teamId === user.teamId)
                       );
-                    } else if (user?.role === 'Sales Admin' || user?.role === 'Admin') {
+                    } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                       // Sales Admin and Admin can assign to anyone
-                      assignableUsers = users.filter(u => u.role !== 'Admin' || user?.role === 'Admin');
+                      assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin');
                     }
                     
                     return assignableUsers.map(u => (

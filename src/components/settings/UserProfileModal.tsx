@@ -4,7 +4,7 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
-import { useLanguage } from '../../contexts/LanguageContext';
+// import { useLanguage } from '../../contexts/LanguageContext';
 
 interface UserProfileModalProps {
   user: UserType | null;
@@ -16,7 +16,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const { logout } = useAuth();
   const { settings } = useSettings();
   const { t } = useTranslation('settings');
-  const { language } = useLanguage();
+  // const { language } = useLanguage();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -178,186 +178,77 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
           &times;
         </button>
         <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">{t('profile.myProfile')}</h2>
-        
-        {!showHomeScreenConfig ? (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="flex flex-col items-center">
-              <label htmlFor="avatar-upload" className="cursor-pointer group relative">
-                <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-4 border-blue-200 shadow-md">
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="avatar" className="object-cover w-full h-full" />
-                  ) : (
-                    <span className="text-3xl text-blue-600 font-bold">{user.name.charAt(0)}</span>
-                  )}
-                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
-                    <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>
-                  </div>
-                </div>
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
-              </label>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.fullName')}</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.email')}</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            
-            {/* Add to Home Screen Button */}
-            <div className="pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => setShowHomeScreenConfig(true)}
-                className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 font-semibold flex items-center justify-center space-x-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-                <span>{t('profile.addToHomeScreen')}</span>
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-              >
-                {t('profile.logout')}
-              </button>
-              <div className="flex space-x-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  disabled={saving}
-                >
-                  {t('profile.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
-                  disabled={saving}
-                >
-                  {saving ? t('profile.saving') : t('profile.saveChanges')}
-                </button>
-              </div>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-5">
-            <div className="text-center">
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">{t('profile.configureHomeScreen')}</h3>
-              <p className="text-gray-600 text-sm">{t('profile.configureHomeScreenDesc')}</p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.appName')}</label>
-              <input
-                type="text"
-                name="appName"
-                value={homeScreenConfig.appName}
-                onChange={handleHomeScreenConfigChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder={t('profile.appNamePlaceholder')}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.appLogo')}</label>
-              <div className="flex items-center space-x-3">
-                <label htmlFor="app-logo-upload" className="cursor-pointer">
-                  <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-300 hover:border-blue-500 transition-colors">
-                                      {homeScreenConfig.appLogoPreview ? (
-                    <img src={homeScreenConfig.appLogoPreview} alt="app logo" className="object-cover w-full h-full" />
-                  ) : (
-                    <img src="/src/aspects/propai logo.png" alt="Propai logo" className="object-cover w-full h-full" />
-                  )}
-                  </div>
-                  <input
-                    id="app-logo-upload"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAppLogoChange}
-                  />
-                </label>
-                <div className="flex-1">
-                  <p className="text-xs text-gray-500">{t('profile.appLogoDesc')}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setHomeScreenConfig(prev => ({
-                        ...prev,
-                        appLogo: '/src/aspects/propai logo.png',
-                        appLogoPreview: '/src/aspects/propai logo.png'
-                      }));
-                    }}
-                    className="text-xs text-blue-600 hover:text-blue-800 mt-1"
-                  >
-                    {t('profile.resetToPropaiLogo')}
-                  </button>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="flex flex-col items-center">
+            <label htmlFor="avatar-upload" className="cursor-pointer group relative">
+              <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-4 border-blue-200 shadow-md">
+                {imagePreview ? (
+                  <img src={imagePreview} alt="avatar" className="object-cover w-full h-full" />
+                ) : (
+                  <span className="text-3xl text-blue-600 font-bold">{user.name}</span>
+                )}
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 flex items-center justify-center transition-all">
+                  <span className="text-white opacity-0 group-hover:opacity-100 transition-opacity">{t('profile.edit')}</span>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">{t('profile.preview')}</h4>
-              <div className="flex items-center space-x-3">
-                <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center overflow-hidden">
-                  {homeScreenConfig.appLogoPreview ? (
-                    <img src={homeScreenConfig.appLogoPreview} alt="preview" className="object-cover w-full h-full" />
-                  ) : (
-                    <img src="/src/aspects/propai logo.png" alt="Propai logo" className="object-cover w-full h-full" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">{homeScreenConfig.appName}</p>
-                  <p className="text-sm text-gray-500">Propai CRM</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex space-x-3 pt-4">
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </label>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.fullName')}</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('profile.email')}</label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
+          <div className="flex items-center justify-between pt-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+            >
+              {t('profile.logout')}
+            </button>
+            <div className="flex space-x-3">
               <button
                 type="button"
-                onClick={() => setShowHomeScreenConfig(false)}
-                className="flex-1 px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                disabled={saving}
               >
-                {t('profile.back')}
+                {t('profile.cancel')}
               </button>
               <button
-                type="button"
-                onClick={addToHomeScreen}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold"
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
+                disabled={saving}
               >
-                {t('profile.createShortcut')}
+                {saving ? t('profile.saving') : t('profile.saveChanges')}
               </button>
             </div>
           </div>
-        )}
+        </form>
       </div>
     </div>
   );

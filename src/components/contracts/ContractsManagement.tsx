@@ -115,7 +115,7 @@ const ContractsManagement: React.FC = () => {
   );
 
   // Role-based access control
-  const canAccessContracts = user?.role === 'Admin' || user?.role === 'Sales Admin';
+  const canAccessContracts = user?.role === 'admin' || user?.role === 'sales_admin';
 
   if (!canAccessContracts) {
     const isArabic = i18n.language === 'ar';
