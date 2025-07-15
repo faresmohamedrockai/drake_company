@@ -3,14 +3,14 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { 
-  Search, 
-  Download, 
-  Filter, 
-  TrendingUp, 
-  Users, 
-  Phone, 
-  Calendar, 
+import {
+  Search,
+  Download,
+  Filter,
+  TrendingUp,
+  Users,
+  Phone,
+  Calendar,
   Target,
   BarChart3,
   PieChart,
@@ -83,16 +83,16 @@ const Reports: React.FC = () => {
   });
 
   // Check if user has access to reports
-  const canAccessReports = currentUser?.role === 'admin' || 
-                          currentUser?.role === 'sales_admin' || 
-                          currentUser?.role === 'team_leader';
+  const canAccessReports = currentUser?.role === 'admin' ||
+    currentUser?.role === 'sales_admin' ||
+    currentUser?.role === 'team_leader';
 
   // Get users based on hierarchy
   const getAccessibleUsers = () => {
     if (currentUser?.role === 'admin' || currentUser?.role === 'sales_admin') {
       return users.filter(u => u.isActive || showInactive);
     } else if (currentUser?.role === 'team_leader') {
-      return users.filter(u => 
+      return users.filter(u =>
         (u.role === 'sales_rep' && u.teamId === currentUser.teamId) ||
         (u.name === currentUser.name)
       ).filter(u => u.isActive || showInactive);
@@ -104,25 +104,25 @@ const Reports: React.FC = () => {
   const calculateUserPerformance = (user: any): UserPerformance => {
     const userLeads = leads.filter(lead => lead.assignedTo === user.name);
     const userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
-    
+
     const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
-    const completedCalls = userLeads.reduce((sum, lead) => 
-      sum + (lead.calls?.filter((call: any) => 
+    const completedCalls = userLeads.reduce((sum, lead) =>
+      sum + (lead.calls?.filter((call: any) =>
         ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)
       ).length || 0), 0);
-    
+
     const totalVisits = userLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
-    const completedVisits = userLeads.reduce((sum, lead) => 
+    const completedVisits = userLeads.reduce((sum, lead) =>
       sum + (lead.visits?.filter((visit: any) => visit.status === 'Completed').length || 0), 0);
-    
+
     const totalMeetings = userMeetings.length;
     const completedMeetings = userMeetings.filter(meeting => meeting.status === 'Completed').length;
     // Enhanced conversion rate calculation
     const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.ClosedDeal).length;
     const openDeals = userLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
-    const conversionRate = userLeads.length > 0 ? 
+    const conversionRate = userLeads.length > 0 ?
       ((closedDeals + openDeals) / userLeads.length) * 100 : 0;
-    
+
     const callCompletionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
     const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0;
     const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
@@ -133,8 +133,8 @@ const Reports: React.FC = () => {
       ...userLeads.map(lead => ({ date: lead.lastVisitDate, type: 'visit', leadName: lead.name })),
       ...userMeetings.map(meeting => ({ date: meeting.date, type: 'meeting', leadName: meeting.client }))
     ].filter(activity => activity.date && activity.date !== '------');
-    
-    const lastActivity = allActivities.length > 0 ? 
+
+    const lastActivity = allActivities.length > 0 ?
       allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date : 'No activity';
 
     // Get performance from localStorage if available
@@ -142,7 +142,7 @@ const Reports: React.FC = () => {
     const meetingPerformanceKey = `user_meeting_performance_${user.name}`;
     const storedPerformance = localStorage.getItem(performanceKey);
     const storedMeetingPerformance = localStorage.getItem(meetingPerformanceKey);
-    
+
     let enhancedCallCompletionRate = callCompletionRate;
     let enhancedVisitCompletionRate = visitCompletionRate;
     let enhancedMeetingCompletionRate = meetingCompletionRate;
@@ -193,21 +193,21 @@ const Reports: React.FC = () => {
   const calculateOverallMetrics = (): PerformanceMetrics => {
     const accessibleUsers = getAccessibleUsers();
     const performances = accessibleUsers.map(calculateUserPerformance);
-    
+
     const totalUsers = accessibleUsers.length;
     const activeUsers = accessibleUsers.filter(u => u.isActive).length;
     const totalLeads = performances.reduce((sum, p) => sum + p.totalLeads, 0);
     const totalCalls = performances.reduce((sum, p) => sum + p.totalCalls, 0);
     const totalVisits = performances.reduce((sum, p) => sum + p.totalVisits, 0);
     const totalMeetings = performances.reduce((sum, p) => sum + p.totalMeetings, 0);
-    
-    const avgConversionRate = performances.length > 0 ? 
+
+    const avgConversionRate = performances.length > 0 ?
       performances.reduce((sum, p) => sum + p.conversionRate, 0) / performances.length : 0;
-    const avgCallCompletionRate = performances.length > 0 ? 
+    const avgCallCompletionRate = performances.length > 0 ?
       performances.reduce((sum, p) => sum + p.callCompletionRate, 0) / performances.length : 0;
-    const avgVisitCompletionRate = performances.length > 0 ? 
+    const avgVisitCompletionRate = performances.length > 0 ?
       performances.reduce((sum, p) => sum + p.visitCompletionRate, 0) / performances.length : 0;
-    const avgMeetingCompletionRate = performances.length > 0 ? 
+    const avgMeetingCompletionRate = performances.length > 0 ?
       performances.reduce((sum, p) => sum + p.meetingCompletionRate, 0) / performances.length : 0;
 
     return {
@@ -229,7 +229,7 @@ const Reports: React.FC = () => {
     if (!selectedDateRange.startDate || !selectedDateRange.endDate) {
       return data;
     }
-    
+
     return data.filter(item => {
       const itemDate = new Date(item.createdAt || item.date || item.lastActivity);
       return itemDate >= selectedDateRange.startDate! && itemDate <= selectedDateRange.endDate!;
@@ -239,20 +239,20 @@ const Reports: React.FC = () => {
   // Get filtered and sorted performances
   const getFilteredPerformances = () => {
     let performances = getAccessibleUsers().map(calculateUserPerformance);
-    
+
     // Filter by search term
     if (searchTerm) {
-      performances = performances.filter(p => 
+      performances = performances.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.role.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // Filter by selected user
     if (selectedUser) {
       performances = performances.filter(p => p.id === selectedUser);
     }
-    
+
     // Filter by date range
     if (selectedDateRange.startDate && selectedDateRange.endDate) {
       performances = performances.filter(p => {
@@ -261,11 +261,11 @@ const Reports: React.FC = () => {
         return lastActivityDate >= selectedDateRange.startDate! && lastActivityDate <= selectedDateRange.endDate!;
       });
     }
-    
+
     // Sort
     performances.sort((a, b) => {
       let aValue: any, bValue: any;
-      
+
       switch (sortBy) {
         case 'name':
           aValue = a.name;
@@ -283,14 +283,14 @@ const Reports: React.FC = () => {
           aValue = a.conversionRate;
           bValue = b.conversionRate;
       }
-      
+
       if (sortOrder === 'asc') {
         return aValue > bValue ? 1 : -1;
       } else {
         return aValue < bValue ? 1 : -1;
       }
     });
-    
+
     return performances;
   };
 
@@ -298,7 +298,7 @@ const Reports: React.FC = () => {
   const getDateRange = () => {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
+
     switch (selectedTimeframe) {
       case 'today':
         return {
@@ -485,16 +485,15 @@ const Reports: React.FC = () => {
               <label htmlFor="showInactive" className="text-sm text-gray-700">{t('controls.showInactive')}</label>
             </div>
           </div>
-          
+
           {/* View Mode Buttons */}
           <div className="flex gap-2">
             <button
               onClick={() => setViewMode('dashboard')}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
-                viewMode === 'dashboard' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${viewMode === 'dashboard'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
             >
               <BarChart3 className="h-4 w-4 inline mr-2" />
               <span className="hidden xs:inline">{t('controls.dashboard')}</span>
@@ -502,11 +501,10 @@ const Reports: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('detailed')}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${
-                viewMode === 'detailed' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-lg transition-colors text-sm ${viewMode === 'detailed'
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
             >
               <FileText className="h-4 w-4 inline mr-2" />
               <span className="hidden xs:inline">{t('controls.detailed')}</span>
@@ -546,7 +544,7 @@ const Reports: React.FC = () => {
               </button>
             </div>
           </div>
-          
+
           {/* Date Range Display */}
           {selectedDateRange.startDate && selectedDateRange.endDate && (
             <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
@@ -556,7 +554,7 @@ const Reports: React.FC = () => {
               </span>
             </div>
           )}
-          
+
           {/* Filters and Controls */}
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
             <div className="flex flex-col sm:flex-row gap-2 flex-1">
@@ -570,7 +568,7 @@ const Reports: React.FC = () => {
                 <option value="month">{t('timeframes.thisMonth')}</option>
                 <option value="custom">{t('timeframes.customRange')}</option>
               </select>
-              
+
               {/* Custom Date Range Picker */}
               {selectedTimeframe === 'custom' && (
                 <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-1">
@@ -592,15 +590,14 @@ const Reports: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowActivityFeed(!showActivityFeed)}
-                className={`px-3 py-1 rounded text-sm transition-colors ${
-                  showActivityFeed 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
+                className={`px-3 py-1 rounded text-sm transition-colors ${showActivityFeed
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
               >
                 <Activity className="h-4 w-4 inline mr-1" />
                 <span className="hidden xs:inline">{t('filters.activityFeed')}</span>
@@ -653,18 +650,16 @@ const Reports: React.FC = () => {
                   priority: meeting.status === 'Completed' ? 'high' : 'medium'
                 }))
               ].filter(activity => activity.date && activity.date !== '------')
-               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-               .slice(0, 10);
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .slice(0, 10);
 
               return allActivities.map((activity, index) => (
-                <div key={index} className={`flex items-center p-3 rounded-lg border-l-4 ${
-                  activity.priority === 'high' ? 'border-l-green-500 bg-green-50' :
+                <div key={index} className={`flex items-center p-3 rounded-lg border-l-4 ${activity.priority === 'high' ? 'border-l-green-500 bg-green-50' :
                   activity.priority === 'medium' ? 'border-l-blue-500 bg-blue-50' :
-                  'border-l-gray-500 bg-gray-50'
-                }`}>
-                  <div className={`w-2 h-2 rounded-full mr-3 ${
-                    activity.type === 'lead' ? 'bg-blue-500' : 'bg-purple-500'
-                  }`} />
+                    'border-l-gray-500 bg-gray-50'
+                  }`}>
+                  <div className={`w-2 h-2 rounded-full mr-3 ${activity.type === 'lead' ? 'bg-blue-500' : 'bg-purple-500'
+                    }`} />
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900">{activity.action}</div>
                     <div className="text-xs text-gray-600">{activity.details}</div>
@@ -773,27 +768,27 @@ const Reports: React.FC = () => {
                 <div className="text-xl sm:text-2xl font-bold text-blue-600">{metrics.averageConversionRate}%</div>
                 <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgConversionRate')}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageConversionRate > 50 ? t('performance.excellent') : 
-                   metrics.averageConversionRate > 30 ? t('performance.good') : 
-                   metrics.averageConversionRate > 15 ? t('performance.fair') : t('performance.needsImprovement')}
+                  {metrics.averageConversionRate > 50 ? t('performance.excellent') :
+                    metrics.averageConversionRate > 30 ? t('performance.good') :
+                      metrics.averageConversionRate > 15 ? t('performance.fair') : t('performance.needsImprovement')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-green-600">{metrics.averageCallCompletionRate}%</div>
                 <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgCallCompletion')}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageCallCompletionRate > 80 ? t('performance.outstanding') : 
-                   metrics.averageCallCompletionRate > 60 ? t('performance.good') : 
-                   metrics.averageCallCompletionRate > 40 ? t('performance.fair') : t('performance.needsWork')}
+                  {metrics.averageCallCompletionRate > 80 ? t('performance.outstanding') :
+                    metrics.averageCallCompletionRate > 60 ? t('performance.good') :
+                      metrics.averageCallCompletionRate > 40 ? t('performance.fair') : t('performance.needsWork')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-purple-600">{metrics.averageMeetingCompletionRate}%</div>
                 <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgMeetingCompletion')}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageMeetingCompletionRate > 90 ? t('performance.perfect') : 
-                   metrics.averageMeetingCompletionRate > 70 ? t('performance.good') : 
-                   metrics.averageMeetingCompletionRate > 50 ? t('performance.fair') : t('performance.needsAttention')}
+                  {metrics.averageMeetingCompletionRate > 90 ? t('performance.perfect') :
+                    metrics.averageMeetingCompletionRate > 70 ? t('performance.good') :
+                      metrics.averageMeetingCompletionRate > 50 ? t('performance.fair') : t('performance.needsAttention')}
                 </div>
               </div>
             </div>
@@ -834,12 +829,11 @@ const Reports: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        performance.role === 'Admin' ? 'bg-red-100 text-red-800' :
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.role === 'Admin' ? 'bg-red-100 text-red-800' :
                         performance.role === 'Sales Admin' ? 'bg-purple-100 text-purple-800' :
-                        performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
+                          performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'
+                        }`}>
                         {performance.role}
                       </span>
                     </td>
@@ -869,9 +863,8 @@ const Reports: React.FC = () => {
                       {performance.lastActivity}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {translateUserStatus(performance.isActive ? 'Active' : 'Inactive')}
                       </span>
                     </td>
@@ -898,17 +891,15 @@ const Reports: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        performance.role === 'Admin' ? 'bg-red-100 text-red-800' :
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.role === 'Admin' ? 'bg-red-100 text-red-800' :
                         performance.role === 'Sales Admin' ? 'bg-purple-100 text-purple-800' :
-                        performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
+                          performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
+                            'bg-green-100 text-green-800'
+                        }`}>
                         {translateUserRole(performance.role)}
                       </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${
-                        performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
                         {translateUserStatus(performance.isActive ? 'Active' : 'Inactive')}
                       </span>
                     </div>

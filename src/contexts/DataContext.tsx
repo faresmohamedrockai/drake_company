@@ -7,7 +7,7 @@ interface DataContextType {
   addUser: (user: Omit<User, 'id' | 'createdAt'>) => void;
   updateUser: (id: string, updates: Partial<User>) => void;
   deleteUser: (id: string) => void;
-  
+
   // Leads
   leads: Lead[];
   addLead: (lead: Omit<Lead, 'id' | 'createdAt' | 'notes' | 'calls' | 'visits'>) => void;
@@ -16,47 +16,47 @@ interface DataContextType {
   addCallLog: (leadId: string, call: Omit<CallLog, 'id' | 'leadId'>) => void;
   addVisitLog: (leadId: string, visit: Omit<VisitLog, 'id' | 'leadId'>) => void;
   addNote: (leadId: string, note: Omit<Note, 'id' | 'leadId'>) => void;
-  
+
   // Properties
   properties: Property[];
   addProperty: (property: Omit<Property, 'id' | 'createdAt'>) => void;
   updateProperty: (id: string, updates: Partial<Property>) => void;
   deleteProperty: (id: string) => void;
-  
+
   // Projects
   projects: Project[];
   addProject: (project: Omit<Project, 'id' | 'createdAt'>) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
-  
+
   // Zones
   zones: Zone[];
   addZone: (zone: Omit<Zone, 'id' | 'createdAt' | 'properties'>) => void;
   updateZone: (id: string, updates: Partial<Zone>) => void;
   deleteZone: (id: string) => void;
-  
+
   // Developers
   developers: Developer[];
   addDeveloper: (developer: Omit<Developer, 'id' | 'createdAt' | 'projects'>) => void;
   updateDeveloper: (id: string, updates: Partial<Developer>) => void;
   deleteDeveloper: (id: string) => void;
-  
+
   // Meetings
   meetings: Meeting[];
   addMeeting: (meeting: Omit<Meeting, 'id' | 'createdAt'>) => void;
   updateMeeting: (id: string, updates: Partial<Meeting>) => void;
   deleteMeeting: (id: string) => void;
-  
+
   // Contracts
   contracts: Contract[];
   addContract: (contract: Omit<Contract, 'id' | 'createdAt'>) => void;
   updateContract: (id: string, updates: Partial<Contract>) => void;
   deleteContract: (id: string) => void;
-  
+
   // Activities
   activities: Activity[];
   addActivity: (activity: Omit<Activity, 'id'>) => void;
-  
+
   // Statistics
   getStatistics: (user?: { name: string; role: string; teamId?: string } | null) => {
     totalProspects: number;
@@ -95,21 +95,21 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 
 const DASHBOARD_STATS_KEY = 'propai_dashboard_stats';
 
-    // Initial mock data
-  const initialUsers: User[] = [
-    {
-      id: '1',
-      name: 'fadel',
-      email: 'fadel@propai.com',
-      username: 'fadel',
-      password: 'password',
-      role: 'admin',
-      createdAt: '2025-01-01',
-      isActive: true
-    },
-    {
-      id: '2',
-      name: 'Sales Manager',
+// Initial mock data
+const initialUsers: User[] = [
+  {
+    id: '1',
+    name: 'fadel',
+    email: 'fadel@propai.com',
+    username: 'fadel',
+    password: 'password',
+    role: 'admin',
+    createdAt: '2025-01-01',
+    isActive: true
+  },
+  {
+    id: '2',
+    name: 'Sales Manager',
     email: 'sales@propai.com',
     username: 'sales',
     password: 'password',
@@ -974,17 +974,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: generateId(),
       leadId
     };
-    
-    setLeads(prev => prev.map(lead => 
-      lead.id === leadId 
-        ? { 
-            ...lead, 
-            calls: [...lead.calls, newCall],
-            lastCallDate: call.date
-          }
+
+    setLeads(prev => prev.map(lead =>
+      lead.id === leadId
+        ? {
+          ...lead,
+          calls: [...lead.calls, newCall],
+          lastCallDate: call.date
+        }
         : lead
     ));
-    
+
     addActivity({
       user: call.createdBy,
       action: `${call.createdBy} logged a call with lead`,
@@ -1000,17 +1000,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: generateId(),
       leadId
     };
-    
-    setLeads(prev => prev.map(lead => 
-      lead.id === leadId 
-        ? { 
-            ...lead, 
-            visits: [...lead.visits, newVisit],
-            lastVisitDate: visit.date
-          }
+
+    setLeads(prev => prev.map(lead =>
+      lead.id === leadId
+        ? {
+          ...lead,
+          visits: [...lead.visits, newVisit],
+          lastVisitDate: visit.date
+        }
         : lead
     ));
-    
+
     addActivity({
       user: visit.createdBy,
       action: `${visit.createdBy} logged a visit with lead`,
@@ -1026,9 +1026,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       id: generateId(),
       leadId
     };
-    
-    setLeads(prev => prev.map(lead => 
-      lead.id === leadId 
+
+    setLeads(prev => prev.map(lead =>
+      lead.id === leadId
         ? { ...lead, notes: [...lead.notes, newNote] }
         : lead
     ));
@@ -1188,8 +1188,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         updates.propertyIds!.includes(property.id)
           ? { ...property, zoneId: id }
           : property.zoneId === id && !updates.propertyIds!.includes(property.id)
-          ? { ...property, zoneId: undefined }
-          : property
+            ? { ...property, zoneId: undefined }
+            : property
       ));
     }
     updateDashboardStats();
@@ -1288,17 +1288,17 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let filteredMeetings = meetings;
     let filteredContracts = contracts;
     if (user) {
-      if (user.role === 'Sales Rep') {
+      if (user.role === 'sales_rep') {
         filteredLeads = leads.filter(lead => lead.assignedTo === user.name);
         filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
         filteredContracts = contracts.filter(contract => contract.createdBy === user.name);
-      } else if (user.role === 'Team Leader') {
+      } else if (user.role === 'team_leader') {
         // Team leaders see their own and their sales reps' leads/meetings/contracts
         const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
         filteredLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
         filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
         filteredContracts = contracts.filter(contract => contract.createdBy === user.name || salesReps.includes(contract.createdBy));
-      } else if (user.role === 'Sales Admin' || user.role === 'Admin') {
+      } else if (user.role === 'sales_admin' || user.role === 'admin') {
         // See all
       }
     }
@@ -1311,9 +1311,9 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const monthlyRevenue = filteredContracts
       .filter(contract => {
         const contractDate = new Date(contract.contractDate);
-        return contractDate.getMonth() === currentMonth && 
-               contractDate.getFullYear() === currentYear &&
-               contract.status === 'Signed';
+        return contractDate.getMonth() === currentMonth &&
+          contractDate.getFullYear() === currentYear &&
+          contract.status === 'Signed';
       })
       .reduce((total, contract) => {
         const value = parseFloat(contract.dealValue.replace(/[$,]/g, ''));

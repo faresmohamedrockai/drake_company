@@ -171,7 +171,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                   );
                 } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                   // Sales Admin and Admin can assign to anyone
-                  assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin');
+                  assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin' || user?.role === 'sales_admin');
                 }
                 
                 return assignableUsers.map(user => (

@@ -27,7 +27,7 @@ const LeadsList: React.FC = () => {
 
   // User color mapping
   const userColors = [
-    'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500', 
+    'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
     'bg-red-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
     'bg-yellow-500', 'bg-cyan-500', 'bg-lime-500', 'bg-amber-500'
   ];
@@ -77,7 +77,7 @@ const LeadsList: React.FC = () => {
   // Filter leads based on user role
   const getFilteredLeads = () => {
     let userLeads = leads;
-    
+
     // Role-based filtering
     if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own leads
@@ -90,7 +90,7 @@ const LeadsList: React.FC = () => {
       // Sales Admin and Admin can see all leads
       userLeads = leads;
     }
-    
+
     // Search filtering - now includes both English and Arabic names
     let filtered = userLeads.filter(lead => {
       const searchableName = getSearchableName(lead);
@@ -130,13 +130,13 @@ const LeadsList: React.FC = () => {
   const userPerformance = React.useMemo(() => {
     const userLeads = leads.filter(lead => lead.assignedTo === user?.name);
     const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
-    const completedCalls = userLeads.reduce((sum, lead) => 
-      sum + (lead.calls?.filter((call: any) => 
+    const completedCalls = userLeads.reduce((sum, lead) =>
+      sum + (lead.calls?.filter((call: any) =>
         ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)
       ).length || 0), 0);
-    
+
     const totalVisits = userLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
-    const completedVisits = userLeads.reduce((sum, lead) => 
+    const completedVisits = userLeads.reduce((sum, lead) =>
       sum + (lead.visits?.filter((visit: any) => visit.status === 'Completed').length || 0), 0);
 
     return {
@@ -273,7 +273,7 @@ const LeadsList: React.FC = () => {
                 <Filter className="h-5 w-5 mr-1" />
                 <span className="hidden xs:inline">{t('filterLeads')}</span>
               </button>
-              <button 
+              <button
                 onClick={() => setShowAddModal(true)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center w-full sm:w-auto"
               >

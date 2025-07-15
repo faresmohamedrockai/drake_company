@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const defaultSettings = {
   companyName: 'Propai Real Estate',
-  companyImage: '',
+  companyImage: 'https://www.dpreview.com/files/p/articles/7952219469/google-imagen-lead-image.jpeg',
   companyWebsite: 'www.propai.com',
   companyEmail: 'info@propai.com',
   companyAddress: '123 Main St, Alexandria, Egypt',
@@ -46,4 +46,10 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   );
 };
 
-export const useSettings = () => useContext(SettingsContext); 
+export const useSettings = () => {
+  const context = useContext(SettingsContext);
+  if (!context) {
+    throw new Error('useSettings must be used within a SettingsProvider');
+  }
+  return context;
+}; 

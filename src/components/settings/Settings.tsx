@@ -18,33 +18,33 @@ const defaultSettings = {
   companyWebsite: 'www.propai.com',
   companyEmail: 'info@propai.com',
   companyAddress: '123 Main St, Alexandria, Egypt',
-      notifications: {
-      // Email notifications with mirror functionality
-      email: {
-        enabled: true,
-        smtpHost: import.meta.env.VITE_SMTP_HOST || 'smtp.gmail.com',
-        smtpPort: parseInt(import.meta.env.VITE_SMTP_PORT || '587'),
-        smtpUser: import.meta.env.VITE_SMTP_USER || '',
-        smtpPass: import.meta.env.VITE_SMTP_PASS || '',
-        fromEmail: import.meta.env.VITE_FROM_EMAIL || 'notifications@propai.com',
-        fromName: import.meta.env.VITE_FROM_NAME || 'Propai CRM',
-        mirrorEnabled: true,
-        mirrorEmail: import.meta.env.VITE_MIRROR_EMAIL || 'admin@propai.com',
-      },
-      // Push notifications
-      push: {
-        enabled: true,
-        meetingReminders: true,
-        contractAlerts: true,
-        soundEnabled: true,
-      },
-      // Contract alerts
-      contract: {
-        statusAlerts: true,
-        expiryAlerts: true,
-        paymentReminders: true,
-      },
+  notifications: {
+    // Email notifications with mirror functionality
+    email: {
+      enabled: true,
+      smtpHost: import.meta.env.VITE_SMTP_HOST || 'smtp.gmail.com',
+      smtpPort: parseInt(import.meta.env.VITE_SMTP_PORT || '587'),
+      smtpUser: import.meta.env.VITE_SMTP_USER || '',
+      smtpPass: import.meta.env.VITE_SMTP_PASS || '',
+      fromEmail: import.meta.env.VITE_FROM_EMAIL || 'notifications@propai.com',
+      fromName: import.meta.env.VITE_FROM_NAME || 'Propai CRM',
+      mirrorEnabled: true,
+      mirrorEmail: import.meta.env.VITE_MIRROR_EMAIL || 'admin@propai.com',
     },
+    // Push notifications
+    push: {
+      enabled: true,
+      meetingReminders: true,
+      contractAlerts: true,
+      soundEnabled: true,
+    },
+    // Contract alerts
+    contract: {
+      statusAlerts: true,
+      expiryAlerts: true,
+      paymentReminders: true,
+    },
+  },
 };
 
 const Settings: React.FC = () => {
