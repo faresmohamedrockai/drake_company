@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const res = await fetch(`http://localhost:3000/api/auth/login`, {
+      const res = await fetch(`http://192.168.1.43:3000/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await fetch('http://localhost:3000/api/auth/logout', {
+      await fetch('http://192.168.1.43:3000/api/auth/logout', {
         method: 'POST',
         credentials: 'include',
         headers: {

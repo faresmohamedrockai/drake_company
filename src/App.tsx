@@ -16,11 +16,56 @@ import { AnimatePresence, motion } from 'framer-motion';
 import './i18n';
 import './styles/rtl.css';
 
+// Custom hook for managing persisted view state with URL sync
+const usePersistedView = (defaultView: string) => {
+  const [currentView, setCurrentView] = useState(() => {
+    // First try to get from URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlView = urlParams.get('page');
+    
+    if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
+      return urlView;
+    }
+    
+    // Then try to get the saved view from sessionStorage
+    const savedView = sessionStorage.getItem('propai-current-view');
+    return savedView || defaultView;
+  });
+
+  // Update URL and sessionStorage whenever currentView changes
+  useEffect(() => {
+    // Update URL query parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', currentView);
+    window.history.replaceState({}, '', url.toString());
+    
+    // Save to sessionStorage
+    sessionStorage.setItem('propai-current-view', currentView);
+  }, [currentView]);
+
+  // Listen for browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlView = urlParams.get('page');
+      
+      if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
+        setCurrentView(urlView);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  return [currentView, setCurrentView] as const;
+};
+
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
-  const {  rtlMargin } = useLanguage();
-  const [currentView, setCurrentView] = useState('dashboard');
+  const { rtlMargin } = useLanguage();
+  const [currentView, setCurrentView] = usePersistedView('dashboard');
 
   // Update page title with company name
   useEffect(() => {
