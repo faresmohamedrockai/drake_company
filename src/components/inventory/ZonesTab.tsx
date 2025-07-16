@@ -1,42 +1,111 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { Search, Plus, MapPin, Edit, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
 import MapComponent from './MapComponent';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { toast } from 'react-toastify';
+
+export interface Zone {
+  id?: string;
+  nameEn: string;
+  nameAr: string;
+  description: string;
+  latitude: number;
+  longitude: number;
+  projects?: any[];
+}
 
 const ZonesTab: React.FC = () => {
-  const { zones, deleteZone, updateZone } = useData();
+  // const { zones, deleteZone, updateZone } = useData();
   const { language } = useLanguage(); // Add language context
   const { t } = useTranslation('inventory');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editZone, setEditZone] = useState<any | null>(null);
   const [editZoneData, setEditZoneData] = useState<any>({ name: '', nameEn: '', nameAr: '', description: '', latitude: '', longitude: '', properties: 0 });
+  const queryClient = useQueryClient();
+  const { data: zones, isLoading, error } = useQuery<Zone[]>({
+    queryKey: ['zones'],
+    queryFn: () => getZones(),
+  });
+
+  const getZones = async () => {
+    const response = await axiosInterceptor.get('/zones');
+    return response.data.zones as Zone[];
+  }
+
+  const { mutateAsync: editZoneMutation, isPending: isEditing } = useMutation({
+    mutationFn: (zone: Zone) => updateZone(zone),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['zones'] });
+      toast.success(t('zoneUpdated'));
+      setEditZone(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response.data.message);
+      setEditZone(null);
+    }
+  });
+
+  const { mutateAsync: deleteZoneMutation, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => deleteZone(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['zones'] });
+      toast.success(t('zoneDeleted'));
+    },
+    onError: (error: any) => {
+      toast.error(error.response.data.message);
+    }
+  });
+
+  const updateZone = async (zone: Zone) => {
+    const response = await axiosInterceptor.patch(`/zones/${zone.id}`, zone);
+    return response.data as Zone;
+  }
+
+  const deleteZone = async (id: string) => {
+    const response = await axiosInterceptor.delete(`/zones/${id}`);
+    return response.data as Zone;
+  }
+
+  useEffect(() => {
+    if (error) {
+      toast.error((error as any).response.data.message);
+    }
+  }, [error]);
 
   // Helper function to get language-appropriate zone name
-  const getZoneName = (zone: any) => {
+  const getZoneName = (zone: Zone) => {
     if (!zone) return '';
     if (language === 'ar' && zone.nameAr) {
       return zone.nameAr;
     }
-    return zone.nameEn || zone.name;
+    return zone.nameEn;
   };
 
-  const filteredZones = zones.filter(zone =>
-    getZoneName(zone).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    zone.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const [filteredZones, setFilteredZones] = useState<Zone[]>([]);
+  useEffect(() => {
+    console.log(zones);
+    const filteredZones = zones?.filter(zone =>
+      getZoneName(zone).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      zone.description.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredZones(filteredZones || []);
+  }, [zones, searchTerm]);
+
 
   const handleDeleteZone = (id: string) => {
     if (window.confirm(t('confirmDeleteZone'))) {
-      deleteZone(id);
+      deleteZoneMutation(id);
     }
   };
 
   const handleEditZone = (zone: any) => {
     setEditZone(zone);
-    setEditZoneData({ 
+    setEditZoneData({
       ...zone,
       nameEn: zone.nameEn || '',
       nameAr: zone.nameAr || ''
@@ -50,14 +119,8 @@ const ZonesTab: React.FC = () => {
 
   const handleEditZoneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editZone) {
-      updateZone(editZone.id, {
-        ...editZoneData,
-        name: editZoneData.nameEn + (editZoneData.nameAr ? ' / ' + editZoneData.nameAr : ''),
-        properties: Number(editZoneData.properties) || 0
-      });
-      setEditZone(null);
-    }
+    editZoneMutation(editZoneData as Zone);
+    setEditZone(null);
   };
 
   return (
@@ -68,7 +131,7 @@ const ZonesTab: React.FC = () => {
           {language === 'ar' ? 'المناطق' : 'Zones'}
         </h2>
       </div>
-      
+
       {/* Search and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
@@ -81,7 +144,7 @@ const ZonesTab: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        <button 
+        <button
           onClick={() => setShowAddModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
         >
@@ -94,9 +157,10 @@ const ZonesTab: React.FC = () => {
         {/* Map Placeholder */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 lg:col-span-5">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('zoneMap')}</h3>
-          <MapComponent 
+          <MapComponent
             showAddZoneModal={showAddModal}
             setShowAddZoneModal={setShowAddModal}
+            zones={zones}
           />
           <p className="text-sm text-gray-500 mt-2">{t('clickMapToAddZones')}</p>
         </div>
@@ -105,7 +169,7 @@ const ZonesTab: React.FC = () => {
         <div className="bg-white border border-gray-200 rounded-lg p-6 lg:col-span-2">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('zonesList')}</h3>
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {filteredZones.map((zone) => (
+            {filteredZones?.map((zone: Zone) => (
               <div key={zone.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">{getZoneName(zone)}</h4>
@@ -113,8 +177,8 @@ const ZonesTab: React.FC = () => {
                     <button className="text-blue-600 hover:text-blue-800" onClick={() => handleEditZone(zone)}>
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button 
-                      onClick={() => handleDeleteZone(zone.id)}
+                    <button
+                      onClick={() => handleDeleteZone(zone.id as string)}
                       className="text-red-600 hover:text-red-800"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -125,12 +189,12 @@ const ZonesTab: React.FC = () => {
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>{t('latitude')}: {zone.latitude}, {t('longitude')}: {zone.longitude}</span>
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                    {t('properties')}: {zone.properties}
+                    {t('properties')}: {zone.projects?.length || 0}
                   </span>
                 </div>
               </div>
             ))}
-            {filteredZones.length === 0 && (
+            {filteredZones?.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 {searchTerm ? t('noZonesFound') : t('noZonesCreated')}
               </div>
@@ -141,11 +205,11 @@ const ZonesTab: React.FC = () => {
 
       {/* Edit Zone Modal as right-side drawer */}
       {editZone && (
-        <div className="fixed inset-0 z-50 flex justify-center items-center">
+        <div className="fixed inset-0 z-[9999] flex justify-center items-center">
           {/* Overlay */}
-          <div className="flex-1 bg-black bg-opacity-40" onClick={() => setEditZone(null)} />
+          <div className="fixed inset-0 bg-black bg-opacity-40" onClick={() => setEditZone(null)} />
           {/* Drawer */}
-          <div className="w-full max-w-md max-h-[60vh] sm:max-h-[70vh] bg-white shadow-2xl p-4 sm:p-6 flex flex-col relative animate-slide-in-right overflow-y-auto rounded-2xl my-6">
+          <div className="right-0 top-0 h-full w-full max-w-md max-h-[60vh] sm:max-h-[70vh] bg-white shadow-2xl p-4 sm:p-6 flex flex-col relative animate-slide-in-right overflow-y-auto rounded-2xl my-6 z-[10000]">
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
               onClick={() => setEditZone(null)}
@@ -175,20 +239,9 @@ const ZonesTab: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('longitude')}</label>
                 <input type="text" name="longitude" value={editZoneData.longitude} onChange={handleEditZoneChange} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('properties')}</label>
-                <input
-                  type="number"
-                  name="properties"
-                  min={0}
-                  value={editZoneData.properties}
-                  onChange={e => setEditZoneData((prev: any) => ({ ...prev, properties: Number(e.target.value) }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
               <div className="flex justify-end gap-2 mt-auto">
                 <button type="button" onClick={() => setEditZone(null)} className="px-4 py-2 text-gray-600 hover:text-gray-800">{t('cancel')}</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t('save')}</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700" disabled={isEditing}>{isEditing ? t('saving') : t('save')}</button>
               </div>
             </form>
           </div>

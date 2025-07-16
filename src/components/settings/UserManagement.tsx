@@ -1,32 +1,53 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
 import { Search, Plus, Edit, Trash2, User, Shield, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '../../types';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-const UserManagement: React.FC = () => {
-  const { users, addUser, updateUser, deleteUser } = useData();
+const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
+  console.log("users", users);
+  // const { addUser, deleteUser } = useData();
   const { user: currentUser } = useAuth();
   const { isRTL, rtlClass, rtlMargin } = useLanguage();
   const { t } = useTranslation('settings');
-  
+  const user = JSON.parse(localStorage.getItem('propai_user') || '{}') as UserType;
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-
+  const [updateUserResponse, setUpdateUserResponse] = useState<UserType | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     username: '',
-    password: '',
+    password: null,
     role: 'Sales Rep' as UserType['role'],
     teamId: '',
     isActive: true,
-    avatar: '',
+    imageBase64: '',
   });
+  const queryClient = useQueryClient();
+  const { mutateAsync: updateUserMutation, isPending } = useMutation({
+    mutationFn: (data: { id: string; formData: any }) => updateUser(data.id, data.formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  })
+  const { mutateAsync: deleteUserMutation, isPending: isDeleting } = useMutation({
+    mutationFn: (userId: string) => deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  })
+
+  const updateUser = async (userId: string, formData: any) => {
+    const response = await axiosInterceptor.patch(`/auth/update-user/${userId}`, formData);
+    return response.data;
+  }
 
   const canManageUsers = currentUser?.role === 'admin';
   const canDeleteUsers = currentUser?.role === 'admin';
@@ -37,7 +58,11 @@ const UserManagement: React.FC = () => {
     user.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    setEditingUser(null);
+  }, [updateUserResponse]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // For team leaders, set their team ID to their own user ID (will be generated)
@@ -51,21 +76,21 @@ const UserManagement: React.FC = () => {
     }
 
     if (editingUser) {
-      updateUser(editingUser.id, submitData);
-      setEditingUser(null);
+      const response = await updateUserMutation({ id: editingUser.id, formData: submitData });
+      setUpdateUserResponse(response);
     } else {
-      addUser(submitData);
+      // addUser(submitData);
     }
 
     setFormData({
       name: '',
       email: '',
       username: '',
-      password: '',
+      password: null,
       role: 'sales_rep',
       teamId: '',
       isActive: true,
-      avatar: '',
+      imageBase64: '',
     });
     setShowAddModal(false);
   };
@@ -76,18 +101,29 @@ const UserManagement: React.FC = () => {
       name: user.name,
       email: user.email,
       username: user.username,
-      password: user.password,
+      password: null,
       role: user.role,
       teamId: user.teamId || '',
       isActive: user.isActive,
-      avatar: user.avatar || '',
+      imageBase64: user.image || '',
     });
     setShowAddModal(true);
   };
 
+  const deleteUser = async (userId: string) => {
+    const response = await axiosInterceptor.delete(`/auth/delete-user/${userId}`);
+    return response.data;
+  }
+
+  // useEffect(() => {
+  //   if (isDeleting) {
+  //     toast.success(t('user.deleted'));
+  //   }
+  // }, [isDeleting]);
+
   const handleDelete = (userId: string) => {
     if (window.confirm(isRTL ? 'هل أنت متأكد من حذف هذا المستخدم؟' : 'Are you sure you want to delete this user?')) {
-      deleteUser(userId);
+      deleteUserMutation(userId);
     }
   };
 
@@ -123,6 +159,11 @@ const UserManagement: React.FC = () => {
     );
   }
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  }
+
   return (
     <div className={isRTL ? 'rtl' : 'ltr'}>
       <div className={`flex items-center justify-between mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -137,11 +178,11 @@ const UserManagement: React.FC = () => {
               name: '',
               email: '',
               username: '',
-              password: '',
+              password: null,
               role: 'sales_rep',
               teamId: '',
               isActive: true,
-              avatar: '',
+              imageBase64: '',
             });
             setShowAddModal(true);
           }}
@@ -201,18 +242,18 @@ const UserManagement: React.FC = () => {
                 <tr key={user.id} className="hover:bg-gray-50">
                   <td className={`px-6 py-4 whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                        <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isRTL ? 'ml-3' : 'mr-3'} bg-blue-600 text-white font-semibold overflow-hidden border-2 border-blue-200`}>
-                          {user.avatar ? (
-                            <img src={user.avatar} alt="avatar" className="object-cover w-full h-full" />
-                          ) : (
-                            user.name.charAt(0)
-                          )}
-                        </div>
-                        <div className={isRTL ? 'text-right' : 'text-left'}>
-                          <div className={`text-sm font-medium text-gray-900 ${isRTL ? 'font-arabic' : ''}`}>{user.name}</div>
-                          {user.teamId && <div className={`text-sm text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>{t('team')}: {user.teamId}</div>}
-                        </div>
+                      <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isRTL ? 'ml-3' : 'mr-3'} bg-blue-600 text-white font-semibold overflow-hidden border-2 border-blue-200`}>
+                        {user.image ? (
+                          <img src={user.image} alt="avatar" className="object-cover w-full h-full" />
+                        ) : (
+                          user.name.charAt(0)
+                        )}
                       </div>
+                      <div className={isRTL ? 'text-right' : 'text-left'}>
+                        <div className={`text-sm font-medium text-gray-900 ${isRTL ? 'font-arabic' : ''}`}>{user.name}</div>
+                        {user.teamId && <div className={`text-sm text-gray-500 ${isRTL ? 'font-arabic' : ''}`}>{t('team')}: {user.teamId}</div>}
+                      </div>
+                    </div>
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{user.email}</td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{user.username}</td>
@@ -269,8 +310,8 @@ const UserManagement: React.FC = () => {
               <div className="flex flex-col items-center">
                 <label htmlFor="avatar-upload" className="cursor-pointer group relative">
                   <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-4 border-blue-200 shadow-md">
-                    {formData.avatar ? (
-                      <img src={formData.avatar} alt="avatar" className="object-cover w-full h-full" />
+                    {formData.imageBase64 ? (
+                      <img src={formData.imageBase64} alt="avatar" className="object-cover w-full h-full" />
                     ) : (
                       <span className="text-2xl text-blue-600 font-bold">{formData.name.charAt(0)}</span>
                     )}
@@ -289,10 +330,10 @@ const UserManagement: React.FC = () => {
                       const file = e.target.files?.[0];
                       if (file) {
                         const reader = new FileReader();
-                        reader.onloadend = () => {
-                          setFormData(prev => ({ ...prev, avatar: reader.result as string }));
-                        };
                         reader.readAsDataURL(file);
+                        reader.onloadend = () => {
+                          setFormData(prev => ({ ...prev, imageBase64: reader.result as string }));
+                        };
                       }
                     }}
                   />
@@ -303,9 +344,10 @@ const UserManagement: React.FC = () => {
                 <input
                   type="text"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  name='name'
+                  onChange={handleInputChange}
                   className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
-                  required
+                  // required
                   dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
@@ -315,14 +357,15 @@ const UserManagement: React.FC = () => {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  name='email'
+                  onChange={handleInputChange}
                   className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
-                  required
+                  // required
                   dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
 
-              <div>
+              {/* <div>
                 <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.username')}</label>
                 <input
                   type="text"
@@ -332,17 +375,18 @@ const UserManagement: React.FC = () => {
                   required
                   dir={isRTL ? 'rtl' : 'ltr'}
                 />
-              </div>
+              </div> */}
 
               <div>
                 <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.password')}</label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    value={formData.password || ''}
+                    name='password'
+                    onChange={handleInputChange}
                     className={`w-full px-3 py-2 ${isRTL ? 'pr-10 pl-3' : 'pl-3 pr-10'} border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
-                    required
+                    // required
                     dir={isRTL ? 'rtl' : 'ltr'}
                   />
                   <button
@@ -354,34 +398,39 @@ const UserManagement: React.FC = () => {
                   </button>
                 </div>
               </div>
+              {
+                user?.role === 'admin' && (
 
-              <div>
-                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.role')}</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => {
-                    const newRole = e.target.value as UserType['role'];
-                    let newTeamId = formData.teamId;
-                    
-                    // If changing to team leader, set team ID to auto-assign
-                    if (newRole === 'team_leader') {
-                      newTeamId = editingUser ? editingUser.id : 'auto-assign';
-                    } else if (newRole === 'sales_rep') {
-                      // If changing to sales rep, clear team ID
-                      newTeamId = '';
-                    }
-                    
-                    setFormData({ ...formData, role: newRole, teamId: newTeamId });
-                  }}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                >
-                  <option value="sales_rep">{t('role.salesRep')}</option>
-                  <option value="team_leader">{t('role.teamLeader')}</option>
-                  <option value="sales_admin">{t('role.salesAdmin')}</option>
-                  <option value="admin">{t('role.admin')}</option>
-                </select>
-              </div>
+                  <div>
+                    <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.role')}</label>
+                    <select
+                      value={formData.role}
+                      name='role'
+                      onChange={(e) => {
+                        const newRole = e.target.value as UserType['role'];
+                        let newTeamId = formData.teamId;
+
+                        // If changing to team leader, set team ID to auto-assign
+                        if (newRole === 'team_leader') {
+                          newTeamId = editingUser ? editingUser.id : 'auto-assign';
+                        } else if (newRole === 'sales_rep') {
+                          // If changing to sales rep, clear team ID
+                          newTeamId = '';
+                        }
+
+                        setFormData({ ...formData, role: newRole, teamId: newTeamId });
+                      }}
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
+                    >
+                      <option value="sales_rep">{t('role.salesRep')}</option>
+                      <option value="team_leader">{t('role.teamLeader')}</option>
+                      <option value="sales_admin">{t('role.salesAdmin')}</option>
+                      <option value="admin">{t('role.admin')}</option>
+                    </select>
+                  </div>
+                )
+              }
 
               {/* Team Leader ID */}
               {formData.role === 'team_leader' && (
@@ -392,7 +441,8 @@ const UserManagement: React.FC = () => {
                   <input
                     type="text"
                     value={formData.teamId}
-                    onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                    onChange={handleInputChange}
+                    name='teamId'
                     className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''} bg-gray-100`}
                     dir={isRTL ? 'rtl' : 'ltr'}
                     placeholder={isRTL ? "سيتم تعيين معرف الفريق تلقائياً" : "Team ID will be auto-assigned"}
@@ -409,7 +459,8 @@ const UserManagement: React.FC = () => {
                   </label>
                   <select
                     value={formData.teamId}
-                    onChange={(e) => setFormData({ ...formData, teamId: e.target.value })}
+                    onChange={handleInputChange}
+                    name='teamId'
                     className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                     dir={isRTL ? 'rtl' : 'ltr'}
                     required
@@ -427,18 +478,6 @@ const UserManagement: React.FC = () => {
                 </div>
               )}
 
-              <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                />
-                <label htmlFor="isActive" className={`text-sm text-gray-700 ${isRTL ? 'mr-2 font-arabic' : 'ml-2'}`}>
-                  {t('user.activeUser')}
-                </label>
-              </div>
 
               <div className={`flex justify-end space-x-3 pt-4 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 <button
@@ -452,7 +491,7 @@ const UserManagement: React.FC = () => {
                   type="submit"
                   className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 ${isRTL ? 'font-arabic' : ''}`}
                 >
-                  {editingUser ? t('actions.updateUser') : t('actions.addUser')}
+                  {isPending ? t('actions.saving') : editingUser ? t('actions.updateUser') : t('actions.addUser')}
                 </button>
               </div>
             </form>

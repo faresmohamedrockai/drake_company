@@ -1,10 +1,12 @@
 import React, { useState, ChangeEvent } from 'react';
 import { User as UserType } from '../../types';
-import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
-import { Download, Smartphone, Globe, Share2, Copy, CheckCircle, AlertCircle } from 'lucide-react';
+import { Download, Smartphone, CheckCircle, AlertCircle } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import imageCompression from 'browser-image-compression';
 // import { useLanguage } from '../../contexts/LanguageContext';
 
 interface UserProfileModalProps {
@@ -13,7 +15,7 @@ interface UserProfileModalProps {
 }
 
 const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) => {
-  const { updateUser } = useData();
+  // const { updateUser } = useData();
   const { logout, user: authUser } = useAuth();
   const { settings } = useSettings();
   const { t } = useTranslation('settings');
@@ -21,11 +23,22 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    avatar: user?.avatar || '',
+    image: user?.image || '',
   });
-  const [imagePreview, setImagePreview] = useState<string | undefined>(user?.avatar);
-  const [saving, setSaving] = useState(false);
-  const [showHomeScreenConfig, setShowHomeScreenConfig] = useState(false);
+
+  const queryClient = useQueryClient();
+  const { mutateAsync: updateUserMutation, isPending } = useMutation({
+    mutationFn: (data: { id: string; formData: any }) => updateUser(data.id, data.formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    }
+  })
+
+  const updateUser = async (userId: string, formData: any) => {
+    const response = await axiosInterceptor.patch(`/auth/update-user/${userId}`, formData);
+    return response.data;
+  }
+  const [imagePreview, setImagePreview] = useState<string | undefined>(user?.image || '');
   const [homeScreenConfig, setHomeScreenConfig] = useState({
     appName: settings?.companyName || 'Propai CRM',
     appLogo: '/src/aspects/propai logo.png',
@@ -57,45 +70,38 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData((prev) => ({ ...prev, avatar: reader.result as string }));
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      const base64 = await compressImageToBase64(file);
+      setFormData((prev) => ({ ...prev, image: base64 }));
+      setImagePreview(base64);
     }
   };
 
-  const handleHomeScreenConfigChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setHomeScreenConfig((prev) => ({ ...prev, [name]: value }));
-  };
+  const compressImageToBase64 = async (file: File): Promise<string> => {
+    const options = {
+      maxSizeMB: 0.2,            // try 200KB instead of 1MB
+      maxWidthOrHeight: 300,     // smaller dimensions
+      useWebWorker: true,
+    };
 
-  const handleAppLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setHomeScreenConfig((prev) => ({ 
-          ...prev, 
-          appLogo: reader.result as string,
-          appLogoPreview: reader.result as string 
-        }));
-      };
-      reader.readAsDataURL(file);
+    try {
+      const compressedFile = await imageCompression(file, options);
+      const base64 = await imageCompression.getDataUrlFromFile(compressedFile);
+      return base64;
+    } catch (error) {
+      console.error('Compression failed:', error);
+      throw error;
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
-    
+
     // Update user in DataContext
-    updateUser(user.id, formData);
-    
+    await updateUserMutation({ id: user.id, formData });
+
     // Also update the current user in AuthContext if it's the same user
     if (authUser && authUser.id === user.id) {
       const updatedUser = { ...authUser, ...formData };
@@ -103,8 +109,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
       // Force a page reload to update the AuthContext
       window.location.reload();
     }
-    
-    setSaving(false);
+
     onClose();
   };
 
@@ -119,10 +124,10 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
       try {
         // Show the install prompt
         deferredPrompt.prompt();
-        
+
         // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice;
-        
+
         if (outcome === 'accepted') {
           setInstallMessage(t('profile.installSuccess'));
           setShowInstallSuccess(true);
@@ -132,7 +137,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
           setShowInstallError(true);
           setTimeout(() => setShowInstallError(false), 3000);
         }
-        
+
         // Clear the deferred prompt
         setDeferredPrompt(null);
       } catch (error) {
@@ -147,11 +152,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const fallbackAddToHomeScreen = () => {
     const url = window.location.href;
     const title = homeScreenConfig.appName;
-    
+
     // Check if it's iOS Safari
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    
+
     if (isIOS && isSafari) {
       // iOS Safari instructions
       setInstallMessage(`${t('profile.iosInstructions')}\n\n1. ${t('profile.iosStep1')}\n2. ${t('profile.iosStep2')}\n3. ${t('profile.iosStep3')}`);
@@ -201,7 +206,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
           <div className="whitespace-pre-line">{installMessage}</div>
         </div>
       )}
-      
+
       {showInstallError && (
         <div className="fixed top-4 right-4 z-60 bg-yellow-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 animate-slideInRight max-w-md">
           <AlertCircle className="h-5 w-5" />
@@ -263,7 +268,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 required
               />
             </div>
-            
+
             {/* Add to Home Screen Section */}
             <div className="border-t pt-4">
               <div className="flex items-center space-x-2 mb-3">
@@ -273,7 +278,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
               <p className="text-sm text-gray-600 mb-4">
                 Install this app on your device for quick access and offline functionality.
               </p>
-              
+
               <div className="grid grid-cols-1 gap-3">
                 <button
                   type="button"
@@ -283,7 +288,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                   <Download className="h-5 w-5" />
                   <span>{t('profile.addToHomeScreen')}</span>
                 </button>
-                
+
                 {deferredPrompt && (
                   <div className="flex items-center space-x-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
                     <CheckCircle className="h-4 w-4" />
@@ -292,7 +297,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 )}
               </div>
             </div>
-            
+
             <div className="flex items-center justify-between pt-4 border-t">
               <button
                 type="button"
@@ -306,16 +311,16 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                   type="button"
                   onClick={onClose}
                   className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                  disabled={saving}
+                  disabled={isPending}
                 >
                   {t('profile.cancel')}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-60"
-                  disabled={saving}
+                  disabled={isPending}
                 >
-                  {saving ? t('profile.saving') : t('profile.saveChanges')}
+                  {isPending ? t('profile.saving') : t('profile.saveChanges')}
                 </button>
               </div>
             </div>

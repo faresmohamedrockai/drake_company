@@ -4,6 +4,9 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { Developer, Zone } from '../../types';
 
 interface Project {
   id: string;
@@ -28,7 +31,7 @@ interface Project {
  * @param {object} plan - The payment plan object from the project
  * @returns {Array<{no: number, dueDate: string, amount: number, label?: string}>}
  */
-export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{no: number, dueDate: string, amount: number, label?: string}> {
+export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{ no: number, dueDate: string, amount: number, label?: string }> {
   if (!plan || !totalPrice) return [];
   const downPaymentAmount = (plan.downPayment / 100) * totalPrice;
   const deliveryAmount = (plan.delivery / 100) * totalPrice;
@@ -54,7 +57,7 @@ export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{n
   const installmentAmount = Math.round(installmentTotal / periods);
 
   // Down Payment row
-  const schedule: Array<{no: number, dueDate: string, amount: number, label?: string}> = [
+  const schedule: Array<{ no: number, dueDate: string, amount: number, label?: string }> = [
     { no: 0, dueDate: plan.firstInstallmentDate, amount: downPaymentAmount, label: `Down Payment (${plan.downPayment}%)` }
   ];
 
@@ -104,7 +107,25 @@ export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{n
 }
 
 const ProjectsTab: React.FC = () => {
-  const { projects, addProject, updateProject, deleteProject, zones, developers, properties } = useData();
+  const { data: developers } = useQuery<Developer[]>({
+    queryKey: ['developers'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getDevelopers()
+  });
+  const getDevelopers = async () => {
+    const response = await axiosInterceptor.get('/developers');
+    return response.data as Developer[];
+  }
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: ['zones'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getZones()
+  });
+  const getZones = async () => {
+    const response = await axiosInterceptor.get('/zones');
+    return response.data as Zone[];
+  }
+  const { addProject, updateProject, deleteProject, properties, projects } = useData();
   const { user } = useAuth();
   const { language } = useLanguage(); // Add language context
   const { t } = useTranslation('inventory');
@@ -177,10 +198,10 @@ const ProjectsTab: React.FC = () => {
     return project.nameEn || project.name;
   };
 
-  const filteredProjects = projects.filter(project =>
+  const filteredProjects = projects?.filter(project =>
     getProjectName(project).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (developers.find(d => d.id === project.developerId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (zones.find(z => z.id === project.zoneId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (developers?.find(d => d.id === project.developerId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (zones?.find(z => z.id === project.zoneId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddPlan = (isEdit = false) => {
@@ -218,8 +239,8 @@ const ProjectsTab: React.FC = () => {
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
-    const developerName = developers.find(d => d.id === newProject.developerId)?.name || '';
-    const zoneName = zones.find(z => z.id === newProject.zoneId)?.name || '';
+    const developerName = developers?.find(d => d.id === newProject.developerId)?.name || '';
+    const zoneName = zones?.find(z => z.id === newProject.zoneId)?.name || '';
     // Calculate installments for each plan
     const paymentPlans = newProject.paymentPlans.map(plan => ({
       ...plan,
@@ -256,8 +277,8 @@ const ProjectsTab: React.FC = () => {
       name: project.name,
       nameEn: project.nameEn || '',
       nameAr: project.nameAr || '',
-      developerId: developers.find(d => d.name === project.developer)?.id || '',
-      zoneId: zones.find(z => z.name === project.zone)?.id || '',
+      developerId: developers?.find(d => d.name === project.developer)?.id || '',
+      zoneId: zones?.find(z => z.name === project.zone)?.id || '',
       type: project.type,
       paymentPlans: project.paymentPlans || [
         { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
@@ -272,8 +293,8 @@ const ProjectsTab: React.FC = () => {
   const handleEditProject = (e: React.FormEvent) => {
     e.preventDefault();
     if (editId) {
-      const developerName = developers.find(d => d.id === editProject.developerId)?.name || '';
-      const zoneName = zones.find(z => z.id === editProject.zoneId)?.name || '';
+      const developerName = developers?.find(d => d.id === editProject.developerId)?.name || '';
+      const zoneName = zones?.find(z => z.id === editProject.zoneId)?.name || '';
       // Calculate installments for each plan
       const paymentPlans = editProject.paymentPlans.map(plan => ({
         ...plan,
@@ -321,6 +342,24 @@ const ProjectsTab: React.FC = () => {
     }
   };
 
+  const handleCancelAddProject = () => {
+    setShowAddForm(false);
+    setNewProject({
+      name: '',
+      nameEn: '',
+      nameAr: '',
+      developerId: '',
+      zoneId: '',
+      type: '',
+      paymentPlans: [
+        { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
+      ],
+      propertyIds: [],
+      images: [],
+      createdBy: user?.name || 'System'
+    });
+  };
+
   return (
     <div>
       {/* Title */}
@@ -329,7 +368,7 @@ const ProjectsTab: React.FC = () => {
           {language === 'ar' ? 'المشاريع' : 'Projects'}
         </h2>
       </div>
-      
+
       {/* Search and Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="relative flex-1 max-w-md">
@@ -376,13 +415,13 @@ const ProjectsTab: React.FC = () => {
                 ))}
               </div>
             )}
-            
+
             <div className="space-y-3 mb-4">
               <div>
                 <span className="text-sm font-medium text-gray-700">{t('developer')}: </span>
                 <span className="text-sm text-gray-900">
                   {(() => {
-                    const developer = developers.find(d => d.id === project.developerId);
+                    const developer = developers?.find(d => d.id === project.developerId);
                     if (!developer) return 'N/A';
                     return language === 'ar' && developer.nameAr ? developer.nameAr : (developer.nameEn || developer.name);
                   })()}
@@ -392,7 +431,7 @@ const ProjectsTab: React.FC = () => {
                 <span className="text-sm font-medium text-gray-700">{t('zone')}: </span>
                 <span className="text-sm text-gray-900">
                   {(() => {
-                    const zone = zones.find(z => z.id === project.zoneId);
+                    const zone = zones?.find(z => z.id === project.zoneId);
                     if (!zone) return 'N/A';
                     return language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name);
                   })()}
@@ -506,7 +545,7 @@ const ProjectsTab: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">{t('developer')}</label>
                       <select value={newProject.developerId} onChange={e => setNewProject({ ...newProject, developerId: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
                         <option value="">{t('selectDeveloper')}</option>
-                        {developers.map(dev => (
+                        {developers?.map(dev => (
                           <option key={dev.id} value={dev.id}>
                             {language === 'ar' && dev.nameAr ? dev.nameAr : (dev.nameEn || dev.name)}
                           </option>
@@ -517,7 +556,7 @@ const ProjectsTab: React.FC = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">{t('zone')}</label>
                       <select value={newProject.zoneId} onChange={e => setNewProject({ ...newProject, zoneId: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required>
                         <option value="">{t('selectZone')}</option>
-                        {zones.map(zone => (
+                        {zones?.map(zone => (
                           <option key={zone.id} value={zone.id}>
                             {language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name)}
                           </option>
@@ -657,12 +696,12 @@ const ProjectsTab: React.FC = () => {
                   <div className="space-y-2 text-sm">
                     <div><span className="font-semibold">{t('projectName')}:</span> {newProject.nameEn + (newProject.nameAr ? ' / ' + newProject.nameAr : '')}</div>
                     <div><span className="font-semibold">{t('developer')}:</span> {(() => {
-                      const developer = developers.find(d => d.id === newProject.developerId);
+                      const developer = developers?.find(d => d.id === newProject.developerId);
                       if (!developer) return '';
                       return language === 'ar' && developer.nameAr ? developer.nameAr : (developer.nameEn || developer.name);
                     })()}</div>
                     <div><span className="font-semibold">{t('zone')}:</span> {(() => {
-                      const zone = zones.find(z => z.id === newProject.zoneId);
+                      const zone = zones?.find(z => z.id === newProject.zoneId);
                       if (!zone) return '';
                       return language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name);
                     })()}</div>
@@ -680,7 +719,7 @@ const ProjectsTab: React.FC = () => {
                 )}
                 {/* Stepper Navigation */}
                 <div className="flex justify-between items-center pt-4 gap-2 flex-col sm:flex-row">
-                  <button type="button" onClick={() => setShowAddForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors w-full sm:w-auto mb-2 sm:mb-0">{t('cancel')}</button>
+                  <button type="button" onClick={() => handleCancelAddProject()} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors w-full sm:w-auto mb-2 sm:mb-0">{t('cancel')}</button>
                   <div className="flex gap-2 w-full sm:w-auto">
                     {addStep > 0 && (
                       <button type="button" onClick={() => setAddStep(s => s - 1)} className="px-5 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 w-full sm:w-auto">{t('back')}</button>
@@ -705,17 +744,17 @@ const ProjectsTab: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-2xl">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">{t('editProject')}</h3>
             <div className="max-h-[60vh] sm:max-h-[70vh] overflow-y-auto px-1 sm:px-2">
-                          <form onSubmit={handleEditProject} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectNameEn')}</label>
-                  <input type="text" value={editProject.nameEn} onChange={e => setEditProject({ ...editProject, nameEn: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+              <form onSubmit={handleEditProject} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectNameEn')}</label>
+                    <input type="text" value={editProject.nameEn} onChange={e => setEditProject({ ...editProject, nameEn: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectNameAr')}</label>
+                    <input type="text" value={editProject.nameAr} onChange={e => setEditProject({ ...editProject, nameAr: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectNameAr')}</label>
-                  <input type="text" value={editProject.nameAr} onChange={e => setEditProject({ ...editProject, nameAr: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                </div>
-              </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectImages')}</label>
                   <input
@@ -750,7 +789,7 @@ const ProjectsTab: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('developer')}</label>
                   <select value={editProject.developerId} onChange={e => setEditProject({ ...editProject, developerId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     <option value="">{t('selectDeveloper')}</option>
-                    {developers.map(dev => (
+                    {developers?.map(dev => (
                       <option key={dev.id} value={dev.id}>
                         {language === 'ar' && dev.nameAr ? dev.nameAr : (dev.nameEn || dev.name)}
                       </option>
@@ -761,7 +800,7 @@ const ProjectsTab: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('zone')}</label>
                   <select value={editProject.zoneId} onChange={e => setEditProject({ ...editProject, zoneId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                     <option value="">{t('selectZone')}</option>
-                    {zones.map(zone => (
+                    {zones?.map(zone => (
                       <option key={zone.id} value={zone.id}>
                         {language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name)}
                       </option>

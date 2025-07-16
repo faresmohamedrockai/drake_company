@@ -1,14 +1,16 @@
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  username: string;
-  password: string;
-  role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep';
-  teamId?: string;
-  createdAt: string;
-  isActive: boolean;
-  avatar?: string; // base64 or URL for profile image
+  id: string,
+  email: string,
+  name: string,
+  password: string,
+  role: string,
+  refreshToken: string | null,
+  createdAt: string,
+  image: string | null,
+  teamLeaderId: string | null,
+  teamId: string | null,
+  username: string,
+  isActive: boolean,
 }
 
 

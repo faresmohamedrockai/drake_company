@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users, Shield, Settings as SettingsIcon, Database, ChevronDown, ChevronLeft, ChevronRight, Lock, AlertTriangle, Bell, Mail, Calendar, FileText, Volume2, Smartphone, Monitor } from 'lucide-react';
 import UserManagement from './UserManagement';
 import { useData } from '../../contexts/DataContext';
-import Papa from 'papaparse'; 
+import Papa from 'papaparse';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
 import notificationService from '../../utils/notificationService';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { User } from '../../types';
 
 const SYSTEM_SETTINGS_KEY = 'propai_system_settings';
 const BACKUP_DATE_KEY = 'propai_last_backup_date';
@@ -48,7 +51,15 @@ const defaultSettings = {
 };
 
 const Settings: React.FC = () => {
+
   const { leads, properties, contracts, addLead, users, projects, developers, meetings, zones } = useData();
+  const [usersData, setUsersData] = useState<User[]>([]);
+  const { data: usersDataQuery } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => getUsers(),
+  })
+  console.log("usersDataQuery", usersDataQuery);
+  // setUsersData(usersDataQuery as User[]);
   const { user } = useAuth();
   const { t } = useTranslation('settings');
   const { language } = useLanguage();
@@ -56,6 +67,7 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
   const [showMobileTabs, setShowMobileTabs] = useState(false);
   const { setGlobalSettings } = useSettings();
+
 
   // System Settings State
   const [settings, setSettings] = useState(() => {
@@ -88,6 +100,13 @@ const Settings: React.FC = () => {
   const hasTeamLeaderAccess = user?.role === 'team_leader';
   const hasSalesRepAccess = user?.role === 'sales_rep';
 
+
+
+  const getUsers = async () => {
+    const response = await axiosInterceptor.get('auth/users');
+    console.log("response", response.data);
+    return response.data as User[];
+  }
   // Define tabs based on role permissions
   const getAvailableTabs = () => {
     const tabs = [
@@ -132,14 +151,14 @@ const Settings: React.FC = () => {
       const updated = { ...prev };
       const pathArray = path.split('.');
       let current = updated.notifications;
-      
+
       for (let i = 0; i < pathArray.length - 1; i++) {
         if (!current[pathArray[i]]) {
           current[pathArray[i]] = {};
         }
         current = current[pathArray[i]];
       }
-      
+
       current[pathArray[pathArray.length - 1]] = value;
       setSettingsChanged(true);
       return updated;
@@ -156,10 +175,10 @@ const Settings: React.FC = () => {
   };
   const handleSaveSettings = () => {
     localStorage.setItem(SYSTEM_SETTINGS_KEY, JSON.stringify(settings));
-    
+
     // Sync notification settings with notification service
     notificationService.updateSettings(settings.notifications);
-    
+
     setSaveSuccess(true);
     setSettingsChanged(false);
     setGlobalSettings(settings);
@@ -257,7 +276,7 @@ const Settings: React.FC = () => {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">{t('accessDenied')}</h1>
             <p className="text-gray-600 mb-6">{t('accessDeniedMessage')}</p>
           </div>
-          
+
           <div className="bg-gray-50 rounded-lg p-6 mb-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">{t('rolePermissions')}</h2>
             <div className="space-y-4 text-sm text-gray-700">
@@ -271,7 +290,7 @@ const Settings: React.FC = () => {
                   <li>• {t('role.admin.fullReportingAnalytics')}</li>
                 </ul>
               </div>
-              
+
               <div className="text-left">
                 <h3 className="font-semibold text-green-600 mb-2">Sales Admin</h3>
                 <ul className="space-y-1 text-gray-600">
@@ -281,7 +300,7 @@ const Settings: React.FC = () => {
                   <li>• {t('role.salesAdmin.viewTeamPerformance')}</li>
                 </ul>
               </div>
-              
+
               <div className="text-left">
                 <h3 className="font-semibold text-purple-600 mb-2">Team Leader</h3>
                 <ul className="space-y-1 text-gray-600">
@@ -291,7 +310,7 @@ const Settings: React.FC = () => {
                   <li>• {t('role.teamLeader.accessTeamPerformanceReports')}</li>
                 </ul>
               </div>
-              
+
               <div className="text-left">
                 <h3 className="font-semibold text-orange-600 mb-2">Sales Rep</h3>
                 <ul className="space-y-1 text-gray-600">
@@ -304,7 +323,7 @@ const Settings: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-3 sm:space-y-0 sm:space-x-4">
             <div className="flex items-center text-sm text-gray-500">
               <AlertTriangle className="h-4 w-4 mr-2" />
@@ -324,7 +343,7 @@ const Settings: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'users':
-        return <UserManagement />;
+        return usersDataQuery && <UserManagement users={usersDataQuery} />;
       case 'permissions':
         return (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
@@ -340,7 +359,7 @@ const Settings: React.FC = () => {
                   <li>• {t('role.admin.fullReportingAnalytics')}</li>
                 </ul>
               </div>
-              
+
               <div className="border rounded-lg p-3 sm:p-4">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">{t('role.salesAdmin')}</h3>
                 <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600">
@@ -350,7 +369,7 @@ const Settings: React.FC = () => {
                   <li>• {t('role.salesAdmin.viewTeamPerformance')}</li>
                 </ul>
               </div>
-              
+
               <div className="border rounded-lg p-3 sm:p-4">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">{t('role.teamLeader')}</h3>
                 <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600">
@@ -360,7 +379,7 @@ const Settings: React.FC = () => {
                   <li>• {t('role.teamLeader.accessTeamPerformanceReports')}</li>
                 </ul>
               </div>
-              
+
               <div className="border rounded-lg p-3 sm:p-4">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">{t('role.salesRep')}</h3>
                 <ul className="space-y-1 sm:space-y-2 text-xs sm:text-sm text-gray-600">
@@ -469,7 +488,7 @@ const Settings: React.FC = () => {
                       />
                     </div>
                   </div>
-                  
+
                   {settings.notifications.email.enabled && (
                     <div className="space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -532,7 +551,7 @@ const Settings: React.FC = () => {
                           />
                         </div>
                       </div>
-                      
+
                       {/* Mirror Email Settings */}
                       <div className="border-t pt-4">
                         <div className="flex items-center justify-between mb-3">
@@ -562,7 +581,7 @@ const Settings: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="pt-2">
                         <button
                           onClick={() => testNotification('email')}
@@ -598,7 +617,7 @@ const Settings: React.FC = () => {
                       />
                     </div>
                   </div>
-                  
+
                   {settings.notifications.push.enabled && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
@@ -616,7 +635,7 @@ const Settings: React.FC = () => {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">{t('contractAlerts')}</label>
@@ -632,7 +651,7 @@ const Settings: React.FC = () => {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">{t('soundNotifications')}</label>
@@ -648,7 +667,7 @@ const Settings: React.FC = () => {
                           />
                         </div>
                       </div>
-                      
+
                       <div className="pt-2">
                         <button
                           onClick={() => testNotification('push')}
@@ -684,7 +703,7 @@ const Settings: React.FC = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">{t('expiryAlerts')}</label>
@@ -700,7 +719,7 @@ const Settings: React.FC = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">{t('paymentReminders')}</label>
@@ -716,7 +735,7 @@ const Settings: React.FC = () => {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="pt-2">
                     <button
                       onClick={() => testNotification('contract')}
@@ -807,7 +826,7 @@ const Settings: React.FC = () => {
             </span>
             <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform ${showMobileTabs ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {showMobileTabs && (
             <div className="border-b border-gray-200 bg-white">
               {availableTabs.map((tab) => (
@@ -817,11 +836,10 @@ const Settings: React.FC = () => {
                     setActiveTab(tab.id);
                     setShowMobileTabs(false);
                   }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'text-blue-600 bg-blue-50 border-r-2 border-blue-600'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
+                    ? 'text-blue-600 bg-blue-50 border-r-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   <tab.icon className="h-4 w-4" />
                   <span>{tab.label}</span>
@@ -841,11 +859,10 @@ const Settings: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium transition-all duration-200 whitespace-nowrap border-b-2 ${
-                      activeTab === tab.id
-                        ? 'text-blue-600 border-blue-600 bg-white shadow-sm'
-                        : 'text-gray-600 border-transparent hover:text-gray-800 hover:bg-gray-100'
-                    }`}
+                    className={`flex items-center space-x-2 px-6 py-4 text-sm font-medium transition-all duration-200 whitespace-nowrap border-b-2 ${activeTab === tab.id
+                      ? 'text-blue-600 border-blue-600 bg-white shadow-sm'
+                      : 'text-gray-600 border-transparent hover:text-gray-800 hover:bg-gray-100'
+                      }`}
                   >
                     <tab.icon className="h-4 w-4 flex-shrink-0" />
                     <span>{tab.label}</span>
@@ -853,7 +870,7 @@ const Settings: React.FC = () => {
                 ))}
               </div>
             </div>
-            
+
             {/* Scroll Indicators */}
             <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-gray-50 to-transparent pointer-events-none"></div>
             <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-gray-50 to-transparent pointer-events-none"></div>

@@ -15,6 +15,10 @@ import Settings from './components/settings/Settings';
 import { AnimatePresence, motion } from 'framer-motion';
 import './i18n';
 import './styles/rtl.css';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { ToastContainer } from 'react-toastify';
+import axiosInterceptor from '../axiosInterceptor/axiosInterceptor';
+import { Developer, Zone } from './types';
 
 // Custom hook for managing persisted view state with URL sync
 const usePersistedView = (defaultView: string) => {
@@ -22,11 +26,11 @@ const usePersistedView = (defaultView: string) => {
     // First try to get from URL query parameter
     const urlParams = new URLSearchParams(window.location.search);
     const urlView = urlParams.get('page');
-    
+
     if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
       return urlView;
     }
-    
+
     // Then try to get the saved view from sessionStorage
     const savedView = sessionStorage.getItem('propai-current-view');
     return savedView || defaultView;
@@ -38,7 +42,7 @@ const usePersistedView = (defaultView: string) => {
     const url = new URL(window.location.href);
     url.searchParams.set('page', currentView);
     window.history.replaceState({}, '', url.toString());
-    
+
     // Save to sessionStorage
     sessionStorage.setItem('propai-current-view', currentView);
   }, [currentView]);
@@ -48,7 +52,7 @@ const usePersistedView = (defaultView: string) => {
     const handlePopState = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlView = urlParams.get('page');
-      
+
       if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
         setCurrentView(urlView);
       }
@@ -66,6 +70,34 @@ const AppContent: React.FC = () => {
   const { settings } = useSettings();
   const { rtlMargin } = useLanguage();
   const [currentView, setCurrentView] = usePersistedView('dashboard');
+  // const queryClient = useQueryClient();
+  // const getDevelopers = async () => {
+  //   const response = await axiosInterceptor.get('/developers');
+
+  //   return response.data.developers as Developer[];
+  // }
+
+  // const getZones = async () => {
+  //   console.log("getZones");
+  //   const response = await axiosInterceptor.get('/zones');
+  //   console.log("response", response);
+  //   return response.data.zones as Zone[];
+  // }
+
+  // useEffect(() => {
+  //   console.log("queryClient");
+  //   queryClient.prefetchQuery({
+  //     queryKey: ['developers'],
+  //     queryFn: () => getDevelopers(),
+  //     staleTime: 1000 * 60 * 5 // 5 minutes
+  //   });
+  //   queryClient.prefetchQuery({
+  //     queryKey: ['zones'],
+  //     queryFn: () => getZones(),
+  //     staleTime: 1000 * 60 * 5 // 5 minutes
+  //   });
+  // }, []);
+
 
   // Update page title with company name
   useEffect(() => {
@@ -120,12 +152,18 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const queryClient = new QueryClient();
+
   return (
+
     <LanguageProvider>
       <AuthProvider>
         <DataProvider>
           <SettingsProvider>
-            <AppContent />
+            <QueryClientProvider client={queryClient}>
+              <AppContent />
+              <ToastContainer />
+            </QueryClientProvider>
           </SettingsProvider>
         </DataProvider>
       </AuthProvider>
