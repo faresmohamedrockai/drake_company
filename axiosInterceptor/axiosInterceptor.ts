@@ -16,6 +16,7 @@ const processQueue = (error: any, token = null) => {
 
 const axiosInstance = axios.create({
   baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
+  // baseURL: `http://localhost:3000/api`,
   headers: {
     "Content-Type": "application/json",
   },
@@ -46,7 +47,7 @@ axiosInstance.interceptors.response.use(
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-          const response = await axiosInstance.post("/refresh");
+          const response = await axiosInstance.post("auth/refresh");
           if (response.status === 200) {
             processQueue(null, null); // token value is not needed, just signal
             isRefreshing = false;
