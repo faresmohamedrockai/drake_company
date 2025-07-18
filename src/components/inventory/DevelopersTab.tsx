@@ -8,7 +8,6 @@ import { toast } from 'react-toastify';
 import { getDevelopers } from '../../queries/queries';
 import { Developer } from '../../types';
 
-
 const DevelopersTab: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('propai_user') || '{}');
   const [form, setForm] = useState({
