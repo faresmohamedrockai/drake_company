@@ -29,6 +29,7 @@ const ZonesTab: React.FC = () => {
   const queryClient = useQueryClient();
   const { data: zones, isLoading, error } = useQuery<Zone[]>({
     queryKey: ['zones'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getZones(),
   });
 

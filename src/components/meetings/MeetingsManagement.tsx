@@ -1,52 +1,133 @@
-import React, { useState } from 'react';
-import { 
-  Search, Plus, Edit, Clock, User, Calendar as CalendarIcon, Trash2,
-  CalendarPlus, Apple, CalendarDays
+import React, { useEffect, useState } from 'react';
+import {
+  Search, Plus, Edit, Clock, Calendar as CalendarIcon, Trash2,
 } from 'lucide-react';
-import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { Meeting, User as UserType } from '../../types';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { Id, toast } from 'react-toastify';
+import { getMeetings, getUsers } from '../../queries/queries';
+import { CalendarPlus } from 'lucide-react';
+import { Apple } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
+import { use } from 'i18next';
 
-interface Meeting {
-  id: string;
-  title: string;
-  client: string;
-  date: string;
-  time: string;
-  duration: string;
-  type: string;
-  status: 'Scheduled' | 'Completed' | 'Cancelled';
-  assignedTo: string;
-  locationType?: string;
-  location?: string;
-}
+
+
 
 const MeetingsManagement: React.FC = () => {
-  const { meetings, addMeeting, updateMeeting, deleteMeeting, users } = useData();
+  const [toastId, setToastId] = useState<Id | null>(null);
+
+  console.log("MeetingsManagement");
+  const { data: meetings } = useQuery<Meeting[]>({
+    queryKey: ['meetings'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: () => getMeetings(),
+  });
+  const queryClient = useQueryClient();
+
+  // const { meetings, addMeeting, updateMeeting, deleteMeeting, users } = useData();
+  const { data: users } = useQuery<UserType[]>({
+    queryKey: ['users'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: () => getUsers(),
+  });
+  const { mutateAsync: addMeeting, isPending: isAddingMeeting } = useMutation({
+    mutationFn: (meeting: Meeting) => axiosInterceptor.post('/meetings', meeting),
+    onSuccess: () => {
+      toast.success(t('meetingAdded'));
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      setShowForm(false);
+      setForm({
+        title: '',
+        client: '',
+        date: '',
+        time: '',
+        duration: '',
+        type: '',
+        status: 'Scheduled',
+        assignedToId: '',
+        notes: '',
+        createdBy: user?.name || 'System',
+        location: '',
+        leadId: '',
+        locationType: 'Online',
+      });
+    },
+    onError: () => {
+      toast.error(t('meetingAddFailed'));
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+    }
+  });
+  const { mutateAsync: updateMeeting, isPending: isUpdatingMeeting } = useMutation({
+    mutationFn: (meeting: Meeting) => axiosInterceptor.patch(`/meetings/${meeting.id}`, meeting),
+    onSuccess: () => {
+      toast.success(t('meetingUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      setShowForm(false);
+      setEditId(null);
+      setForm({
+        title: '',
+        client: '',
+        date: '',
+        time: '',
+        duration: '',
+        type: '',
+        status: 'Scheduled',
+        assignedToId: '',
+        notes: '',
+        createdBy: user?.name || 'System',
+        location: '',
+        leadId: '',
+        locationType: 'Online',
+      });
+    },
+    onError: () => {
+      toast.error(t('meetingUpdateFailed'));
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+    }
+  });
+  const { mutateAsync: deleteMeeting, isPending: isDeletingMeeting } = useMutation({
+    mutationFn: (id: string) => axiosInterceptor.delete(`/meetings/${id}`),
+    onSuccess: () => {
+      toast.dismiss(toastId || '');
+      toast.success("Meeting deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+    },
+    onError: () => {
+      toast.error(t('meetingDeleteFailed'));
+      queryClient.invalidateQueries({ queryKey: ['meetings'] });
+    }
+  });
   const { user } = useAuth();
   const { t } = useTranslation('meetings');
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    title: '',
-    client: '',
-    date: '',
-    time: '',
-    duration: '',
-    type: '',
-    status: 'Scheduled',
-    assignedTo: '',
-    notes: '',
-    createdBy: user?.name || 'System',
-    locationType: 'Online',
-    location: '',
-  });
+  const [form, setForm] = useState<Meeting>(
+    {
+      title: '',
+      client: '',
+      date: '',
+      time: '',
+      duration: '',
+      type: '',
+      status: 'Scheduled',
+      assignedToId: '',
+      notes: '',
+      createdBy: user?.name || 'System',
+      locationType: 'Online',
+      location: '',
+      leadId: '',
+    }
+  );
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
-
+  const [filteredMeetings, setFilteredMeetings] = useState<Meeting[]>([]);
   // Helper function to translate meeting types
   const translateMeetingType = (type: string) => {
     const typeMap: { [key: string]: string } = {
@@ -75,6 +156,12 @@ const MeetingsManagement: React.FC = () => {
     };
     return locationMap[locationType] || locationType;
   };
+
+  useEffect(() => {
+    if (isDeletingMeeting) {
+      setToastId(toast.loading("Deleting meeting..."));
+    }
+  }, [isDeletingMeeting]);
 
   // Helper to format date/time for Google Calendar (UTC, YYYYMMDDTHHmmssZ)
   const formatGoogleDate = (date: string, time: string, duration: string) => {
@@ -155,18 +242,19 @@ const MeetingsManagement: React.FC = () => {
       duration: '',
       type: '',
       status: 'Scheduled',
-      assignedTo: '',
+      assignedToId: '',
       notes: '',
       createdBy: user?.name || 'System',
       locationType: 'Online',
       location: '',
+      leadId: '',
     });
     setShowForm(true);
   };
 
   const openEditForm = (meeting: any) => {
     setEditId(meeting.id);
-    setForm({ ...meeting, createdBy: meeting.createdBy || user?.name || 'System' });
+    setForm({ ...meeting, createdBy: meeting.createdBy || user?.name || 'System', leadId: meeting.leadId || '' });
     setShowForm(true);
   };
 
@@ -179,11 +267,12 @@ const MeetingsManagement: React.FC = () => {
     e.preventDefault();
     if (!user) return;
     if (editId) {
-      updateMeeting(editId, { ...form, status: form.status as 'Scheduled' | 'Completed' | 'Cancelled', createdBy: user.name });
+      updateMeeting({
+        ...form, status: form.status as 'Scheduled' | 'Completed' | 'Cancelled', createdBy: user.name, id: editId,
+      });
     } else {
       addMeeting({ ...form, status: form.status as 'Scheduled' | 'Completed' | 'Cancelled', createdBy: user.name });
     }
-    setShowForm(false);
   };
 
   const handleDelete = (id: string) => {
@@ -213,45 +302,49 @@ const MeetingsManagement: React.FC = () => {
   // Role-based meeting filtering
   const getFilteredMeetings = () => {
     let userMeetings = meetings;
-    
+
     // Role-based filtering
     if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own meetings
-      userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
+      userMeetings = meetings?.filter((meeting: Meeting) => meeting.assignedToId === user.id);
     } else if (user?.role === 'team_leader') {
       // Team leaders see their own meetings and their sales reps' meetings
-      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
-      userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
+      const salesReps = users?.filter((u: UserType) => u.role === 'sales_rep' && u.teamId === user.name).map((u: UserType) => u.name);
+      userMeetings = meetings?.filter((meeting: Meeting) => meeting.assignedToId === user.id || salesReps?.includes(meeting.assignedToId));
     } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Sales Admin and Admin can see all meetings
       userMeetings = meetings;
     }
-    
+
     // Search filtering
-    return userMeetings.filter(meeting =>
+    return userMeetings?.filter((meeting: Meeting) =>
       meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meeting.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meeting.type.toLowerCase().includes(searchTerm.toLowerCase())
+      meeting.client.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
 
-  const filteredMeetings = getFilteredMeetings();
+  useEffect(() => {
+    console.log("meetings", meetings);
+    if (meetings) {
+      setFilteredMeetings(getFilteredMeetings() || []);
+    }
+  }, [meetings, searchTerm]);
 
   // Performance tracking for reports
   const userMeetingPerformance = React.useMemo(() => {
-    const userMeetings = meetings.filter(meeting => meeting.assignedTo === user?.name);
-    const totalMeetings = userMeetings.length;
-    const completedMeetings = userMeetings.filter(meeting => meeting.status === 'Completed').length;
-    const cancelledMeetings = userMeetings.filter(meeting => meeting.status === 'Cancelled').length;
-    const scheduledMeetings = userMeetings.filter(meeting => meeting.status === 'Scheduled').length;
+    const userMeetings = meetings?.filter((meeting: Meeting) => meeting.assignedToId === user?.id);
+    const totalMeetings = userMeetings?.length;
+    const completedMeetings = userMeetings?.filter((meeting: Meeting) => meeting.status === 'Completed').length;
+    const cancelledMeetings = userMeetings?.filter((meeting: Meeting) => meeting.status === 'Cancelled').length;
+    const scheduledMeetings = userMeetings?.filter((meeting: Meeting) => meeting.status === 'Scheduled').length;
 
     return {
       totalMeetings,
       completedMeetings,
       cancelledMeetings,
       scheduledMeetings,
-      completionRate: totalMeetings > 0 ? Math.round((completedMeetings / totalMeetings) * 100) : 0,
-      cancellationRate: totalMeetings > 0 ? Math.round((cancelledMeetings / totalMeetings) * 100) : 0
+      completionRate: totalMeetings && totalMeetings > 0 ? Math.round((completedMeetings || 0 / totalMeetings) * 100) : 0,
+      cancellationRate: totalMeetings && totalMeetings > 0 ? Math.round((cancelledMeetings || 0 / totalMeetings) * 100) : 0
     };
   }, [meetings, user?.name]);
 
@@ -315,7 +408,7 @@ const MeetingsManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredMeetings.map((meeting) => (
+              {filteredMeetings?.map((meeting: Meeting) => (
                 <tr key={meeting.id} className="hover:bg-gray-50 cursor-pointer" onClick={(e) => handleRowClick(e, meeting)}>
                   <td className="px-6 py-4">
                     <div className="flex items-center">
@@ -356,8 +449,8 @@ const MeetingsManagement: React.FC = () => {
                     <button className="text-blue-600 hover:text-blue-800 mr-3" onClick={() => openEditForm(meeting)}>
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(meeting.id)}>
-                    <Trash2 className="h-4 w-4" />
+                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(meeting.id || '')}>
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
@@ -463,28 +556,28 @@ const MeetingsManagement: React.FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.assignedTo')}</label>
-                <select name="assignedTo" value={form.assignedTo} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <select name="assignedToId" value={form.assignedToId} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">{t('form.selectUser')}</option>
                   {(() => {
                     // Role-based user filtering for assignment
                     let assignableUsers = users;
-                    
+
                     if (user?.role === 'sales_rep') {
                       // Sales Reps can only assign to themselves
-                      assignableUsers = users.filter(u => u.name === user.name);
+                      assignableUsers = users?.filter((u: UserType) => u.id === user.id);
                     } else if (user?.role === 'team_leader') {
                       // Team Leaders can assign to their team members and themselves
-                      assignableUsers = users.filter(u => 
-                        u.name === user.name || 
+                      assignableUsers = users?.filter((u: UserType) =>
+                        u.id === user.id ||
                         (u.role === 'sales_rep' && u.teamId === user.teamId)
                       );
                     } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                       // Sales Admin and Admin can assign to anyone
-                      assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin');
+                      assignableUsers = users?.filter((u: UserType) => u.role !== 'admin' || user?.role === 'admin');
                     }
-                    
-                    return assignableUsers.map(u => (
-                      <option key={u.id} value={u.name}>{u.name} ({u.role})</option>
+
+                    return assignableUsers?.map((u: UserType) => (
+                      <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
                     ));
                   })()}
                 </select>
@@ -495,7 +588,9 @@ const MeetingsManagement: React.FC = () => {
               </div>
               <div className="md:col-span-2 flex justify-end space-x-3 mt-4">
                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">{t('actions.cancel')}</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editId ? t('actions.update') : t('actions.schedule')} {t('meetingDetails').toLowerCase()}</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{
+                  editId ? isUpdatingMeeting ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('actions.update') : isAddingMeeting ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('actions.schedule') + ' ' + t('meetingDetails').toLowerCase()}
+                </button>
               </div>
             </form>
           </div>

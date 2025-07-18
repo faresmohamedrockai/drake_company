@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInterceptor = axios.create({
-    baseURL: 'https://ca582cea704f.ngrok-free.app/api',
+    baseURL: 'https://crm-backend-production-d062.up.railway.app/api',
 });
 
 axiosInterceptor.interceptors.request.use((config) => {

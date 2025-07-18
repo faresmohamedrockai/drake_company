@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Trash2, MapPin, FileText } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -8,7 +8,13 @@ import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { generatePaymentSchedule } from './ProjectsTab';
+import { generatePaymentSchedule, Project } from './ProjectsTab';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Id, toast } from 'react-toastify';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { Zone } from './ZonesTab';
+import { Developer } from './DevelopersTab';
+import { Lead } from '../../types';
 
 // Fix default marker icon for leaflet in React
 if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
@@ -19,34 +25,19 @@ if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
   });
 }
 
-interface Property {
-  id: string;
-  title: string;
-  type: string;
-  price: string;
-  location: string;
-  area: string;
-  bedrooms: string;
-  bathrooms: string;
-  parking: string;
-  amenities: string[];
-  project: string;
-  status: 'Available' | 'Rented' | 'Sold';
-  projectId?: string; // Add projectId to link properties to projects
-}
 
 // Add FormState type for form
-type FormState = {
+type Property = {
+  id?: string;
   title: string;
   titleEn: string;
   titleAr: string;
   type: string;
-  price: string;
+  price: number;
   location: string;
-  area: string;
-  bedrooms: string;
-  bathrooms: string;
-  parking: string;
+  area: number;
+  bedrooms: number;
+  bathrooms: number;
   amenities: string[];
   project: string;
   status: string;
@@ -60,24 +51,119 @@ type FormState = {
 };
 
 const PropertiesTab: React.FC = () => {
-  const { properties, addProperty, updateProperty, deleteProperty, projects, zones, developers, leads } = useData();
+  const queryClient = useQueryClient();
+  const [toastIsLoading, setToastIsLoading] = useState<Id | null>(null);
+  const { data: properties, isLoading: isLoadingProperties } = useQuery<Property[]>({
+    queryKey: ['properties'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProperties()
+  });
+  const getProperties = async () => {
+    const response = await axiosInterceptor.get('/properties');
+    // Defensive: always return an array
+    return Array.isArray(response.data.properties) ? response.data.properties : [];
+  }
+  const addProperty = async (property: any) => {
+    const response = await axiosInterceptor.post('/properties/create', property);
+    return response.data.property as Property;
+  }
+  const { data: zones } = useQuery<Zone[]>({
+    queryKey: ['zones'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getZones()
+  });
+  const getZones = async () => {
+    const response = await axiosInterceptor.get('/zones');
+    return response.data.zones as Zone[];
+  }
+  const { data: projects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProjects()
+  });
+  const getProjects = async () => {
+    const response = await axiosInterceptor.get('/projects');
+    return response.data.data as Project[];
+  }
+  const updateProperty = async (property: Property) => {
+    const response = await axiosInterceptor.patch(`/properties/${property.id}`, property);
+    return response.data.property as Property;
+  }
+  const deleteProperty = async (id: string) => {
+    const response = await axiosInterceptor.delete(`/properties/${id}`);
+    return response.data.property as Property;
+  }
+  const { data: developers } = useQuery<Developer[]>({
+    queryKey: ['developers'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getDevelopers()
+  });
+  const getDevelopers = async () => {
+    const response = await axiosInterceptor.get('/developers');
+    return response.data.developers as Developer[];
+  }
+  const { mutateAsync: addPropertyMutation, isPending: isAdding } = useMutation({
+    mutationFn: (property: any) => addProperty(property),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      toast.success(t('propertyAdded'));
+      setShowForm(false);
+      setFormStep(0);
+    },
+    onError: () => {
+      toast.error(t('propertyAddFailed'));
+      setFormStep(0);
+      setShowForm(false);
+    }
+  });
+  const { mutateAsync: updatePropertyMutation, isPending: isUpdating } = useMutation({
+    mutationFn: (property: Property) => updateProperty(property),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      toast.success(t('propertyUpdated'));
+      setShowForm(false);
+      setFormStep(0);
+    },
+    onError: () => {
+      toast.error(t('propertyUpdateFailed'));
+      setFormStep(0);
+      setShowForm(false);
+    }
+  });
+  const { mutateAsync: deletePropertyMutation, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => deleteProperty(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['properties'] });
+      toast.dismiss(toastIsLoading!);
+      toast.success(t('propertyDeleted'));
+    }
+  });
+  const { data: leads } = useQuery<Lead[]>({
+    queryKey: ['leads'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getLeads()
+  });
+  const getLeads = async () => {
+    const response = await axiosInterceptor.get('/leads');
+    return response.data.leads as Lead[];
+  }
   const { user } = useAuth();
   const { settings } = useSettings(); // Add settings context
   const { language } = useLanguage(); // Add language context
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState<FormState>({
+  const [form, setForm] = useState<Property>({
+    id: '',
     title: '',
     titleEn: '',
     titleAr: '',
     type: '',
-    price: '', // will be handled as number in input and calculations
+    price: 0, // will be handled as number in input and calculations
     location: '',
-    area: '',
-    bedrooms: '',
-    bathrooms: '',
-    parking: '',
+    area: 0,
+    bedrooms: 0,
+    bathrooms: 0,
     amenities: [],
     project: '',
     status: 'Available',
@@ -96,7 +182,7 @@ const PropertiesTab: React.FC = () => {
   const [showPaymentPlan, setShowPaymentPlan] = useState<any>(null);
   const [showTypeOther, setShowTypeOther] = useState(false);
   const [showAmenitiesOther, setShowAmenitiesOther] = useState(false);
-  const [zoneModal, setZoneModal] = useState<{ name: string, latitude: number, longitude: number } | null>(null);
+  const [zoneModal, setZoneModal] = useState<Zone | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportStep, setReportStep] = useState<'input' | 'preview'>("input");
   const [reportPhone, setReportPhone] = useState('');
@@ -116,7 +202,13 @@ const PropertiesTab: React.FC = () => {
   ];
   const [showPlanPopup, setShowPlanPopup] = useState(false);
   const [showImageModal, setShowImageModal] = useState<{ images: string[], title: string } | null>(null);
+  const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
 
+  useEffect(() => {
+    if (isDeleting) {
+      setToastIsLoading(toast.loading(t('deletingProperty')));
+    }
+  }, [isDeleting]);
   // Helper functions to get language-appropriate data
   const getPropertyName = (property: any) => {
     if (!property) return '';
@@ -151,6 +243,7 @@ const PropertiesTab: React.FC = () => {
         'Security': 'أمن',
         'Garden': 'حديقة',
         'Pool': 'مسبح',
+        'Parking': 'موقف سيارات',
         'Other': 'أخرى'
       };
       return amenities.map(amenity => amenitiesMap[amenity] || amenity);
@@ -160,13 +253,13 @@ const PropertiesTab: React.FC = () => {
 
   const getProjectName = (projectId: string | undefined) => {
     if (!projectId) return '';
-    const project = projects.find(p => p.id === projectId);
+    const project = projects?.find(p => p.id === projectId);
     if (!project) return '';
 
     if (language === 'ar' && project.nameAr) {
       return project.nameAr;
     }
-    return project.nameEn || project.name;
+    return project.nameEn || project.nameEn;
   };
 
   const getStatusText = (status: string | undefined) => {
@@ -185,16 +278,16 @@ const PropertiesTab: React.FC = () => {
   const openAddForm = () => {
     setEditId(null);
     setForm({
+      id: '',
       title: '',
       titleEn: '',
       titleAr: '',
       type: '',
-      price: '', // will be handled as number in input and calculations
+      price: 0, // will be handled as number in input and calculations
       location: '',
-      area: '',
-      bedrooms: '',
-      bathrooms: '',
-      parking: '',
+      area: 0,
+      bedrooms: 0,
+      bathrooms: 0,
       amenities: [],
       project: '',
       status: 'Available',
@@ -232,7 +325,7 @@ const PropertiesTab: React.FC = () => {
     const { name, value } = e.target;
     if (name === 'projectId') {
       // Find the selected project and set developerId accordingly
-      const selectedProject = projects.find(p => p.id === value);
+      const selectedProject = projects?.find(p => p.id === value);
       let paymentPlanIndex: number | undefined = undefined;
       if (selectedProject && Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0) {
         paymentPlanIndex = 0;
@@ -293,9 +386,12 @@ const PropertiesTab: React.FC = () => {
     const propertyData = {
       ...form,
       price: form.price ? Number(form.price) : 0,
+      area: form.area ? Number(form.area) : 0,
+      bedrooms: form.bedrooms ? Number(form.bedrooms) : 0,
+      bathrooms: form.bathrooms ? Number(form.bathrooms) : 0,
       status: form.status as 'Available' | 'Rented' | 'Sold',
       createdBy: user.name,
-      project: projects.find(p => p.id === form.projectId)?.name || '',
+      project: projects?.find(p => p.id === form.projectId)?.nameEn || '',
       type: showTypeOther ? form.typeOther : form.type,
       amenities: showAmenitiesOther
         ? [...form.amenities.filter((a: string) => a !== 'Other'), form.amenitiesOther].filter(Boolean)
@@ -305,16 +401,15 @@ const PropertiesTab: React.FC = () => {
       title: form.titleEn + (form.titleAr ? ' / ' + form.titleAr : ''), // Combine names for display
     };
     if (editId) {
-      updateProperty(editId, propertyData);
+      updatePropertyMutation(propertyData as unknown as Property);
     } else {
-      addProperty(propertyData);
+      addPropertyMutation(propertyData as unknown as Property);
     }
-    setShowForm(false);
   };
 
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this property?')) {
-      deleteProperty(id);
+      deletePropertyMutation(id);
     }
   };
 
@@ -327,18 +422,22 @@ const PropertiesTab: React.FC = () => {
     }
   };
 
-  const filteredProperties = properties.filter(property =>
-    (getPropertyName(property).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getPropertyType(property.type).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getAmenities(property.amenities || []).join(' ').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getProjectName(property.projectId).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getStatusText(property.status).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.location.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    (filterProject ? property.projectId === filterProject : true) &&
-    (filterZone ? property.zoneId === filterZone : true) &&
-    (filterDeveloper ? property.developerId === filterDeveloper : true) &&
-    (filterStatus ? property.status === filterStatus : true)
-  );
+  useEffect(() => {
+    console.log("properties", properties);
+    const filteredProperties = properties?.filter(property =>
+      (getPropertyName(property).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getPropertyType(property.type).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getAmenities(property.amenities || []).join(' ').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getProjectName(property.projectId).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        getStatusText(property.status).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        property.location.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (filterProject ? property.projectId === filterProject : true) &&
+      (filterZone ? property.zoneId === filterZone : true) &&
+      (filterDeveloper ? property.developerId === filterDeveloper : true) &&
+      (filterStatus ? property.status === filterStatus : true)
+    );
+    setFilteredProperties(filteredProperties || []);
+  }, [properties, searchTerm, filterProject, filterZone, filterDeveloper, filterStatus]);
 
   function handleOpenReport(property: any) {
     setReportProperty(property);
@@ -354,7 +453,7 @@ const PropertiesTab: React.FC = () => {
     e.preventDefault();
     setReportError('');
     // Access control: Team Leader can only for their team, Sales Rep only for their own
-    let found = leads.find(l => l.phone === reportPhone);
+    let found = leads?.find(l => l.contact === reportPhone);
     if (!found) {
       setReportError('No client found with this number. Please check and try again.');
       return;
@@ -393,7 +492,7 @@ const PropertiesTab: React.FC = () => {
   }
 
   // Helper to get selected project's payment plans
-  const selectedProject = projects.find(p => p.id === form.projectId);
+  const selectedProject = projects?.find(p => p.id === form.projectId);
   const paymentPlans = selectedProject?.paymentPlans || [];
 
   return (
@@ -420,25 +519,25 @@ const PropertiesTab: React.FC = () => {
           </div>
           <select value={filterProject} onChange={e => setFilterProject(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
             <option value="">{language === 'ar' ? 'جميع المشاريع' : 'All Projects'}</option>
-            {projects.map(project => (
+            {projects?.map(project => (
               <option key={project.id} value={project.id}>
-                {language === 'ar' && project.nameAr ? project.nameAr : (project.nameEn || project.name)}
+                {language === 'ar' && project.nameAr ? project.nameAr : (project.nameEn || project.nameEn)}
               </option>
             ))}
           </select>
           <select value={filterZone} onChange={e => setFilterZone(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
             <option value="">{language === 'ar' ? 'جميع المناطق' : 'All Zones'}</option>
-            {zones.map(zone => (
+            {zones?.map(zone => (
               <option key={zone.id} value={zone.id}>
-                {language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name)}
+                {language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.nameEn)}
               </option>
             ))}
           </select>
           <select value={filterDeveloper} onChange={e => setFilterDeveloper(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
             <option value="">{language === 'ar' ? 'جميع المطورين' : 'All Developers'}</option>
-            {developers.map(dev => (
+            {developers?.map(dev => (
               <option key={dev.id} value={dev.id}>
-                {language === 'ar' && dev.nameAr ? dev.nameAr : (dev.nameEn || dev.name)}
+                {language === 'ar' && dev.nameAr ? dev.nameAr : (dev.nameEn || dev.nameEn)}
               </option>
             ))}
           </select>
@@ -478,102 +577,120 @@ const PropertiesTab: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredProperties.map((property) => {
-              const zone = zones.find(z => z.id === property.zoneId);
-              return (
-                <tr key={property.id} className="hover:bg-gray-50">
-                  <td className="px-2 py-4">
-                    <button
-                      className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer truncate block w-full text-left text-xs"
-                      title={getPropertyName(property)}
-                      onClick={() => {
-                        const propertyImages = (property as any).images || [];
-                        const projectImages = (projects.find(p => p.id === property.projectId) as any)?.images || [];
-                        const allImages = [...propertyImages, ...projectImages];
-                        if (allImages.length > 0) {
-                          setShowImageModal({ images: allImages, title: getPropertyName(property) });
-                        }
-                      }}
-                    >
-                      {getPropertyName(property)}
-                    </button>
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={getPropertyType(property.type)}>
-                      {getPropertyType(property.type)}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={`${Number(property.price).toLocaleString()} EGP`}>
-                      {Number(property.price).toLocaleString()} EGP
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={property.location}>
-                      {property.location}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={property.area}>
-                      {property.area}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={`${property.bedrooms} / ${property.bathrooms}`}>
-                      {property.bedrooms} / {property.bathrooms}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={getAmenities(property.amenities || []).join(', ')}>
-                      {getAmenities(property.amenities || []).join(', ')}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    {zone ? (
-                      <button
-                        className="text-xs text-blue-600 underline cursor-pointer truncate block w-full text-left flex items-center"
-                        title={zone.name}
-                        onClick={() => setZoneModal(zone)}
-                      >
-                        <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
-                        <span className="truncate">{zone.name}</span>
-                      </button>
-                    ) : (
-                      <span className="text-xs text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className="text-xs text-gray-900 truncate block" title={getProjectName(property.projectId)}>
-                      {getProjectName(property.projectId)}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <span className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(property.status)} truncate max-w-full`} title={getStatusText(property.status)}>
-                      {getStatusText(property.status)}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4">
-                    <div className="flex space-x-1">
-                      {user?.role !== 'sales_rep' && (
-                        <>
-                          <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title={t('editProperty')}>
-                            <Edit className="h-3 w-3" />
-                          </button>
-                          <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id)} title={t('deleteProperty')}>
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </>
-                      )}
-                      {canGenerateReport && (
-                        <button className="text-green-600 hover:text-green-800" title={t('generateClientReport')} onClick={() => handleOpenReport(property)}>
-                          <FileText className="h-4 w-4" />
-                        </button>
-                      )}
+            {
+              isLoadingProperties ? (
+                <tr>
+                  <td colSpan={10} className="px-2 py-4 text-center text-gray-500">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-2"></div>
                     </div>
                   </td>
                 </tr>
-              );
-            })}
+              ) : (
+                filteredProperties && filteredProperties.length > 0 ? (
+                  filteredProperties?.map((property) => {
+                    const zone = zones?.find(z => z.id === property.zoneId);
+                    return (
+                      <tr key={property.id} className="hover:bg-gray-50">
+                        <td className="px-2 py-4">
+                          <button
+                            className="font-bold text-blue-600 hover:text-blue-800 hover:underline transition-colors cursor-pointer truncate block w-full text-left text-xs"
+                            title={getPropertyName(property)}
+                            onClick={() => {
+                              const propertyImages = (property as any).images || [];
+                              const projectImages = (projects?.find(p => p.id === property.projectId) as any)?.images || [];
+                              const allImages = [...propertyImages, ...projectImages];
+                              if (allImages.length > 0) {
+                                setShowImageModal({ images: allImages, title: getPropertyName(property) });
+                              }
+                            }}
+                          >
+                            {getPropertyName(property)}
+                          </button>
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className="text-xs text-gray-900 truncate block" title={getPropertyType(property.type)}>
+                            {getPropertyType(property.type)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className="text-xs text-gray-900 truncate block" title={`${Number(property.price).toLocaleString()} EGP`}>
+                            {Number(property.price).toLocaleString()} EGP
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className="text-xs text-gray-900 truncate block" title={property.location}>
+                            {property.location}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className="text-xs text-gray-900 truncate block" title={property.area.toString()}>
+                            {property.area.toString()}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className="text-xs text-gray-900 truncate block" title={`${property.bedrooms} / ${property.bathrooms}`}>
+                            {property.bedrooms} / {property.bathrooms}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className="text-xs text-gray-900 truncate block" title={getAmenities(property.amenities || []).join(', ')}>
+                            {getAmenities(property.amenities || []).join(', ')}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          {zone ? (
+                            <button
+                              className="text-xs text-blue-600 underline cursor-pointer truncate block w-full text-left flex items-center"
+                              title={zone.nameEn}
+                              onClick={() => setZoneModal(zone as Zone)}
+                            >
+                              <MapPin className="h-3 w-3 mr-1 flex-shrink-0" />
+                              <span className="truncate">{zone.nameEn}</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className="text-xs text-gray-900 truncate block" title={getProjectName(property.projectId)}>
+                            {getProjectName(property.projectId)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <span className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(property.status)} truncate max-w-full`} title={getStatusText(property.status)}>
+                            {getStatusText(property.status)}
+                          </span>
+                        </td>
+                        <td className="px-2 py-4">
+                          <div className="flex space-x-1">
+                            {user?.role !== 'sales_rep' && (
+                              <>
+                                <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(property)} title={t('editProperty')}>
+                                  <Edit className="h-3 w-3" />
+                                </button>
+                                <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(property.id!)} title={t('deleteProperty')}>
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </>
+                            )}
+                            {canGenerateReport && (
+                              <button className="text-green-600 hover:text-green-800" title={t('generateClientReport')} onClick={() => handleOpenReport(property)}>
+                                <FileText className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={10} className="px-2 py-4 text-center text-gray-500">
+                      {t('noPropertiesFound')}
+                    </td>
+                  </tr>
+                ))}
           </tbody>
         </table>
       </div>
@@ -684,13 +801,9 @@ const PropertiesTab: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('parking')}</label>
-                    <input type="text" name="parking" value={form.parking} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'موقف السيارات' : 'Parking spaces'} />
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('amenities')}</label>
                     <div className="flex flex-wrap gap-3">
-                      {['Elevator', 'Security', 'Garden', 'Pool', 'Other'].map(option => (
+                      {['Elevator', 'Security', 'Garden', 'Pool', 'Parking', 'Other'].map(option => (
                         <label key={option} className="inline-flex items-center text-sm font-normal">
                           <input
                             type="checkbox"
@@ -726,9 +839,9 @@ const PropertiesTab: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('project')}</label>
                     <select name="projectId" value={form.projectId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
                       <option value="">{t('selectProject')}</option>
-                      {projects.map(project => (
+                      {projects?.map(project => (
                         <option key={project.id} value={project.id}>
-                          {language === 'ar' && project.nameAr ? project.nameAr : (project.nameEn || project.name)}
+                          {language === 'ar' && project.nameAr ? project.nameAr : (project.nameEn || project.nameEn)}
                         </option>
                       ))}
                     </select>
@@ -738,25 +851,25 @@ const PropertiesTab: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('developer')}</label>
                     <select name="developerId" value={form.developerId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
                       <option value="">{t('selectDeveloper')}</option>
-                      {developers.map(dev => (
-                        <option key={dev.id} value={dev.id}>{dev.name}</option>
+                      {developers?.map(dev => (
+                        <option key={dev.id} value={dev.id}>{dev.nameEn}</option>
                       ))}
                     </select>
                   </div>
                   {/* Zone */}
                   {(() => {
-                    const selectedProject = projects.find(p => p.id === form.projectId);
+                    const selectedProject = projects?.find(p => p.id === form.projectId);
                     const projectHasZone = selectedProject?.zoneId;
 
                     // If project has a zone, show it as read-only
                     if (projectHasZone) {
-                      const zone = zones.find(z => z.id === projectHasZone);
+                      const zone = zones?.find(z => z.id === projectHasZone);
                       return (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">{t('zoneFromProject')}</label>
                           <input
                             type="text"
-                            value={zone?.name || t('unknownZone')}
+                            value={zone?.nameEn || t('unknownZone')}
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-base cursor-not-allowed"
                             readOnly
                           />
@@ -770,8 +883,8 @@ const PropertiesTab: React.FC = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">{t('zone')}</label>
                         <select name="zoneId" value={form.zoneId} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base">
                           <option value="">{t('selectZone')}</option>
-                          {zones.map(zone => (
-                            <option key={zone.id} value={zone.id}>{zone.name}</option>
+                          {zones?.map(zone => (
+                            <option key={zone.id} value={zone.id}>{zone.nameEn}</option>
                           ))}
                         </select>
                       </div>
@@ -810,10 +923,10 @@ const PropertiesTab: React.FC = () => {
                                 {isSelected && <span className="ml-auto text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded-full shadow">{t('selected')}</span>}
                               </div>
                               <div className="text-xs text-gray-800 space-y-0.5">
-                                <div className="flex items-center gap-2"><span className="font-medium">{t('downPayment')}:</span> <span className="text-blue-700 font-bold">{plan.downPayment}%</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">{t('installments')}:</span> <span className="text-green-700 font-bold">{100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('downPayment')}:</span> <span className="text-blue-700 font-bold">{plan.downpayment}%</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('installments')}:</span> <span className="text-green-700 font-bold">{100 - (plan.downpayment || 0) - (plan.delivery || 0)}%</span></div>
                                 <div className="flex items-center gap-2"><span className="font-medium">{t('delivery')}:</span> <span className="text-orange-700 font-bold">{plan.delivery}%</span></div>
-                                <div className="flex items-center gap-2"><span className="font-medium">{t('yearsToPay')}:</span> <span className="text-purple-700 font-bold">{plan.payYears}</span></div>
+                                <div className="flex items-center gap-2"><span className="font-medium">{t('yearsToPay')}:</span> <span className="text-purple-700 font-bold">{plan.yearsToPay}</span></div>
                                 <div className="flex items-center gap-2"><span className="font-medium">{t('installmentPeriod')}:</span> <span className="text-pink-700 font-bold">{plan.installmentPeriod}{plan.installmentPeriod === 'custom' && plan.installmentMonthsCount ? ` (${plan.installmentMonthsCount} {t('months')})` : ''}</span></div>
                                 <div className="flex items-center gap-2"><span className="font-medium">{t('firstInstallmentDate')}:</span> <span className="text-gray-700 font-bold">{plan.firstInstallmentDate}</span></div>
                                 <div className="flex items-center gap-2"><span className="font-medium">{t('deliveryDate')}:</span> <span className="text-gray-700 font-bold">{plan.deliveryDate}</span></div>
@@ -838,22 +951,23 @@ const PropertiesTab: React.FC = () => {
                   <div><span className="font-semibold">{t('area')}:</span> {form.area}</div>
                   <div><span className="font-semibold">{t('bedrooms')}:</span> {form.bedrooms}</div>
                   <div><span className="font-semibold">{t('bathrooms')}:</span> {form.bathrooms}</div>
-                  <div><span className="font-semibold">{t('parking')}:</span> {form.parking}</div>
                   <div><span className="font-semibold">{t('amenities')}:</span> {showAmenitiesOther ? [...form.amenities.filter(a => a !== 'Other'), form.amenitiesOther].filter(Boolean).join(', ') : getAmenities(form.amenities).join(', ')}</div>
-                  <div><span className="font-semibold">{t('zone')}:</span> {zones.find(z => z.id === form.zoneId)?.name || ''}</div>
+                  <div><span className="font-semibold">{t('zone')}:</span> {zones?.find(z => z.id === form.zoneId)?.nameEn || ''}</div>
                   <div><span className="font-semibold">{t('project')}:</span> {getProjectName(form.projectId)}</div>
-                  <div><span className="font-semibold">{t('developer')}:</span> {developers.find(d => d.id === form.developerId)?.name || ''}</div>
+                  <div><span className="font-semibold">{t('developer')}:</span> {developers?.find(d => d.id === form.developerId)?.nameEn || ''}</div>
                   <div><span className="font-semibold">{t('status')}:</span> {getStatusText(form.status)}</div>
                   {/* Payment Plan Review (always show if project selected) */}
                   {(() => {
-                    const selectedProject = projects.find(p => p.id === form.projectId);
+                    const selectedProject = projects?.find(p => p.id === form.projectId);
                     if (selectedProject) {
                       const hasPlans = Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0;
                       if (hasPlans && form.paymentPlanIndex !== undefined) {
                         const plan = selectedProject.paymentPlans[form.paymentPlanIndex];
+
                         if (plan) {
                           const price = Number(form.price || 0);
                           const schedule = generatePaymentSchedule(price, plan);
+                          console.log("schedule", schedule);
                           return (
                             <div className="mt-4">
                               <div className="font-semibold mb-1">{t('selectedPaymentPlan')}:</div>
@@ -910,7 +1024,7 @@ const PropertiesTab: React.FC = () => {
                     <button type="button" onClick={() => setFormStep(s => s + 1)} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto">{t('next')}</button>
                   )}
                   {formStep === formSteps.length - 1 && (
-                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">{editId ? t('updateProperty') : t('addProperty')}</button>
+                    <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">{editId ? isUpdating ? <div className="flex items-center justify-center"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div> {t('updatingProperty')}</div> : t('updateProperty') : isAdding ? <div className="flex items-center justify-center"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div></div> : isLoadingProperties ? <div className="flex items-center justify-center"><div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div></div> : t('addProperty')}</button>
                   )}
                 </div>
               </div>
@@ -924,7 +1038,7 @@ const PropertiesTab: React.FC = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
             <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl" onClick={() => setZoneModal(null)}>&times;</button>
-            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('zone')}: {zoneModal.name}</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('zone')}: {zoneModal.nameEn}</h3>
             <div className="mb-2 text-gray-700">{t('latitude')}: <span className="font-mono">{zoneModal.latitude}</span></div>
             <div className="mb-4 text-gray-700">{t('longitude')}: <span className="font-mono">{zoneModal.longitude}</span></div>
             {/* Real map using react-leaflet */}
@@ -941,7 +1055,7 @@ const PropertiesTab: React.FC = () => {
                 />
                 <Marker position={[zoneModal.latitude, zoneModal.longitude]}>
                   <Popup>
-                    {zoneModal.name}<br />({zoneModal.latitude}, {zoneModal.longitude})
+                    {zoneModal.nameEn}<br />({zoneModal.latitude}, {zoneModal.longitude})
                   </Popup>
                 </Marker>
               </MapContainer>
@@ -1034,7 +1148,7 @@ const PropertiesTab: React.FC = () => {
                 {/* Property Info */}
                 {reportProperty && (
                   <>
-                    {(reportProperty.title || reportProperty.type || reportProperty.price || reportProperty.area || reportProperty.location || reportProperty.bedrooms || reportProperty.bathrooms || reportProperty.parking || reportProperty.amenities || reportProperty.project) && (
+                    {(reportProperty.title || reportProperty.type || reportProperty.price || reportProperty.area || reportProperty.location || reportProperty.bedrooms || reportProperty.bathrooms || reportProperty.amenities || reportProperty.project) && (
                       <div className="mb-4">
                         <h3 className="text-lg font-semibold text-gray-800 mb-1">
                           {language === 'ar' ? 'معلومات العقار' : 'Property Information'}
@@ -1047,7 +1161,6 @@ const PropertiesTab: React.FC = () => {
                           {reportProperty.location && <div><span className="font-medium">{t('location')}:</span> {reportProperty.location}</div>}
                           {reportProperty.bedrooms && <div><span className="font-medium">{t('bedrooms')}:</span> {reportProperty.bedrooms}</div>}
                           {reportProperty.bathrooms && <div><span className="font-medium">{t('bathrooms')}:</span> {reportProperty.bathrooms}</div>}
-                          {reportProperty.parking && <div><span className="font-medium">{t('parking')}:</span> {reportProperty.parking}</div>}
                           {reportProperty.amenities && <div><span className="font-medium">{t('amenities')}:</span> {Array.isArray(reportProperty.amenities) ? reportProperty.amenities.join(', ') : reportProperty.amenities}</div>}
                           {reportProperty.project && <div><span className="font-medium">{t('project')}:</span> {reportProperty.project}</div>}
                         </div>
@@ -1058,7 +1171,7 @@ const PropertiesTab: React.FC = () => {
                 {/* Payment Plan Table - Full Installments */}
                 {(() => {
                   // Find the linked project and its selected payment plan
-                  const project = projects.find(p => p.id === reportProperty?.projectId);
+                  const project = projects?.find(p => p.id === reportProperty?.projectId);
                   let plan = null;
                   if (project && Array.isArray(project.paymentPlans)) {
                     const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
@@ -1085,17 +1198,17 @@ const PropertiesTab: React.FC = () => {
                   return (
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                        {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {project?.name ? ` ${project.name}` : ''}
+                        {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {project?.nameEn ? ` ${project.nameEn}` : ''}
                       </h3>
                       {/* Summary Card */}
                       <div className="flex flex-wrap gap-4 mb-4">
                         <div className="flex items-center bg-blue-100 text-blue-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
                           <svg className="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>
-                          {t('downPayment')}: <span className="ml-1">{plan.downPayment}%</span>
+                          {t('downPayment')}: <span className="ml-1">{plan.downpayment}%</span>
                         </div>
                         <div className="flex items-center bg-green-100 text-green-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
                           <svg className="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" /></svg>
-                          {t('installments')}: <span className="ml-1">{100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span>
+                          {t('installments')}: <span className="ml-1">{100 - (plan.downpayment || 0) - (plan.delivery || 0)}%</span>
                         </div>
                         <div className="flex items-center bg-orange-100 text-orange-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
                           <svg className="w-5 h-5 mr-2 text-orange-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12,2 22,22 2,22" /></svg>
@@ -1146,7 +1259,7 @@ const PropertiesTab: React.FC = () => {
                         <div>{language === 'ar' ? 'السعر الإجمالي' : 'Total Price'}: <span className="text-blue-700">{price.toLocaleString()} EGP</span></div>
                         <div>{language === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}: <span className="text-green-700">{downPayment.toLocaleString()} EGP</span></div>
                         <div>{language === 'ar' ? 'الأقساط' : 'Installments'}: <span className="text-orange-700">{installmentsTotal.toLocaleString()} EGP</span></div>
-                        <div>{language === 'ar' ? 'المطور' : 'Developer'}: <span className="text-gray-700">{developers.find(d => d.id === project?.developerId)?.name || project?.developer || '-'}</span></div>
+                        <div>{language === 'ar' ? 'المطور' : 'Developer'}: <span className="text-gray-700">{developers?.find(d => d.id === project?.developerId)?.nameEn || project?.developer || '-'}</span></div>
                       </div>
                     </div>
                   );
@@ -1157,7 +1270,7 @@ const PropertiesTab: React.FC = () => {
                   const propertyImages = reportProperty && Array.isArray(reportProperty.images) ? reportProperty.images : [];
 
                   // Get project images
-                  const project = projects.find(p => p.id === reportProperty?.projectId);
+                  const project = projects?.find(p => p.id === reportProperty?.projectId);
                   const projectImages = project && Array.isArray(project.images) ? project.images : [];
 
                   // Combine all images

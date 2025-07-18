@@ -18,7 +18,8 @@ import './styles/rtl.css';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
 import axiosInterceptor from '../axiosInterceptor/axiosInterceptor';
-import { Developer, Zone } from './types';
+import { Developer, Lead, Meeting, Property, User, Zone } from './types';
+import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProperties, getUsers, getZones } from './queries/queries';
 
 // Custom hook for managing persisted view state with URL sync
 const usePersistedView = (defaultView: string) => {
@@ -70,33 +71,51 @@ const AppContent: React.FC = () => {
   const { settings } = useSettings();
   const { rtlMargin } = useLanguage();
   const [currentView, setCurrentView] = usePersistedView('dashboard');
-  // const queryClient = useQueryClient();
-  // const getDevelopers = async () => {
-  //   const response = await axiosInterceptor.get('/developers');
+  const queryClient = useQueryClient();
 
-  //   return response.data.developers as Developer[];
-  // }
-
-  // const getZones = async () => {
-  //   console.log("getZones");
-  //   const response = await axiosInterceptor.get('/zones');
-  //   console.log("response", response);
-  //   return response.data.zones as Zone[];
-  // }
-
-  // useEffect(() => {
-  //   console.log("queryClient");
-  //   queryClient.prefetchQuery({
-  //     queryKey: ['developers'],
-  //     queryFn: () => getDevelopers(),
-  //     staleTime: 1000 * 60 * 5 // 5 minutes
-  //   });
-  //   queryClient.prefetchQuery({
-  //     queryKey: ['zones'],
-  //     queryFn: () => getZones(),
-  //     staleTime: 1000 * 60 * 5 // 5 minutes
-  //   });
-  // }, []);
+  useEffect(() => {
+    console.log("queryClient");
+    queryClient.prefetchQuery({
+      queryKey: ['developers'],
+      queryFn: () => getDevelopers(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['zones'],
+      queryFn: () => getZones(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['leads'],
+      queryFn: () => getLeads(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['users'],
+      queryFn: () => getUsers(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['properties'],
+      queryFn: () => getProperties(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['meetings'],
+      queryFn: () => getMeetings(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['contracts'],
+      queryFn: () => getContracts(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['logs'],
+      queryFn: () => getLogs(),
+      staleTime: 1000 * 60 * 5 // 5 minutes
+    });
+  }, []);
 
 
   // Update page title with company name

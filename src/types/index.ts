@@ -1,3 +1,5 @@
+import { Project } from "../components/inventory/ProjectsTab";
+
 export interface User {
   id: string,
   email: string,
@@ -31,33 +33,44 @@ export enum LeadStatus {
   OPEN_DEAL = 'open_deal',
   CANCELLATION = 'cancellation',
   CLOSED_DEAL = "closed_deal",
+  NO_ANSWER = "no_answer",
+  NO_INTEREST = "no_interest",
+}
+
+export interface Log {
+  id: number,
+  action: string,
+  description: string,
+  userId: string,
+  userName: string | null,
+  email: string | null,
+  userRole: string,
+  leadId: string | null,
+  ip: string | null,
+  userAgent: string | null,
+  createdAt: string,
 }
 
 
-
-
-
-
-
 export interface Lead {
-  id: string;
-  name: string;
+  id?: string;
   nameEn?: string; // English name
   nameAr?: string; // Arabic name
-  phone: string;
+  contact: string;
   email?: string;
   budget: string;
-  inventoryInterest: string;
+  inventoryInterestId: string;
   source: string;
   status: LeadStatus;
-  lastCallDate: string;
-  lastVisitDate: string;
-  assignedTo: string;
-  createdAt: string;
-  createdBy: string;
-  notes: Note[];
-  calls: CallLog[];
-  visits: VisitLog[];
+  lastCallDate?: string;
+  lastVisitDate?: string;
+  assignedToId: string;
+  createdAt?: string;
+  createdBy?: string;
+  notes?: string[] | null;
+  calls?: CallLog[] | null;
+  visits?: VisitLog[] | null;
+  owner?: User | null;
 }
 
 export interface CallLog {
@@ -66,12 +79,13 @@ export interface CallLog {
   date: string;
   outcome: string;
   duration: string;
-  project: string;
+  projectId: string;
   notes: string;
   createdBy: string;
 }
 
 export interface VisitLog {
+  inventoryId: string;
   id: string;
   leadId: string;
   date: string;
@@ -121,31 +135,31 @@ export interface Property {
   deliveryDate?: string; // ISO date
 }
 
-export interface Project {
-  id: string;
-  name: string;
-  nameEn?: string; // English name
-  nameAr?: string; // Arabic name
-  developer: string;
-  zone: string;
-  type: string;
-  paymentPlans: {
-    downPayment: number;
-    delivery: number;
-    schedule?: string;
-    payYears: number;
-    installmentPeriod: string;
-    installmentMonthsCount: number;
-    firstInstallmentDate: string;
-    deliveryDate: string;
-  }[];
-  createdAt: string;
-  createdBy: string;
-  zoneId?: string;
-  developerId?: string;
-  propertyIds?: string[];
-  images?: string[]; // Array of image URLs or data URLs
-}
+// export interface Project {
+//   id: string;
+//   name: string;
+//   nameEn?: string; // English name
+//   nameAr?: string; // Arabic name
+//   developer: string;
+//   zone: string;
+//   type: string;
+//   paymentPlans: {
+//     downPayment: number;
+//     delivery: number;
+//     schedule?: string;
+//     payYears: number;
+//     installmentPeriod: string;
+//     installmentMonthsCount: number;
+//     firstInstallmentDate: string;
+//     deliveryDate: string;
+//   }[];
+//   createdAt: string;
+//   createdBy: string;
+//   zoneId?: string;
+//   developerId?: string;
+//   propertyIds?: string[];
+//   images?: string[]; // Array of image URLs or data URLs
+// }
 
 export interface Zone {
   id: string;
@@ -165,21 +179,23 @@ export interface Zone {
 export interface Developer {
   id: string;
   name: string;
-  nameEn?: string; // English name
-  nameAr?: string; // Arabic name
-  email: string;
-  phone: string;
-  projects: number;
-  established: string;
-  location: string;
   createdAt: string;
   createdBy: string;
   image?: string; // 
   projectIds?: string[];
+  nameEn?: string; // English name
+  nameAr: string;
+  email: string;
+  phone: string;
+  projects: Project[];
+  established: string;
+  location: string;
+  logo: string;
+
 }
 
 export interface Meeting {
-  id: string;
+  id?: string;
   title: string;
   client: string;
   leadId?: string;
@@ -188,23 +204,26 @@ export interface Meeting {
   duration: string;
   type: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';
-  assignedTo: string;
+  assignedToId: string;
   notes?: string;
-  createdAt: string;
-  createdBy: string;
+  createdAt?: string;
+  createdBy?: string;
+  location?: string;
+  locationType?: string;
 }
 
 export interface Contract {
-  id: string;
-  leadId: string;
-  leadName: string;
-  property: string;
-  dealValue: string;
+  id?: string;
+  leadId?: string;
+  inventoryId: string;
+  dealValue: number;
   contractDate: string;
   status: 'Pending' | 'Signed' | 'Cancelled';
-  createdBy: string;
   notes: string;
-  createdAt: string;
+  createdById?: string;
+  lead?: Lead,
+  inventory?: Property,
+  createdBy?: User,
 }
 
 export interface Activity {

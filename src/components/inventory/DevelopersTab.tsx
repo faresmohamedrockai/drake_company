@@ -5,17 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { toast } from 'react-toastify';
+import { getDevelopers } from '../../queries/queries';
+import { Developer } from '../../types';
 
-interface Developer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  projects: number;
-  established: string;
-  location: string;
-  logo: string;
-}
 
 const DevelopersTab: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('propai_user') || '{}');
@@ -31,29 +23,21 @@ const DevelopersTab: React.FC = () => {
     createdBy: user?.name || 'System'
   });
   const queryClient = useQueryClient();
-  const [developers, setDevelopers] = useState<Developer[]>([]);
-
-  useEffect(() => {
-    const fetchDevelopers = async () => {
-      const response = await axiosInterceptor.get('/developers');
-      console.log("response", response);
-      setDevelopers(response.data.developers as Developer[]);
-    };
-    fetchDevelopers();
-  }, []);
-
-  // const { data: developers, isLoading, isError } = useQuery<Developer[]>({
-  //   queryKey: ['developers'],
-  //   queryFn: () => getDevelopers(),
-  // });
+  const { data: developers, isLoading, isError } = useQuery<Developer[]>({
+    queryKey: ['developers'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getDevelopers(),
+  });
   const { mutateAsync: addDeveloperMutation, isPending: isAdding } = useMutation({
     mutationFn: (developerData: any) => addDeveloper(developerData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['developers'] });
       toast.success(t('developerAdded'));
+      setShowForm(false);
     },
     onError: (error: any) => {
       toast.error(error.response.data.message);
+      setShowForm(false);
     }
   });
 
@@ -62,9 +46,11 @@ const DevelopersTab: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['developers'] });
       toast.success(t('developerUpdated'));
+      setShowForm(false);
     },
     onError: (error: any) => {
       toast.error(error.response.data.message);
+      setShowForm(false);
     }
   });
 
@@ -79,10 +65,10 @@ const DevelopersTab: React.FC = () => {
     }
   });
 
-  const getDevelopers = async () => {
-    const response = await axiosInterceptor.get('/developers');
-    return response.data.developers as Developer[];
-  }
+  // const getDevelopers = async () => {
+  //   const response = await axiosInterceptor.get('/developers');
+  //   return response.data.developers as Developer[];
+  // }
 
   const addDeveloper = async (developerData: any) => {
     const response = await axiosInterceptor.post('/developers/create', developerData);
@@ -179,7 +165,7 @@ const DevelopersTab: React.FC = () => {
     } else {
       addDeveloperMutation(developerData as any);
     }
-    setShowForm(false);
+    // setShowForm(false);
   };
 
   const handleDelete = (id: string) => {
@@ -240,7 +226,7 @@ const DevelopersTab: React.FC = () => {
                   {developer.logo ? (
                     <img
                       src={developer.logo}
-                      alt={developer.name}
+                      alt={developer.nameEn}
                       className="object-cover w-full h-full"
                       onError={e => {
                         const target = e.target as HTMLImageElement;
@@ -274,11 +260,11 @@ const DevelopersTab: React.FC = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       // Custom event or navigation logic to go to Projects tab and filter by developer
-                      const event = new CustomEvent('navigateToProjects', { detail: { developer: developer.name } });
+                      const event = new CustomEvent('navigateToProjects', { detail: { developer: developer.nameEn } });
                       window.dispatchEvent(event);
                     }}
                   >
-                    {developer.projects}
+                    {developer.projects.length}
                   </a>
                 </div>
               </div>
@@ -291,7 +277,7 @@ const DevelopersTab: React.FC = () => {
                 </button>
               </div>
             </div>
-          )) : <div className="w-full text-center text-gray-500">No developers found</div>}
+          )) : isLoading ? <div className="spinner-border text-blue-600" role="status"></div> : <div className="w-full text-center text-gray-500">No developers found</div>}
       </div>
 
       {/* Add/Edit Developer Modal */}
@@ -343,7 +329,7 @@ const DevelopersTab: React.FC = () => {
                   {language === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors">
-                  {isAdding ? <div className="spinner-border text-white" role="status"></div> : editId ? (language === 'ar' ? 'تحديث المطور' : 'Update Developer') : (language === 'ar' ? 'إضافة المطور' : 'Add Developer')}
+                  {isAdding ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : editId ? (language === 'ar' ? 'تحديث المطور' : 'Update Developer') : (language === 'ar' ? 'إضافة المطور' : 'Add Developer')}
                 </button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -8,12 +8,56 @@ import LeadModal from './LeadModal';
 import AddLeadModal from './AddLeadModal';
 import EditLeadModal from './EditLeadModal';
 
-import { Lead } from '../../types';
+import { Lead, Property } from '../../types';
+import { useQuery } from '@tanstack/react-query';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { User } from '../../types';
+import { Project } from '../inventory/ProjectsTab';
 
 const LeadsList: React.FC = () => {
-  const { leads, deleteLead } = useData();
+  // const { leads, deleteLead } = useData();
+  const { data: leads, isLoading: isLoadingLeads } = useQuery<Lead[]>({
+    queryKey: ['leads'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getLeads()
+  });
+
+  const getUsers = async () => {
+    const response = await axiosInterceptor.get('/auth/users');
+    return response.data as User[];
+  }
+
+  const getLeads = async () => {
+    const response = await axiosInterceptor.get('/leads');
+    return response.data.leads as Lead[];
+  }
+
+  const getProjects = async () => {
+    const response = await axiosInterceptor.get('/projects');
+    return response.data.data as Project[];
+  }
+  const getProperties = async () => {
+    const response = await axiosInterceptor.get('/properties');
+    return response.data.properties as Property[];
+  }
+  const { data: projects, isLoading: isLoadingProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProjects()
+  });
+  const { data: properties, isLoading: isLoadingProperties } = useQuery<Property[]>({
+    queryKey: ['properties'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProperties()
+  });
+  const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
+    queryKey: ['users'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getUsers()
+  });
+
   const { user } = useAuth();
-  const { projects, users } = useData(); // Add users from DataContext
+  // const { projects, users } = useData(); // Add users from DataContext
   const { t, i18n } = useTranslation('leads');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -24,7 +68,7 @@ const LeadsList: React.FC = () => {
   const [showFilterPopup, setShowFilterPopup] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
-
+  const [filteredLeads, setFilteredLeads] = useState<Lead[]>([]);
   // User color mapping
   const userColors = [
     'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
@@ -33,8 +77,8 @@ const LeadsList: React.FC = () => {
   ];
 
   const getUserColor = (userName: string) => {
-    const userIndex = users.findIndex(user => user.name === userName);
-    return userIndex >= 0 ? userColors[userIndex % userColors.length] : 'bg-gray-500';
+    const userIndex = users?.findIndex(user => user.name === userName);
+    return userIndex !== undefined && userIndex >= 0 ? userColors[userIndex % userColors.length] : 'bg-gray-500';
   };
 
   const getUserInitials = (userName: string) => {
@@ -49,24 +93,24 @@ const LeadsList: React.FC = () => {
   // Helper function to get display name based on current language
   const getDisplayName = (lead: Lead) => {
     if (i18n.language === 'ar') {
-      return lead.nameAr || lead.nameEn || lead.name;
+      return lead.nameAr || lead.nameEn || '';
     } else {
-      return lead.nameEn || lead.nameAr || lead.name;
+      return lead.nameEn || lead.nameAr || '';
     }
   };
 
   // Helper function to get searchable name (both languages)
   const getSearchableName = (lead: Lead) => {
-    const names = [lead.name, lead.nameEn, lead.nameAr].filter(Boolean);
+    const names = [lead.nameEn, lead.nameAr].filter(Boolean);
     return names.join(' ').toLowerCase();
   };
 
   // Column filters
   const [filters, setFilters] = useState({
     name: '',
-    phone: '',
+    contact: '',
     budget: '',
-    inventoryInterest: '',
+    inventoryInterestId: '',
     source: '',
     status: '',
     assignedTo: '',
@@ -81,32 +125,31 @@ const LeadsList: React.FC = () => {
     // Role-based filtering
     if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own leads
-      userLeads = leads.filter(lead => lead.assignedTo === user.name);
+      userLeads = leads?.filter(lead => lead.assignedTo === user.name);
     } else if (user?.role === 'team_leader') {
       // Team leaders see their own leads and their sales reps' leads
-      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
-      userLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
+      const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
+      userLeads = leads?.filter(lead => lead.assignedTo === user.name || salesReps?.includes(lead.assignedTo));
     } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Sales Admin and Admin can see all leads
       userLeads = leads;
     }
 
     // Search filtering - now includes both English and Arabic names
-    let filtered = userLeads.filter(lead => {
+    let filtered = userLeads?.filter(lead => {
       const searchableName = getSearchableName(lead);
       return searchableName.includes(searchTerm.toLowerCase()) ||
-        lead.phone.includes(searchTerm) ||
-        lead.inventoryInterest.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        lead.contact.includes(searchTerm) ||
         lead.source.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
     // Column filters
-    filtered = filtered.filter(lead => {
+    filtered = filtered?.filter(lead => {
       const displayName = getDisplayName(lead);
       return (filters.name === '' || displayName.toLowerCase().includes(filters.name.toLowerCase())) &&
-        (filters.phone === '' || lead.phone.includes(filters.phone)) &&
+        (filters.contact === '' || lead.contact.includes(filters.contact)) &&
         (filters.budget === '' || lead.budget === filters.budget) &&
-        (filters.inventoryInterest === '' || lead.inventoryInterest === filters.inventoryInterest) &&
+        (filters.inventoryInterestId === '' || lead.inventoryInterestId === filters.inventoryInterestId) &&
         (filters.source === '' || lead.source === filters.source) &&
         (filters.status === '' || lead.status === filters.status) &&
         (filters.assignedTo === '' || lead.assignedTo === filters.assignedTo) &&
@@ -115,38 +158,41 @@ const LeadsList: React.FC = () => {
     });
     return filtered;
   };
-
+  useEffect(() => {
+    if (leads) {
+      setFilteredLeads(getFilteredLeads() || []);
+    }
+  }, [leads, users, projects, searchTerm, filters]);
   // KPI calculations (moved here)
-  const filteredLeads = getFilteredLeads();
-  const allLeadsCount = filteredLeads.length;
+  const allLeadsCount = filteredLeads?.length || 0;
   // Duplicate: same phone or email (excluding empty values)
-  const duplicateLeadsCount = filteredLeads.filter((lead, idx, arr) =>
-    arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx
+  const duplicateLeadsCount = filteredLeads?.filter((lead, idx, arr) =>
+    arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx
   ).length;
-  const freshLeadsCount = filteredLeads.filter(lead => lead.status === 'fresh_lead').length;
-  const coldCallsCount = filteredLeads.filter(lead => lead.source === 'Cold Call').length;
+  const freshLeadsCount = filteredLeads?.filter(lead => lead.status === 'fresh_lead').length || 0;
+  const coldCallsCount = filteredLeads?.filter(lead => lead.source === 'Cold Call').length || 0;
 
   // Performance tracking for reports
   const userPerformance = React.useMemo(() => {
-    const userLeads = leads.filter(lead => lead.assignedTo === user?.name);
-    const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
-    const completedCalls = userLeads.reduce((sum, lead) =>
+    const userLeads = leads?.filter(lead => lead.assignedTo === user?.name);
+    const totalCalls = userLeads?.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0) || 0;
+    const completedCalls = userLeads?.reduce((sum, lead) =>
       sum + (lead.calls?.filter((call: any) =>
         ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)
       ).length || 0), 0);
 
-    const totalVisits = userLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
-    const completedVisits = userLeads.reduce((sum, lead) =>
+    const totalVisits = userLeads?.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0) || 0;
+    const completedVisits = userLeads?.reduce((sum, lead) =>
       sum + (lead.visits?.filter((visit: any) => visit.status === 'Completed').length || 0), 0);
 
     return {
-      totalLeads: userLeads.length,
+      totalLeads: userLeads?.length || 0,
       totalCalls,
       completedCalls,
-      callCompletionRate: totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0,
+      callCompletionRate: totalCalls > 0 ? Math.round((completedCalls || 0 / totalCalls) * 100) : 0,
       totalVisits,
-      completedVisits,
-      visitCompletionRate: totalVisits > 0 ? Math.round((completedVisits / totalVisits) * 100) : 0
+      completedVisits: completedVisits || 0,
+      visitCompletionRate: totalVisits > 0 ? Math.round((completedVisits || 0 / totalVisits) * 100) : 0
     };
   }, [leads, user?.name]);
 
@@ -171,7 +217,7 @@ const LeadsList: React.FC = () => {
     return Math.round(((current - previous) / previous) * 100 * 10) / 10;
   }
   const allLeadsChange = getChange(allLeadsCount, prevLeadsStats.allLeadsCount);
-  const duplicateLeadsChange = getChange(duplicateLeadsCount, prevLeadsStats.duplicateLeadsCount);
+  const duplicateLeadsChange = getChange(duplicateLeadsCount || 0, prevLeadsStats.duplicateLeadsCount);
   const freshLeadsChange = getChange(freshLeadsCount, prevLeadsStats.freshLeadsCount);
   const coldCallsChange = getChange(coldCallsCount, prevLeadsStats.coldCallsCount);
 
@@ -213,7 +259,7 @@ const LeadsList: React.FC = () => {
 
   const confirmDelete = () => {
     if (deletingLead) {
-      deleteLead(deletingLead.id);
+      // deleteLead(deletingLead.id);
       setShowDeleteConfirm(false);
       setDeletingLead(null);
     }
@@ -230,7 +276,7 @@ const LeadsList: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
           <span className="text-gray-700 text-base font-medium mb-2">{t('allLeads')}</span>
-          <span className="text-3xl font-bold text-gray-900 mb-1">{allLeadsCount}</span>
+          <span className="text-3xl font-bold text-gray-900 mb-1">{leads?.length || 0}</span>
           <span className={`text-sm font-medium ${allLeadsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{allLeadsChange >= 0 ? '↑' : '↓'}{Math.abs(allLeadsChange)}%</span>
         </div>
         <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
@@ -307,9 +353,9 @@ const LeadsList: React.FC = () => {
               />
               <input
                 type="text"
-                value={filters.phone}
-                onChange={e => setFilters(f => ({ ...f, phone: e.target.value }))}
-                placeholder={t('phone')}
+                value={filters.contact}
+                onChange={e => setFilters(f => ({ ...f, contact: e.target.value }))}
+                placeholder={t('contact')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               />
               <select
@@ -325,13 +371,13 @@ const LeadsList: React.FC = () => {
                 <option value="EGP2,000,000+">EGP 2,000,000+</option>
               </select>
               <select
-                value={filters.inventoryInterest}
-                onChange={e => setFilters(f => ({ ...f, inventoryInterest: e.target.value }))}
+                value={filters.inventoryInterestId}
+                onChange={e => setFilters(f => ({ ...f, inventoryInterestId: e.target.value }))}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">{t('allInterests')}</option>
-                {projects.map(project => (
-                  <option key={project.id} value={project.name}>{project.name}</option>
+                {projects?.map((project: Project) => (
+                  <option key={project.id} value={project.nameEn}>{project.nameEn}</option>
                 ))}
               </select>
               <select
@@ -366,7 +412,7 @@ const LeadsList: React.FC = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">{t('allUsers')}</option>
-                {users.map(user => (
+                {users?.map(user => (
                   <option key={user.id} value={user.name}>{user.name}</option>
                 ))}
               </select>
@@ -420,94 +466,108 @@ const LeadsList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-gray-50">
-                  <td className="px-3 sm:px-6 py-4">
-                    <button
-                      onClick={() => handleLeadClick(lead)}
-                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-sm truncate block w-full text-left"
-                      title={getDisplayName(lead)}
-                    >
-                      {getDisplayName(lead)}
-                    </button>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.phone}>
-                      {lead.phone}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.budget}>
-                      {lead.budget}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.inventoryInterest}>
-                      {lead.inventoryInterest}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.source}>
-                      {lead.source}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`} title={lead.status}>
-                      {lead.status}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    {lead.assignedTo ? (
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0 ${getUserColor(lead.assignedTo)}`}>
-                          {getUserInitials(lead.assignedTo)}
-                        </span>
-                        <span className="text-sm text-gray-900 truncate block" title={lead.assignedTo}>
-                          {lead.assignedTo}
-                        </span>
+              {
+                isLoadingLeads ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mr-2"></div>
+                        Loading leads...
                       </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">{t('unassigned')}</span>
-                    )}
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.lastCallDate}>
-                      {lead.lastCallDate}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>
-                      {lead.lastVisitDate}
-                    </span>
-                  </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => handleLeadClick(lead)}
-                        className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                        title={t('viewDetails')}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleEditLead(lead)}
-                        className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
-                        title={t('editLead')}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteLead(lead)}
-                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                        title={t('deleteLead')}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredLeads.length === 0 && (
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLeads?.map((lead) => (
+                    <tr key={lead.id} className="hover:bg-gray-50">
+                      <td className="px-3 sm:px-6 py-4">
+                        <button
+                          onClick={() => handleLeadClick(lead)}
+                          className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-sm truncate block w-full text-left"
+                          title={getDisplayName(lead)}
+                        >
+                          {getDisplayName(lead)}
+                        </button>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className="text-sm text-gray-900 truncate block" title={lead.contact}>
+                          {lead.contact}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className="text-sm text-gray-900 truncate block" title={lead.budget}>
+                          {lead.budget}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className="text-sm text-gray-900 truncate block" title={lead.inventoryInterestId}>
+                          {
+                            properties?.find(property => property.id === lead.inventoryInterestId)?.titleEn
+                          }
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className="text-sm text-gray-900 truncate block" title={lead.source}>
+                          {lead.source}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`} title={lead.status}>
+                          {lead.status}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        {lead.owner ? (
+                          <div className="flex items-center space-x-2 min-w-0">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0 ${getUserColor(lead.owner.name)}`}>
+                              {getUserInitials(lead.owner.name)}
+                            </span>
+                            <span className="text-sm text-gray-900 truncate block" title={lead.owner.name}>
+                              {lead.owner?.name}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">{t('unassigned')}</span>
+                        )}
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className="text-sm text-gray-900 truncate block" title={lead.lastCallDate}>
+                          {lead.lastCallDate}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>
+                          {lead.lastVisitDate}
+                        </span>
+                      </td>
+                      <td className="px-3 sm:px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleLeadClick(lead)}
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title={t('viewDetails')}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEditLead(lead)}
+                            className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                            title={t('editLead')}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteLead(lead)}
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                            title={t('deleteLead')}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              {filteredLeads?.length === 0 && !isLoadingLeads && (
                 <tr>
                   <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
                     {searchTerm ? t('noLeadsFound') : t('noLeadsAvailable')}

@@ -3,8 +3,11 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X, User, Phone, Mail, DollarSign, Building, Globe, Target } from 'lucide-react';
-import { LeadStatus } from '../../types';
-import { getCookie } from '../../lib/cookieHelper';
+import { Lead, LeadStatus, Property } from '../../types';
+import { User as UserType } from '../../types';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 
 interface AddLeadModalProps {
   isOpen: boolean;
@@ -12,27 +15,85 @@ interface AddLeadModalProps {
 }
 
 const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
-  const { users, properties, addLead } = useData();
+  // const { users, properties, addLead } = useData();
+  const queryClient = useQueryClient();
+  const { data: users, isLoading: isLoadingUsers } = useQuery<UserType[]>({
+    queryKey: ['users'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getUsers()
+  });
+  const getUsers = async () => {
+    const response = await axiosInterceptor.get('/auth/users');
+    return response.data as UserType[];
+  }
+  const { data: properties, isLoading: isLoadingProperties } = useQuery<Property[]>({
+    queryKey: ['properties'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProperties()
+  });
+  const getProperties = async () => {
+    const response = await axiosInterceptor.get('/properties');
+    console.log("response properties", response.data.properties);
+    return response.data.properties as Property[];
+  }
+  const addLead = async (lead: Lead) => {
+    const response = await axiosInterceptor.post('/leads/create', lead);
+    return response.data.data.lead;
+  }
+  const { mutateAsync: addLeadMutation, isPending: isAddingLead } = useMutation({
+    mutationFn: (lead: Lead) => addLead(lead),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success("Lead added successfully");
+      setFormData({
+        nameEn: '',
+        nameAr: '',
+        contact: '',
+        email: '',
+        budget: '',
+        inventoryInterestId: '',
+        source: '',
+        status: LeadStatus.FRESH_LEAD,
+        assignedTo: ''
+      });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast.error(error.response.data.message);
+      setError("Error adding lead: " + error.message);
+      setFormData({
+        nameEn: '',
+        nameAr: '',
+        contact: '',
+        email: '',
+        budget: '',
+        inventoryInterestId: '',
+        source: '',
+        status: LeadStatus.FRESH_LEAD,
+        assignedTo: ''
+      });
+      onClose();
+    }
+  });
+
   const { user } = useAuth();
   const { t, i18n } = useTranslation('leads');
   const [formData, setFormData] = useState({
     nameEn: '',
     nameAr: '',
-    phone: '',
+    contact: '',
     email: '',
     budget: '',
-    inventoryInterest: '',
+    inventoryInterestId: '',
     source: '',
     status: LeadStatus.FRESH_LEAD as LeadStatus,
     assignedTo: ''
   });
   const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsSubmitting(true);
 
     try {
       // Create combined name based on current language
@@ -40,44 +101,28 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         ? (formData.nameAr || formData.nameEn)
         : (formData.nameEn || formData.nameAr);
 
-      // Get the selected property title if inventoryInterest is selected
-      const selectedProperty = properties.find(p => p.id === formData.inventoryInterest);
-      const inventoryInterest = selectedProperty ? selectedProperty.title : '';
 
-      // Add the new lead using DataContext
-      addLead({
-        name: combinedName,
+      addLeadMutation({
         nameEn: formData.nameEn,
         nameAr: formData.nameAr,
-        phone: formData.phone,
+        contact: formData.contact,
         email: formData.email,
         budget: formData.budget,
-        inventoryInterest: inventoryInterest,
+        inventoryInterestId: formData.inventoryInterestId,
         source: formData.source,
         status: formData.status as LeadStatus,
         lastCallDate: '------',
         lastVisitDate: '------',
         assignedTo: formData.assignedTo,
-        createdBy: user?.name || 'Unknown'
+        createdBy: user?.name || 'Unknown',
+        createdAt: new Date().toISOString(),
       });
 
       // Reset form and close modal
-      setFormData({
-        nameEn: '',
-        nameAr: '',
-        phone: '',
-        email: '',
-        budget: '',
-        inventoryInterest: '',
-        source: '',
-        status: LeadStatus.FRESH_LEAD,
-        assignedTo: ''
-      });
-      onClose();
+
     } catch (err: any) {
+      // toast.error(err.response.data.message);
       setError("Error adding lead: " + err.message);
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -165,8 +210,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                 <div className="relative">
                   <input
                     type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    value={formData.contact}
+                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
                     required
                   />
@@ -210,18 +255,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                       let assignableUsers = users;
 
                       if (user?.role === 'sales_rep') {
-                        assignableUsers = users.filter(u => u.name === user.name);
+                        assignableUsers = users!.filter(u => u.name === user.name);
                       } else if (user?.role === 'team_leader') {
-                        assignableUsers = users.filter(u =>
+                        assignableUsers = users!.filter(u =>
                           u.name === user.name ||
                           (u.role === 'sales_rep' && u.teamId === user.teamId)
                         );
                       } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-                        assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin');
+                        assignableUsers = users!.filter(u => u.role !== 'admin' || user?.role === 'admin');
                       }
 
-                      return assignableUsers.map(user => (
-                        <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
+                      return assignableUsers!.map(user => (
+                        <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
                       ));
                     })()}
                   </select>
@@ -248,12 +293,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                 <label className="block text-sm font-medium text-gray-700">{t('inventoryInterest')}</label>
                 <div className="relative">
                   <select
-                    value={formData.inventoryInterest}
-                    onChange={e => setFormData({ ...formData, inventoryInterest: e.target.value })}
+                    value={formData.inventoryInterestId}
+                    onChange={e => {
+                      console.log("e.target.value", e.target.value);
+                      return setFormData({ ...formData, inventoryInterestId: e.target.value });
+                    }}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
                   >
                     <option value="">{t('selectPropertyType')}</option>
-                    {properties.map((item: any) => (
+                    {properties?.map((item: Property) => (
                       <option key={item.id} value={item.id}>{item.title}</option>
                     ))}
                   </select>
@@ -321,10 +369,10 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isAddingLead}
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 shadow-lg font-semibold transition-all duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
             >
-              {isSubmitting ? (
+              {isAddingLead ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Adding...</span>
