@@ -17,8 +17,6 @@ import './i18n';
 import './styles/rtl.css';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
-import axiosInterceptor from '../axiosInterceptor/axiosInterceptor';
-import { Developer, Lead, Meeting, Property, User, Zone } from './types';
 import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProperties, getUsers, getZones } from './queries/queries';
 
 // Custom hook for managing persisted view state with URL sync
@@ -67,6 +65,7 @@ const usePersistedView = (defaultView: string) => {
 };
 
 const AppContent: React.FC = () => {
+  const { checkAuth } = useAuth();
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const { rtlMargin } = useLanguage();
@@ -74,47 +73,51 @@ const AppContent: React.FC = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    queryClient.prefetchQuery({
-      queryKey: ['developers'],
-      queryFn: () => getDevelopers(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['zones'],
-      queryFn: () => getZones(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['leads'],
-      queryFn: () => getLeads(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['users'],
-      queryFn: () => getUsers(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['properties'],
-      queryFn: () => getProperties(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['meetings'],
-      queryFn: () => getMeetings(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['contracts'],
-      queryFn: () => getContracts(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-    queryClient.prefetchQuery({
-      queryKey: ['logs'],
-      queryFn: () => getLogs(),
-      staleTime: 1000 * 60 * 5 // 5 minutes
-    });
-  }, []);
+    console.log("isAuthenticated", isAuthenticated);
+    checkAuth();
+    if (isAuthenticated) {
+      queryClient.prefetchQuery({
+        queryKey: ['developers'],
+        queryFn: () => getDevelopers(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['zones'],
+        queryFn: () => getZones(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['leads'],
+        queryFn: () => getLeads(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['users'],
+        queryFn: () => getUsers(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['properties'],
+        queryFn: () => getProperties(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['meetings'],
+        queryFn: () => getMeetings(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['contracts'],
+        queryFn: () => getContracts(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['logs'],
+        queryFn: () => getLogs(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+    }
+  }, [isAuthenticated]);
 
 
   // Update page title with company name
