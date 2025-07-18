@@ -3,12 +3,12 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
 
 // RTL Responsive Wrapper Component
-const RTLWrapper: React.FC<{ children: React.ReactNode; className?: string }> = ({ 
-  children, 
-  className = "" 
+const RTLWrapper: React.FC<{ children: React.ReactNode; className?: string }> = ({
+  children,
+  className = ""
 }) => {
   const { isRTL } = useLanguage();
-  
+
   return (
     <div className={`rtl-responsive-wrapper ${className}`} dir={isRTL ? 'rtl' : 'ltr'}>
       {children}
@@ -27,7 +27,7 @@ const TestTranslation: React.FC = () => {
   return (
     <div className="p-6 bg-white rounded-lg shadow-md">
       <h2 className="text-2xl font-bold mb-4">RTL Responsive Test</h2>
-      
+
       <div className="mb-6">
         <h3 className="text-lg font-semibold mb-2">Current Language: {language}</h3>
         <h3 className="text-lg font-semibold mb-2">RTL Mode: {isRTL ? 'Yes' : 'No'}</h3>
@@ -78,7 +78,7 @@ const TestTranslation: React.FC = () => {
             <span>Label:</span>
             <input type="text" placeholder="Input field" className="border p-2 rounded" />
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <span>Another Label:</span>
             <select className="border p-2 rounded">
