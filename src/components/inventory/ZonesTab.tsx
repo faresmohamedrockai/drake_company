@@ -89,7 +89,6 @@ const ZonesTab: React.FC = () => {
 
   const [filteredZones, setFilteredZones] = useState<Zone[]>([]);
   useEffect(() => {
-    console.log(zones);
     const filteredZones = zones?.filter(zone =>
       getZoneName(zone).toLowerCase().includes(searchTerm.toLowerCase()) ||
       zone.description.toLowerCase().includes(searchTerm.toLowerCase())

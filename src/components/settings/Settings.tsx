@@ -58,7 +58,6 @@ const Settings: React.FC = () => {
     queryKey: ['users'],
     queryFn: () => getUsers(),
   })
-  console.log("usersDataQuery", usersDataQuery);
   // setUsersData(usersDataQuery as User[]);
   const { user } = useAuth();
   const { t } = useTranslation('settings');
@@ -104,7 +103,6 @@ const Settings: React.FC = () => {
 
   const getUsers = async () => {
     const response = await axiosInterceptor.get('auth/users');
-    console.log("response", response.data);
     return response.data as User[];
   }
   // Define tabs based on role permissions

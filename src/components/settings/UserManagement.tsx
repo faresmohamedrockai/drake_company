@@ -9,7 +9,6 @@ import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
-  console.log("users", users);
   // const { addUser, deleteUser } = useData();
   const { user: currentUser } = useAuth();
   const { isRTL, rtlClass, rtlMargin } = useLanguage();

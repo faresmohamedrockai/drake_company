@@ -295,7 +295,6 @@ const ProjectsTab: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("projects", projects);
     if (projects) {
       setFilteredProjects(projects?.filter((project: Project | any) =>
         getProjectName(project).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -305,9 +304,7 @@ const ProjectsTab: React.FC = () => {
     }
   }, [projects, searchTerm, developers, zones]);
 
-  useEffect(() => {
-    console.log("filteredProjects", filteredProjects);
-  }, [filteredProjects]);
+
 
   const handleAddPlan = (isEdit = false) => {
     if (isEdit) {
@@ -344,7 +341,6 @@ const ProjectsTab: React.FC = () => {
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("newProject", newProject);
     addProjectMutation(newProject);
   };
 

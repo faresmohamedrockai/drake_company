@@ -21,7 +21,6 @@ import { use } from 'i18next';
 const MeetingsManagement: React.FC = () => {
   const [toastId, setToastId] = useState<Id | null>(null);
 
-  console.log("MeetingsManagement");
   const { data: meetings } = useQuery<Meeting[]>({
     queryKey: ['meetings'],
     staleTime: 1000 * 60 * 5,
@@ -324,7 +323,6 @@ const MeetingsManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("meetings", meetings);
     if (meetings) {
       setFilteredMeetings(getFilteredMeetings() || []);
     }

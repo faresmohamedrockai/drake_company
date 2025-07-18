@@ -192,7 +192,6 @@ const ContractsManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("contracts", contracts);
     if (contracts) {
       setFilteredContracts(contracts);
     }

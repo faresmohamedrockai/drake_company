@@ -9,9 +9,7 @@ export const getDevelopers = async () => {
 }
 
 export const getZones = async () => {
-    console.log("getZones");
     const response = await axiosInterceptor.get('/zones');
-    console.log("response", response);
     return response.data.zones as Zone[];
 }
 
@@ -27,7 +25,6 @@ export const getUsers = async () => {
 
 export const getProperties = async () => {
     const response = await axiosInterceptor.get('/properties');
-    console.log("responseaasdads", response.data.properties);
     return response.data.properties as Property[];
 }
 

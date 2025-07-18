@@ -175,7 +175,6 @@ const DevelopersTab: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("developers", developers);
     if (developers) {
       setFilteredDevelopers(developers.filter((developer: any) =>
         getDeveloperName(developer).toLowerCase().includes(searchTerm.toLowerCase()) ||

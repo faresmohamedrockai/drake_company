@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Id, toast } from 'react-toastify';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { Zone } from './ZonesTab';
-import { Developer } from './DevelopersTab';
+import { Developer } from '../../types';
 import { Lead } from '../../types';
 
 // Fix default marker icon for leaflet in React
@@ -423,7 +423,7 @@ const PropertiesTab: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("properties", properties);
+    // console.log("properties", properties);
     const filteredProperties = properties?.filter(property =>
       (getPropertyName(property).toLowerCase().includes(searchTerm.toLowerCase()) ||
         getPropertyType(property.type).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -458,11 +458,11 @@ const PropertiesTab: React.FC = () => {
       setReportError('No client found with this number. Please check and try again.');
       return;
     }
-    if (user?.role === 'sales_rep' && found.assignedTo !== user.name) {
+    if (user?.role === 'sales_rep' && found.assignedToId !== user.id) {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
-    if (user?.role === 'team_leader' && found.assignedTo !== user.name && !(user.teamId && found.assignedTo.includes(user.teamId))) {
+    if (user?.role === 'team_leader' && found.assignedToId !== user.id && !(user.teamId && found.assignedToId.includes(user.teamId))) {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
@@ -967,7 +967,7 @@ const PropertiesTab: React.FC = () => {
                         if (plan) {
                           const price = Number(form.price || 0);
                           const schedule = generatePaymentSchedule(price, plan);
-                          console.log("schedule", schedule);
+                          // console.log("schedule", schedule);
                           return (
                             <div className="mt-4">
                               <div className="font-semibold mb-1">{t('selectedPaymentPlan')}:</div>

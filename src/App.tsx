@@ -74,7 +74,6 @@ const AppContent: React.FC = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    console.log("queryClient");
     queryClient.prefetchQuery({
       queryKey: ['developers'],
       queryFn: () => getDevelopers(),

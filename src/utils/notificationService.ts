@@ -242,16 +242,6 @@ class NotificationService {
     text: string;
   }): Promise<void> {
     // In a real implementation, this would use a service like SendGrid, AWS SES, or similar
-    console.log('Sending email:', {
-      to: emailData.to,
-      subject: emailData.subject,
-      smtpHost: this.settings.email.smtpHost,
-      smtpPort: this.settings.email.smtpPort,
-      fromEmail: this.settings.email.fromEmail,
-    });
-
-    // Simulate email sending
-    await new Promise(resolve => setTimeout(resolve, 1000));
   }
 
   // Email templates

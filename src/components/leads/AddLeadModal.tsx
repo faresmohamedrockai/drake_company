@@ -33,7 +33,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   });
   const getProperties = async () => {
     const response = await axiosInterceptor.get('/properties');
-    console.log("response properties", response.data.properties);
     return response.data.properties as Property[];
   }
   const addLead = async (lead: Lead) => {
@@ -113,7 +112,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         status: formData.status as LeadStatus,
         lastCallDate: '------',
         lastVisitDate: '------',
-        assignedTo: formData.assignedTo,
+        assignedToId: formData.assignedTo,
         createdBy: user?.name || 'Unknown',
         createdAt: new Date().toISOString(),
       });
@@ -295,7 +294,6 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <select
                     value={formData.inventoryInterestId}
                     onChange={e => {
-                      console.log("e.target.value", e.target.value);
                       return setFormData({ ...formData, inventoryInterestId: e.target.value });
                     }}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
