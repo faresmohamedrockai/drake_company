@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const axiosInterceptor = axios.create({
-    baseURL: 'https://crm-backend-production-d062.up.railway.app/api',
+    baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
 });
 
 axiosInterceptor.interceptors.request.use((config) => {
