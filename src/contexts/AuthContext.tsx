@@ -8,6 +8,7 @@ export interface User {
   email: string;
   role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep';
   teamId?: string;
+  image?: string | null;
 }
 
 interface AuthContextType {

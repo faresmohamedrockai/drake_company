@@ -17,13 +17,15 @@ import {
 } from 'lucide-react';
 import { User as UserType } from '../../types';
 import UserProfileModal from '../settings/UserProfileModal';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-interface SidebarProps {
-  currentView: string;
-  setCurrentView: (view: string) => void;
-}
+// Remove SidebarProps
+// interface SidebarProps {
+//   currentView: string;
+//   setCurrentView: (view: string) => void;
+// }
 
-const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
+const Sidebar: React.FC = () => {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { language, setLanguage, isRTL, rtlPosition } = useLanguage();
@@ -31,6 +33,8 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const toggleLanguage = () => {
     setIsSwitching(true);
@@ -41,13 +45,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
   };
 
   const menuItems = [
-    { id: 'dashboard', label: t('navigation.dashboard'), icon: Home },
-    { id: 'leads', label: t('navigation.leads'), icon: Users },
-    { id: 'inventory', label: t('navigation.inventory'), icon: Building2 },
-    { id: 'meetings', label: t('navigation.meetings'), icon: Calendar },
-    { id: 'contracts', label: t('navigation.contracts'), icon: FileText, adminOnly: true, salesAdminOnly: true },
-    { id: 'reports', label: t('navigation.reports'), icon: BarChart3, adminOnly: true },
-    { id: 'settings', label: t('navigation.settings'), icon: Settings },
+    { id: 'dashboard', label: t('navigation.dashboard'), icon: Home, path: '/dashboard' },
+    { id: 'leads', label: t('navigation.leads'), icon: Users, path: '/leads' },
+    { id: 'inventory', label: t('navigation.inventory'), icon: Building2, path: '/inventory' },
+    { id: 'meetings', label: t('navigation.meetings'), icon: Calendar, path: '/meetings' },
+    { id: 'contracts', label: t('navigation.contracts'), icon: FileText, path: '/contracts', adminOnly: true, salesAdminOnly: true },
+    { id: 'reports', label: t('navigation.reports'), icon: BarChart3, path: '/reports', adminOnly: true },
+    { id: 'settings', label: t('navigation.settings'), icon: Settings, path: '/settings' },
   ];
 
   // Sidebar content for reuse
@@ -130,14 +134,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
             
             if (!hasAccess) return null;
 
+            const isActive = location.pathname.startsWith(item.path);
+
             return (
               <li key={item.id}>
                 <button
                   onClick={() => {
-                    setCurrentView(item.id);
+                    navigate(item.path);
                     setSidebarOpen(false); // close sidebar on mobile after click
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${currentView === item.id
+                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${isActive
                       ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}

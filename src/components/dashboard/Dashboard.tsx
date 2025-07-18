@@ -13,6 +13,9 @@ import {
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { motion } from 'framer-motion';
+import LeadsSummaryCards from '../leads/LeadsSummaryCards';
+import { useNavigate } from 'react-router-dom';
+import UserFilterSelect from '../leads/UserFilterSelect';
 
 interface DashboardProps {
   setCurrentView?: (view: string) => void;
@@ -58,8 +61,9 @@ const useCountAnimation = (endValue: number, duration: number = 2000, delay: num
 
 const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { user } = useAuth();
-  const { getStatistics, getPreviousStats, getChangeForStat, activities } = useData();
+  const { getStatistics, getPreviousStats, getChangeForStat, activities, leads, users } = useData();
   const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
   
   const stats = getStatistics(user ? { name: user.name, role: user.role, teamId: user.teamId } : undefined);
   const prevStats = getPreviousStats ? getPreviousStats() || stats : stats; // fallback to current if none
@@ -162,6 +166,87 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     { stage: t('meetingsToDeals'), value: stats.conversionRates.meetingsToDeals }
   ];
 
+  // --- LEADS SUMMARY CARDS LOGIC (copied and adapted from LeadsList) ---
+  // Helper to add spaces to camelCase or PascalCase
+  function addSpacesToCamelCase(text: string) {
+    return text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/\b([A-Z])([A-Z]+)\b/g, '$1 $2');
+  }
+  // Helper to get translated label for cards, fallback to humanized label
+  function getCardLabel(key: string, t: (k: string) => string) {
+    const translated = t(key);
+    return translated !== key ? translated : addSpacesToCamelCase(key);
+  }
+  // Status cards
+  const [selectedManager, setSelectedManager] = useState('');
+  const [selectedSalesRep, setSelectedSalesRep] = useState('');
+  // Filter leads based on user role and selected manager/sales rep
+  let filteredLeads = leads;
+  if (user?.role === 'sales_rep') {
+    filteredLeads = leads.filter(lead => lead.assignedTo === user.name);
+  } else if (user?.role === 'team_leader') {
+    const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
+    filteredLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
+    if (selectedSalesRep) {
+      filteredLeads = filteredLeads.filter(lead => lead.assignedTo === selectedSalesRep);
+    }
+  } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
+    if (selectedManager) {
+      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager).map(u => u.name);
+      filteredLeads = leads.filter(lead => lead.assignedTo === selectedManager || salesReps.includes(lead.assignedTo));
+    }
+    if (selectedSalesRep) {
+      filteredLeads = filteredLeads.filter(lead => lead.assignedTo === selectedSalesRep);
+    }
+  }
+  // Use filteredLeads for dashboardCards, callOutcomeCards, visitStatusCards
+  const dashboardCards = [
+    { key: 'all', label: getCardLabel('allLeads', t), count: filteredLeads.length },
+    { key: 'duplicate', label: getCardLabel('duplicateLeads', t), count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx).length },
+    { key: 'fresh_lead', label: getCardLabel('freshLeads', t), count: filteredLeads.filter(lead => lead.status === 'fresh_lead').length },
+    { key: 'cold_call', label: getCardLabel('coldCalls', t), count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
+    { key: 'follow_up', label: getCardLabel('followUp', t), count: filteredLeads.filter(lead => lead.status === 'follow_up').length },
+    { key: 'scheduled_visit', label: getCardLabel('scheduledVisit', t), count: filteredLeads.filter(lead => lead.status === 'scheduled_visit').length },
+    { key: 'open_deal', label: getCardLabel('openDeal', t), count: filteredLeads.filter(lead => lead.status === 'open_deal').length },
+    { key: 'closed_deal', label: getCardLabel('closedDeal', t), count: filteredLeads.filter(lead => lead.status === 'closed_deal').length },
+    { key: 'cancellation', label: getCardLabel('cancellation', t), count: filteredLeads.filter(lead => lead.status === 'cancellation').length },
+    { key: 'no_answer', label: getCardLabel('noAnswer', t), count: filteredLeads.filter(lead => lead.status === 'no_answer').length },
+    { key: 'not_interested_now', label: getCardLabel('notInterestedNow', t), count: filteredLeads.filter(lead => lead.status === 'not_interested_now').length },
+    { key: 'reservation', label: getCardLabel('reservation', t), count: filteredLeads.filter(lead => lead.status === 'reservation').length },
+  ];
+  const compactCards = dashboardCards.slice(0, 4);
+  const fullCards = dashboardCards;
+
+  // Extract unique call outcomes and visit statuses
+  const allCallOutcomes = Array.from(new Set(filteredLeads.flatMap(lead => (lead.calls || []).map(call => call.outcome)))).filter(Boolean);
+  const allVisitStatuses = Array.from(new Set(filteredLeads.flatMap(lead => (lead.visits || []).map(visit => visit.status)))).filter(Boolean);
+
+  // Count leads for each outcome/status (always from all leads)
+  const callOutcomeCards = allCallOutcomes.map(outcome => ({
+    key: outcome,
+    label: getCardLabel(outcome, t),
+    count: filteredLeads.filter(lead => (lead.calls || []).some(call => call.outcome === outcome)).length,
+  }));
+  const visitStatusCards = allVisitStatuses.map(status => ({
+    key: status,
+    label: getCardLabel(status, t),
+    count: filteredLeads.filter(lead => (lead.visits || []).some(visit => visit.status === status)).length,
+  }));
+
+  // --- END LEADS SUMMARY CARDS LOGIC ---
+
+  // Card click handlers for navigation
+  const handleStatusCardClick = (key: string) => {
+    navigate(`/leads?filterType=status&filterValue=${encodeURIComponent(key)}`);
+  };
+  const handleCallOutcomeCardClick = (key: string) => {
+    navigate(`/leads?filterType=callOutcome&filterValue=${encodeURIComponent(key)}`);
+  };
+  const handleVisitStatusCardClick = (key: string) => {
+    navigate(`/leads?filterType=visitStatus&filterValue=${encodeURIComponent(key)}`);
+  };
+
+  const [showAllStatusCards, setShowAllStatusCards] = useState(false);
+
   return (
     <motion.div
       className="p-6 bg-gray-50 min-h-screen"
@@ -230,6 +315,42 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
           );
         })}
       </div>
+
+      {/* Show More/Less Toggle for Status Cards */}
+      <div className="flex justify-end mb-6"> {/* Increased mb-2 to mb-6 for more space below cards */}
+        {dashboardCards.length > 4 && (
+          <button
+            onClick={() => setShowAllStatusCards((v) => !v)}
+            className="flex items-center px-4 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors text-gray-700 text-base font-medium shadow-sm"
+          >
+            {showAllStatusCards ? (t('showLess') !== 'showLess' ? t('showLess') : 'Show Less') : (t('showMore') !== 'showMore' ? t('showMore') : 'Show More')}
+          </button>
+        )}
+      </div>
+      {/* User Filter Select for Manager/Sales Rep */}
+      {user && (
+        <UserFilterSelect
+          currentUser={user}
+          users={users as import('../../contexts/AuthContext').User[]}
+          selectedManager={selectedManager}
+          setSelectedManager={setSelectedManager}
+          selectedSalesRep={selectedSalesRep}
+          setSelectedSalesRep={setSelectedSalesRep}
+        />
+      )}
+      <LeadsSummaryCards
+        statusCards={dashboardCards}
+        callOutcomeCards={callOutcomeCards}
+        visitStatusCards={visitStatusCards}
+        onStatusCardClick={handleStatusCardClick}
+        onCallOutcomeCardClick={handleCallOutcomeCardClick}
+        onVisitStatusCardClick={handleVisitStatusCardClick}
+        showAllStatusCards={showAllStatusCards}
+        onShowAllStatusCardsToggle={() => setShowAllStatusCards((v) => !v)}
+      />
+
+      {/* Add extra space between cards and Conversion Rates & Metrics */}
+      <div className="mb-10" />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Conversion Rates Chart */}

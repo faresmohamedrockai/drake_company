@@ -13,6 +13,10 @@ interface LeadModalProps {
   onClose: () => void;
 }
 
+function addSpacesToCamelCase(text: string) {
+  return text.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
 const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const { updateLead, addCallLog, addVisitLog, addNote, projects, leads } = useData();
   const { user } = useAuth();
@@ -64,6 +68,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   ];
   const isCancelled = currentLead.status === 'cancellation';
   const currentStatusIndex = isCancelled ? -1 : statusStages.findIndex(s => s.value === currentLead.status);
+
+  // Only show main stages in the progress bar
+  const progressBarSpecialStatuses = ['no_answer', 'not_interested_now', 'reservation'];
+  const isSpecialStatus = progressBarSpecialStatuses.includes(currentLead.status);
 
   const handleStatusUpdate = (newStatus: Lead['status']) => {
     if (canEdit) {
@@ -195,51 +203,76 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           {/* Animated Deal Progress Bar */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">{t('dealProgress')}</label>
-            <div className="flex items-center justify-center space-x-0 md:space-x-3 overflow-x-auto py-2 w-full">
-              {statusStages.map((stage, index) => {
-                const isCompleted = !isCancelled && index < currentStatusIndex;
-                const isActive = !isCancelled && index === currentStatusIndex;
-                return (
-                  <React.Fragment key={stage.id}>
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0.5 }}
-                      animate={{ scale: isActive ? 1.1 : 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                      className={`flex flex-col items-center relative`}
-                    >
-                      <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
-                          ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
-                            isCompleted ? 'bg-green-500 border-green-500 text-white' :
-                            isActive ? 'bg-blue-600 border-blue-600 text-white' :
-                            'bg-gray-200 border-gray-300 text-gray-600'}
-                        `}
-                      >
-                        {index + 1}
-                      </div>
-                      <span className={`mt-2 text-xs font-medium text-center w-20
-                        ${isCancelled ? 'text-red-500' :
-                          isCompleted ? 'text-green-600' :
-                          isActive ? 'text-blue-600' :
-                          'text-gray-500'}
-                      `}>{stage.label}</span>
-                    </motion.div>
-                    {index < statusStages.length - 1 && (
+            {isSpecialStatus ? (
+              <div className="flex items-center justify-center py-4">
+                <div
+                  className={`w-40 h-10 rounded-full flex items-center justify-center text-base font-bold border-2 transition-colors duration-300
+                    ${currentLead.status === 'reservation'
+                      ? 'bg-blue-500 border-blue-500 text-white'
+                      : currentLead.status === 'not_interested_now'
+                      ? 'bg-gray-100 border-gray-400 text-gray-700 font-semibold text-sm shadow-md'
+                      : 'bg-orange-400 border-orange-500 text-white'}
+                  `}
+                  style={currentLead.status === 'not_interested_now' ? { letterSpacing: '0.5px' } : {}}
+                >
+                  {addSpacesToCamelCase(
+                    t(
+                      currentLead.status === 'no_answer'
+                        ? 'noAnswer'
+                        : currentLead.status === 'not_interested_now'
+                        ? 'notInterestedNow'
+                        : 'reservation'
+                    )
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center space-x-0 md:space-x-3 overflow-x-auto py-2 w-full">
+                {statusStages.map((stage, index) => {
+                  const isCompleted = !isCancelled && index < currentStatusIndex;
+                  const isActive = !isCancelled && index === currentStatusIndex;
+                  return (
+                    <React.Fragment key={stage.id}>
                       <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: 40 }}
-                        transition={{ duration: 0.5, delay: 0.1 * index }}
-                        className={`h-1 mx-1 md:mx-2 rounded-full transition-colors duration-300
-                          ${isCancelled ? 'bg-red-500' :
-                            index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
-                        `}
-                        style={{ minWidth: 24, maxWidth: 40 }}
-                      />
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
+                        initial={{ scale: 0.8, opacity: 0.5 }}
+                        animate={{ scale: isActive ? 1.1 : 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        className={`flex flex-col items-center relative`}
+                      >
+                        <div
+                          className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
+                            ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
+                              isCompleted ? 'bg-green-500 border-green-500 text-white' :
+                              isActive ? 'bg-blue-600 border-blue-600 text-white' :
+                              'bg-gray-200 border-gray-300 text-gray-600'}
+                          `}
+                        >
+                          {index + 1}
+                        </div>
+                        <span className={`mt-2 text-xs font-medium text-center w-20
+                          ${isCancelled ? 'text-red-500' :
+                            isCompleted ? 'text-green-600' :
+                            isActive ? 'text-blue-600' :
+                            'text-gray-500'}
+                        `}>{stage.label}</span>
+                      </motion.div>
+                      {index < statusStages.length - 1 && (
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: 40 }}
+                          transition={{ duration: 0.5, delay: 0.1 * index }}
+                          className={`h-1 mx-1 md:mx-2 rounded-full transition-colors duration-300
+                            ${isCancelled ? 'bg-red-500' :
+                              index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
+                          `}
+                          style={{ minWidth: 24, maxWidth: 40 }}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            )}
             {isCancelled && (
               <div className="mt-1 text-xs text-red-600 font-semibold text-center">{t('dealCancelled')}</div>
             )}
@@ -265,7 +298,14 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <select
                 value={currentLead.status}
                 onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
+                  ${currentLead.status === 'reservation'
+                    ? 'text-blue-600'
+                    : currentLead.status === 'not_interested_now'
+                    ? 'text-gray-600'
+                    : currentLead.status === 'no_answer'
+                    ? 'text-orange-500'
+                    : ''}`}
               >
                 <option value="fresh_lead">{t('freshLead')}</option>
                 <option value="follow_up">{t('followUp')}</option>
@@ -273,6 +313,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <option value="open_deal">{t('openDeal')}</option>
                 <option value="closed_deal">{t('closedDeal')}</option>
                 <option value="cancellation">{t('cancellation')}</option>
+                <option value="not_interested_now" className="text-gray-600">
+                  {addSpacesToCamelCase(t('notInterestedNow'))}
+                </option>
+                <option value="no_answer" className="text-orange-500">
+                  {addSpacesToCamelCase(t('noAnswer'))}
+                </option>
+                <option value="reservation" className="text-blue-600">{t('reservation')}</option>
               </select>
             )}
           </div>

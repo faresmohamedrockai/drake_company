@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
@@ -15,91 +15,18 @@ import Settings from './components/settings/Settings';
 import { AnimatePresence, motion } from 'framer-motion';
 import './i18n';
 import './styles/rtl.css';
-import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
 import axiosInterceptor from '../axiosInterceptor/axiosInterceptor';
 import { Developer, Zone } from './types';
-
-// Custom hook for managing persisted view state with URL sync
-const usePersistedView = (defaultView: string) => {
-  const [currentView, setCurrentView] = useState(() => {
-    // First try to get from URL query parameter
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlView = urlParams.get('page');
-
-    if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
-      return urlView;
-    }
-
-    // Then try to get the saved view from sessionStorage
-    const savedView = sessionStorage.getItem('propai-current-view');
-    return savedView || defaultView;
-  });
-
-  // Update URL and sessionStorage whenever currentView changes
-  useEffect(() => {
-    // Update URL query parameter
-    const url = new URL(window.location.href);
-    url.searchParams.set('page', currentView);
-    window.history.replaceState({}, '', url.toString());
-
-    // Save to sessionStorage
-    sessionStorage.setItem('propai-current-view', currentView);
-  }, [currentView]);
-
-  // Listen for browser back/forward buttons
-  useEffect(() => {
-    const handlePopState = () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlView = urlParams.get('page');
-
-      if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
-        setCurrentView(urlView);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  return [currentView, setCurrentView] as const;
-};
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const { rtlMargin } = useLanguage();
-  const [currentView, setCurrentView] = usePersistedView('dashboard');
-  // const queryClient = useQueryClient();
-  // const getDevelopers = async () => {
-  //   const response = await axiosInterceptor.get('/developers');
+  const location = useLocation();
 
-  //   return response.data.developers as Developer[];
-  // }
-
-  // const getZones = async () => {
-  //   console.log("getZones");
-  //   const response = await axiosInterceptor.get('/zones');
-  //   console.log("response", response);
-  //   return response.data.zones as Zone[];
-  // }
-
-  // useEffect(() => {
-  //   console.log("queryClient");
-  //   queryClient.prefetchQuery({
-  //     queryKey: ['developers'],
-  //     queryFn: () => getDevelopers(),
-  //     staleTime: 1000 * 60 * 5 // 5 minutes
-  //   });
-  //   queryClient.prefetchQuery({
-  //     queryKey: ['zones'],
-  //     queryFn: () => getZones(),
-  //     staleTime: 1000 * 60 * 5 // 5 minutes
-  //   });
-  // }, []);
-
-
-  // Update page title with company name
   useEffect(() => {
     const companyName = settings?.companyName || 'Propai';
     document.title = `${companyName} - Real Estate CRM`;
@@ -109,41 +36,30 @@ const AppContent: React.FC = () => {
     return <Login />;
   }
 
-  const renderView = () => {
-    switch (currentView) {
-      case 'dashboard':
-        return <Dashboard setCurrentView={setCurrentView} />;
-      case 'leads':
-        return <LeadsList />;
-      case 'inventory':
-        return <InventoryManagement />;
-      case 'meetings':
-        return <MeetingsManagement />;
-      case 'contracts':
-        return <ContractsManagement />;
-      case 'reports':
-        return <Reports />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} />
+      <Sidebar />
       <main className={`flex-1 overflow-y-auto transition-all ${rtlMargin('md:ml-64', 'md:mr-64')}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
-            key={currentView}
+            key={location.pathname}
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -30 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            transition={{ duration: 0.1, ease: 'easeOut' }}
             className="h-full"
           >
-            {renderView()}
+            <Routes location={location} key={location.pathname}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/leads" element={<LeadsList />} />
+              <Route path="/inventory" element={<InventoryManagement />} />
+              <Route path="/meetings" element={<MeetingsManagement />} />
+              <Route path="/contracts" element={<ContractsManagement />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
           </motion.div>
         </AnimatePresence>
       </main>
@@ -155,19 +71,20 @@ const App: React.FC = () => {
   const queryClient = new QueryClient();
 
   return (
-
-    <LanguageProvider>
-      <AuthProvider>
-        <DataProvider>
-          <SettingsProvider>
-            <QueryClientProvider client={queryClient}>
-              <AppContent />
-              <ToastContainer />
-            </QueryClientProvider>
-          </SettingsProvider>
-        </DataProvider>
-      </AuthProvider>
-    </LanguageProvider>
+    <BrowserRouter>
+      <LanguageProvider>
+        <AuthProvider>
+          <DataProvider>
+            <SettingsProvider>
+              <QueryClientProvider client={queryClient}>
+                <AppContent />
+                <ToastContainer />
+              </QueryClientProvider>
+            </SettingsProvider>
+          </DataProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </BrowserRouter>
   );
 };
 
