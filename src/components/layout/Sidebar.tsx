@@ -155,17 +155,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
       <div className="p-4 border-t">
         <div className="flex items-center mb-4 justify-between">
           <div className="flex items-center">
-            {/* <button
+            <button
               className="h-14 w-14 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-2xl border-4 border-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 relative overflow-hidden"
               onClick={() => setProfileModalOpen(true)}
               aria-label="Open profile"
             >
-              {user?.avatar ? (
-                <img src={user?.avatar} alt="avatar" className="object-cover w-full h-full rounded-full" />
+              {user?.image ? (
+                <img src={user?.image} alt="avatar" className="object-cover w-full h-full rounded-full" />
               ) : (
                 user?.name ? user.name.charAt(0) : '?'
               )}
-            </button> */}
+            </button>
             <div className="ml-3">
               <div className="text-base font-semibold text-gray-900">{user?.name}</div>
               <div className="text-xs text-gray-500">{user?.role}</div>
