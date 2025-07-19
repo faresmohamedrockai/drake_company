@@ -3,7 +3,16 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { Lead, LeadStatus } from '../../types';
+import { Lead, LeadStatus, Property, User } from '../../types';
+import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
+import { getLeads, getProperties, getUsers } from '../../queries/queries';
+import { Project } from '../inventory/ProjectsTab';
+import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
+import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
+import { useLanguage } from '../../contexts/LanguageContext';
+
 
 interface EditLeadModalProps {
   isOpen: boolean;
@@ -12,21 +21,55 @@ interface EditLeadModalProps {
 }
 
 const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) => {
-  const { updateLead, leads, projects, users } = useData();
+  const queryClient = useQueryClient();
+  const { data: leads } = useQuery<Lead[]>({
+    queryKey: ['leads'],
+    queryFn: getLeads,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: properties } = useQuery<Property[]>({
+    queryKey: ['properties'],
+    queryFn: getProperties,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: users } = useQuery<User[]>({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { mutateAsync: updateLead, isPending } = useMutation({
+    mutationFn: (lead: Lead) => axiosInterceptor.patch(`/leads/${lead.id}`, lead),
+    onSuccess: () => {
+      toast.success(t('leadUpdated'));
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      onClose();
+
+    },
+    onError: (error: any) => {
+      console.log("asdasdasdasda");
+      
+      console.log(error);
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.error(error.response.data.message[0] || "Error updating lead");
+    }
+  });
   const { user } = useAuth();
   const { t, i18n } = useTranslation('leads');
-  const [formData, setFormData] = useState({
+  const { language } = useLanguage();
+  const [formData, setFormData] = useState<Lead>({
     nameEn: '',
     nameAr: '',
-    phone: '',
+    contact: '',
     email: '',
     budget: '',
-    inventoryInterest: '',
+    inventoryInterestId: '',
     source: '',
     status: 'fresh_lead' as LeadStatus,
-    assignedTo: ''
+    assignedToId: ''
   });
   const [error, setError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   // Initialize form data when lead changes
   useEffect(() => {
@@ -34,13 +77,13 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       setFormData({
         nameEn: lead.nameEn || '',
         nameAr: lead.nameAr || '',
-        phone: lead.phone || '',
+        contact: lead.contact || '',
         email: lead.email || '',
         budget: lead.budget || '',
-        inventoryInterest: lead.inventoryInterest || '',
+        inventoryInterestId: lead.inventoryInterestId || '',
         source: lead.source || '',
         status: lead.status || 'fresh_lead',
-        assignedTo: lead.assignedTo || ''
+        assignedToId: lead.assignedToId || ''
       });
       setError('');
     }
@@ -49,35 +92,54 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setPhoneError('');
+    setEmailError('');
 
     if (!lead) return;
 
+    // Phone validation
+    if (!validatePhoneNumber(formData.contact)) {
+      setPhoneError(getPhoneErrorMessage(formData.contact, language));
+      return;
+    }
+
+    // Email validation (only if email is provided)
+    if (formData.email && !validateEmail(formData.email)) {
+      setEmailError(getEmailErrorMessage(formData.email, language));
+      return;
+    }
+
+    // Client-side validation
+    if (!formData.inventoryInterestId) {
+      setError('Please select an inventory interest');
+      return;
+    }
+
     // Check for duplicate phone number (excluding current lead)
-    const existingLead = leads.find(l => l.phone === formData.phone && l.id !== lead.id);
+    const existingLead = leads?.find(l => l.contact === formData.contact && l.id !== lead.id);
     if (existingLead) {
       setError(t('duplicatePhoneError'));
       return;
     }
 
     // Create combined name based on current language
-    const combinedName = i18n.language === 'ar' 
+    const combinedName = i18n.language === 'ar'
       ? (formData.nameAr || formData.nameEn)
       : (formData.nameEn || formData.nameAr);
 
-    updateLead(lead.id, {
-      name: combinedName,
+    updateLead({
+      id: lead.id,
       nameEn: formData.nameEn,
       nameAr: formData.nameAr,
-      phone: formData.phone,
+      contact: formData.contact,
       email: formData.email,
       budget: formData.budget,
-      inventoryInterest: formData.inventoryInterest,
+      inventoryInterestId: formData.inventoryInterestId,
       source: formData.source,
       status: formData.status as LeadStatus,
-      assignedTo: formData.assignedTo
+      assignedToId: formData.assignedToId,
     });
 
-    onClose();
   };
 
   if (!isOpen || !lead) return null;
@@ -130,11 +192,20 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('phoneRequired')}</label>
             <input
               type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+              value={formData.contact}
+              onChange={(e) => {
+                setFormData({ ...formData, contact: e.target.value });
+                setPhoneError(''); // Clear error when user types
+              }}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${
+                phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+              }`}
               required
+              placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
             />
+            {phoneError && (
+              <p className="text-red-600 text-sm mt-1">{phoneError}</p>
+            )}
           </div>
 
           <div className="col-span-1">
@@ -142,16 +213,25 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <input
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                setEmailError(''); // Clear error when user types
+              }}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${
+                emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+              }`}
+              placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
             />
+            {emailError && (
+              <p className="text-red-600 text-sm mt-1">{emailError}</p>
+            )}
           </div>
 
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('assignedToRequired')}</label>
             <select
-              value={formData.assignedTo}
-              onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+              value={lead?.owner?.id || ''}
+              onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
               required
             >
@@ -159,23 +239,23 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
               {(() => {
                 // Role-based user filtering for assignment
                 let assignableUsers = users;
-                
+
                 if (user?.role === 'sales_rep') {
                   // Sales Reps can only assign to themselves
-                  assignableUsers = users.filter(u => u.name === user.name);
+                  assignableUsers = users?.filter(u => u.name === user.name);
                 } else if (user?.role === 'team_leader') {
                   // Team Leaders can assign to their team members and themselves
-                  assignableUsers = users.filter(u => 
-                    u.name === user.name || 
+                  assignableUsers = users?.filter(u =>
+                    u.name === user.name ||
                     (u.role === 'sales_rep' && u.teamId === user.teamId)
                   );
                 } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                   // Sales Admin and Admin can assign to anyone
-                  assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin' || user?.role === 'sales_admin');
+                  assignableUsers = users?.filter(u => u.role !== 'admin' || user?.role === 'admin' || user?.role === 'sales_admin');
                 }
-                
-                return assignableUsers.map(user => (
-                  <option key={user.id} value={user.name}>{user.name} ({user.role})</option>
+
+                return assignableUsers?.map(user => (
+                  <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
                 ));
               })()}
             </select>
@@ -185,35 +265,27 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('budgetRequired')}</label>
             <select
               value={formData.budget}
-              onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-              required
+              onChange={e => setFormData({ ...formData, budget: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
             >
-              <option value="">{t('selectBudgetRange')}</option>
-              <option value="EGP 800,000 - 1,200,000">EGP 800,000 - 1,200,000</option>
-              <option value="EGP 1,200,000 - 1,800,000">EGP 1,200,000 - 1,800,000</option>
-              <option value="EGP 1,500,000 - 2,500,000">EGP 1,500,000 - 2,500,000</option>
-              <option value="EGP 1,800,000 - 2,500,000">EGP 1,800,000 - 2,500,000</option>
-              <option value="EGP 2,000,000 - 3,000,000">EGP 2,000,000 - 3,000,000</option>
-              <option value="EGP 2,500,000 - 3,500,000">EGP 2,500,000 - 3,500,000</option>
-              <option value="EGP 3,000,000 - 4,500,000">EGP 3,000,000 - 4,500,000</option>
-              <option value="EGP 3,500,000 - 5,000,000">EGP 3,500,000 - 5,000,000</option>
-              <option value="EGP 4,000,000 - 6,000,000">EGP 4,000,000 - 6,000,000</option>
-              <option value="EGP 5,500,000 - 8,000,000">EGP 5,500,000 - 8,000,000</option>
+              <option value="">{t('allBudgets')}</option>
+              {leads?.map((lead: Lead) => (
+                <option key={lead.id} value={lead.budget}>{lead.budget}</option>
+              ))}
             </select>
           </div>
 
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterestRequired')}</label>
             <select
-              value={formData.inventoryInterest}
-              onChange={(e) => setFormData({ ...formData, inventoryInterest: e.target.value })}
+              value={formData.inventoryInterestId}
+              onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
               required
             >
               <option value="">{t('selectPropertyType')}</option>
-              {projects.map(project => (
-                <option key={project.id} value={project.name}>{project.name}</option>
+              {properties?.map(property => (
+                <option key={property.id} value={property.id}>{property.title}</option>
               ))}
             </select>
           </div>
@@ -261,8 +333,11 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <button
               type="submit"
               className="flex-1 bg-blue-600 text-white py-2.5 sm:py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              disabled={isPending}
             >
-              {t('updateLead')}
+              {isPending ? <div className="flex items-center justify-center gap-2">
+                <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div>
+              </div> : t('updateLead')}
             </button>
             <button
               type="button"

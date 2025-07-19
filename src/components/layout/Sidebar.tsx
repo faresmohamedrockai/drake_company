@@ -56,7 +56,8 @@ const Sidebar: React.FC = () => {
 
   // Sidebar content for reuse
   const sidebarContent = (
-    <div className="bg-white shadow-lg h-full w-80 flex flex-col">
+
+    <div className="bg-white shadow-lg h-full w-100 flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b">
         <div className="flex items-center justify-between">
@@ -74,7 +75,7 @@ const Sidebar: React.FC = () => {
             ) : null}
             <Building className={`h-10 w-10 text-blue-600 mr-4 ${settings?.companyImage ? 'hidden' : ''}`} />
             {(() => {
-              const companyName = settings?.companyName || 'Propai';
+              const companyName = settings?.companyName || 'James Map';
               const words = companyName.split(' ');
               const firstLine = words.slice(0, 2).join(' ');
               const secondLine = words.length > 2 ? words.slice(2).join(' ') : null;
@@ -167,7 +168,9 @@ const Sidebar: React.FC = () => {
               aria-label="Open profile"
             >
               {user?.image ? (
-                <img src={user.image} alt="avatar" className="object-cover w-full h-full rounded-full" />
+
+                <img src={user?.image} alt="avatar" className="object-cover w-full h-full rounded-full" />
+
               ) : (
                 user?.name ? user.name.charAt(0) : '?'
               )}

@@ -1,44 +1,130 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Plus, Edit, FileText, DollarSign, Calendar, User, Trash2, Shield } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { Contract, Lead, Property } from '../../types';
+import { addContract, getContracts, getLeads, getProperties, updateContract } from '../../queries/queries';
+import { deleteContract } from '../../queries/queries';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Id, toast } from 'react-toastify';
 
-interface Contract {
-  id: string;
-  leadName: string;
-  property: string;
-  dealValue: string;
-  contractDate: string;
-  status: 'Pending' | 'Signed' | 'Cancelled';
-  createdBy: string;
-  notes: string;
-}
 
 const ContractsManagement: React.FC = () => {
-  const { contracts, addContract, updateContract, deleteContract, leads, properties } = useData();
+  // const { contracts, addContract, updateContract, deleteContract, leads, properties } = useData();
+  const [toastId, setToastId] = useState<Id | null>(null);
+  const { data: contracts } = useQuery<Contract[]>({
+    queryKey: ['contracts'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: getContracts,
+  });
+  const { data: leads } = useQuery<Lead[]>({
+    queryKey: ['leads'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: getLeads,
+  });
+  const { data: properties } = useQuery<Property[]>({
+    queryKey: ['properties'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: getProperties,
+  });
+  const queryClient = useQueryClient();
+  const { mutate: deleteContractMutation, isPending: isDeletingContract } = useMutation({
+    mutationFn: (id: string) => deleteContract(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      toast.dismiss(toastId || '');
+      setToastId(null);
+      toast.success("Contract deleted successfully");
+    },
+    onError: (error: any) => {
+      toast.dismiss(toastId || '');
+      setToastId(null);
+      toast.error(error.response.data.message[0]);
+    },
+  });
+  const { mutate: updateContractMutation, isPending: isUpdatingContract } = useMutation({
+    mutationFn: (contract: Contract) => updateContract(contract.id || '', contract),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      toast.dismiss(toastId || '');
+      setToastId(null);
+      toast.success("Contract updated successfully");
+      setShowForm(false);
+      setForm({
+        leadId: '',
+        inventoryId: '',
+        dealValue: 0,
+        contractDate: '',
+        status: 'Pending',
+        notes: '',
+        createdById: '',
+      });
+    },
+    onError: (error: any) => {
+      toast.dismiss(toastId || '');
+      setToastId(null);
+      toast.error(error.response.data.message[0]);
+    },
+  });
+  const { mutate: addContractMutation, isPending: isAddingContract } = useMutation({
+    mutationFn: (contract: Contract) => addContract(contract),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      toast.dismiss(toastId || '');
+      setToastId(null);
+      toast.success("Contract added successfully");
+      setShowForm(false);
+      setForm({
+        leadId: '',
+        inventoryId: '',
+        dealValue: 0,
+        contractDate: '',
+        status: 'Pending',
+        notes: '',
+        createdById: '',
+      });
+    },
+    onError: (error: any) => {
+      toast.dismiss(toastId || '');
+      setToastId(null);
+      toast.error(error.response.data.message[0]);
+    },
+  });
+
+  useEffect(() => {
+    if (isAddingContract) {
+      setToastId(toast.loading(`Adding contract...`));
+    }
+    if (isUpdatingContract) {
+      setToastId(toast.loading(`Updating contract...`));
+    }
+    if (isDeletingContract) {
+      setToastId(toast.loading(`Deleting contract...`));
+    }
+  }, [isAddingContract, isUpdatingContract, isDeletingContract]);
+
   const { user } = useAuth();
   const { t, i18n } = useTranslation('contracts');
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<Contract>({
     leadId: '',
-    leadName: '',
-    property: '',
-    dealValue: '',
+    inventoryId: '',
+    dealValue: 0,
     contractDate: '',
     status: 'Pending',
-    createdBy: user?.name || 'System',
-    notes: ''
+    notes: '',
+    createdById: '',
   });
+  const [filteredContracts, setFilteredContracts] = useState<Contract[]>([]);
 
 
 
 
-  
 
 
 
@@ -56,29 +142,27 @@ const ContractsManagement: React.FC = () => {
     setEditId(null);
     setForm({
       leadId: '',
-      leadName: '',
-      property: '',
-      dealValue: '',
+      inventoryId: '',
+      dealValue: 0,
       contractDate: '',
       status: 'Pending',
-      createdBy: user?.name || 'System',
-      notes: ''
+      createdById: user?.id || '',
+      notes: '',
     });
     setShowForm(true);
   };
 
   const openEditForm = (contract: any) => {
     setEditId(contract.id);
-    setForm({ ...contract, createdBy: contract.createdBy || user?.name || 'System' });
+    setForm({ ...contract, createdById: contract.createdById || user?.id || '' });
     setShowForm(true);
   };
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value, dealValue: name === 'dealValue' ? Number(value) : prev.dealValue }));
     if (name === 'leadId') {
-      const lead = leads.find(l => l.id === value);
-      setForm((prev) => ({ ...prev, leadId: value, leadName: lead ? lead.name : '' }));
+      setForm((prev) => ({ ...prev, leadId: value }));
     }
   };
 
@@ -86,16 +170,15 @@ const ContractsManagement: React.FC = () => {
     e.preventDefault();
     if (!user) return;
     if (editId) {
-      updateContract(editId, { ...form, status: form.status as 'Pending' | 'Signed' | 'Cancelled', createdBy: user.name });
+      updateContractMutation({ ...form, status: form.status as 'Pending' | 'Signed' | 'Cancelled' });
     } else {
-      addContract({ ...form, status: form.status as 'Pending' | 'Signed' | 'Cancelled', createdBy: user.name });
+      addContractMutation({ ...form, status: form.status as 'Pending' | 'Signed' | 'Cancelled' });
     }
-    setShowForm(false);
   };
 
   const handleDelete = (id: string) => {
     if (window.confirm(t('deleteConfirm'))) {
-      deleteContract(id);
+      deleteContractMutation(id);
     }
   };
 
@@ -108,11 +191,19 @@ const ContractsManagement: React.FC = () => {
     }
   };
 
-  const filteredContracts = contracts.filter(contract =>
-    contract.leadName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contract.property.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    contract.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (contracts) {
+      setFilteredContracts(contracts);
+    }
+    if (contracts && searchTerm) {
+      setFilteredContracts(contracts.filter(contract =>
+        contract.lead?.nameEn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contract.inventory?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contract.id?.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
+    }
+  }, [contracts, searchTerm]);
+
 
   // Role-based access control
   const canAccessContracts = user?.role === 'admin' || user?.role === 'sales_admin';
@@ -185,7 +276,7 @@ const ContractsManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredContracts.map((contract) => (
+              {filteredContracts?.map((contract) => (
                 <tr key={contract.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -198,11 +289,11 @@ const ContractsManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <User className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">{contract.leadName}</span>
+                      <span className="text-sm text-gray-900">{contract.lead?.nameEn}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{contract.property}</div>
+                    <div className="text-sm text-gray-900">{contract.inventory?.title}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -221,13 +312,13 @@ const ContractsManagement: React.FC = () => {
                       {translateContractStatus(contract.status)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contract.createdBy}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contract.createdBy?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <button className="text-blue-600 hover:text-blue-800 mr-3" onClick={() => openEditForm(contract)}>
                       <Edit className="h-4 w-4" />
                     </button>
-                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(contract.id)}>
-                    <Trash2 className="h-4 w-4" />
+                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(contract.id || '')}>
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
@@ -247,23 +338,23 @@ const ContractsManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.lead')}</label>
                 <select name="leadId" value={form.leadId} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">{t('form.selectLead')}</option>
-                  {leads.map(lead => (
-                    <option key={lead.id} value={lead.id}>{lead.name}</option>
+                  {leads?.map(lead => (
+                    <option key={lead.id} value={lead.id}>{lead.nameEn}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.propertyProject')}</label>
-                <select name="property" value={form.property} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+                <select name="inventoryId" value={form.inventory?.id} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">{t('form.selectProperty')}</option>
-                  {properties.map(property => (
-                    <option key={property.id} value={property.title}>{property.title}</option>
+                  {properties?.map(property => (
+                    <option key={property.id} value={property.id}>{property.title}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.dealValue')}</label>
-                <input type="text" name="dealValue" value={form.dealValue} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <input type="number" name="dealValue" value={form.dealValue} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.contractDate')}</label>
@@ -283,7 +374,7 @@ const ContractsManagement: React.FC = () => {
               </div>
               <div className="flex justify-end space-x-3">
                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">{t('actions.cancel')}</button>
-                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editId ? t('actions.update') : t('actions.add')} {t('contractDetails').toLowerCase()}</button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{editId ? isUpdatingContract ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('actions.update') : isAddingContract ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('actions.add')}  </button>
               </div>
             </form>
           </div>
@@ -292,7 +383,7 @@ const ContractsManagement: React.FC = () => {
 
       {/* Contract Details Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-8">
-        {filteredContracts.map((contract) => (
+        {filteredContracts?.map((contract) => (
           <div key={contract.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{contract.id}</h3>
@@ -300,15 +391,15 @@ const ContractsManagement: React.FC = () => {
                 {translateContractStatus(contract.status)}
               </span>
             </div>
-            
+
             <div className="space-y-3 mb-4">
               <div>
                 <span className="text-sm font-medium text-gray-700">{t('cardLabels.client')}: </span>
-                <span className="text-sm text-gray-900">{contract.leadName}</span>
+                <span className="text-sm text-gray-900">{contract.lead?.nameEn}</span>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700">{t('cardLabels.property')}: </span>
-                <span className="text-sm text-gray-900">{contract.property}</span>
+                <span className="text-sm text-gray-900">{contract.inventory?.title}</span>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700">{t('cardLabels.dealValue')}: </span>
@@ -332,3 +423,4 @@ const ContractsManagement: React.FC = () => {
 };
 
 export default ContractsManagement;
+

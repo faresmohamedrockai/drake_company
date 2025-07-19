@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useData } from '../../contexts/DataContext';
+import { useQuery } from '@tanstack/react-query';
+import { getLeads, getMeetings, getUsers } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
   Search,
-  Download,
   Filter,
   TrendingUp,
   Users,
@@ -25,7 +25,6 @@ import {
   EyeOff
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import Papa from 'papaparse';
 import { LeadStatus } from '../../types';
 
 interface UserPerformance {
@@ -64,7 +63,9 @@ interface PerformanceMetrics {
 }
 
 const Reports: React.FC = () => {
-  const { leads, meetings, users } = useData();
+  const { data: leads = [], isLoading: leadsLoading } = useQuery({ queryKey: ['leads'], queryFn: getLeads });
+  const { data: meetings = [], isLoading: meetingsLoading } = useQuery({ queryKey: ['meetings'], queryFn: getMeetings });
+  const { data: users = [], isLoading: usersLoading } = useQuery({ queryKey: ['users'], queryFn: getUsers });
   const { user: currentUser } = useAuth();
   const { t } = useTranslation('reports');
   const { language } = useLanguage();
@@ -102,8 +103,8 @@ const Reports: React.FC = () => {
 
   // Calculate user performance
   const calculateUserPerformance = (user: any): UserPerformance => {
-    const userLeads = leads.filter(lead => lead.assignedTo === user.name);
-    const userMeetings = meetings.filter(meeting => meeting.assignedTo === user.name);
+    const userLeads = leads.filter(lead => lead.owner?.id === user.id);
+    const userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
 
     const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
     const completedCalls = userLeads.reduce((sum, lead) =>
@@ -129,13 +130,14 @@ const Reports: React.FC = () => {
 
     // Get last activity date with enhanced logic
     const allActivities = [
-      ...userLeads.map(lead => ({ date: lead.lastCallDate, type: 'call', leadName: lead.name })),
-      ...userLeads.map(lead => ({ date: lead.lastVisitDate, type: 'visit', leadName: lead.name })),
+      ...userLeads.map(lead => ({ date: lead.lastCallDate, type: 'call', leadName: lead.nameEn || lead.nameAr || '' })),
+      ...userLeads.map(lead => ({ date: lead.lastVisitDate, type: 'visit', leadName: lead.nameEn || lead.nameAr || '' })),
       ...userMeetings.map(meeting => ({ date: meeting.date, type: 'meeting', leadName: meeting.client }))
     ].filter(activity => activity.date && activity.date !== '------');
 
-    const lastActivity = allActivities.length > 0 ?
-      allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0].date : 'No activity';
+    const lastActivity = allActivities.length > 0
+      ? String(allActivities.sort((a, b) => new Date(String(b.date)).getTime() - new Date(String(a.date)).getTime())[0].date)
+      : 'No activity';
 
     // Get performance from localStorage if available
     const performanceKey = `user_performance_${user.name}`;
@@ -184,7 +186,7 @@ const Reports: React.FC = () => {
       callCompletionRate: Math.round(enhancedCallCompletionRate * 10) / 10,
       visitCompletionRate: Math.round(enhancedVisitCompletionRate * 10) / 10,
       meetingCompletionRate: Math.round(enhancedMeetingCompletionRate * 10) / 10,
-      lastActivity,
+      lastActivity: lastActivity || 'No activity',
       isActive: user.isActive
     };
   };
@@ -243,8 +245,8 @@ const Reports: React.FC = () => {
     // Filter by search term
     if (searchTerm) {
       performances = performances.filter(p =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.role.toLowerCase().includes(searchTerm.toLowerCase())
+        (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (p.role && p.role.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -256,9 +258,17 @@ const Reports: React.FC = () => {
     // Filter by date range
     if (selectedDateRange.startDate && selectedDateRange.endDate) {
       performances = performances.filter(p => {
-        if (p.lastActivity === 'No activity') return true;
-        const lastActivityDate = new Date(p.lastActivity);
-        return lastActivityDate >= selectedDateRange.startDate! && lastActivityDate <= selectedDateRange.endDate!;
+        const lastActivity = p.lastActivity;
+        if (
+          typeof lastActivity !== 'string' ||
+          !lastActivity ||
+          !selectedDateRange.startDate ||
+          !selectedDateRange.endDate
+        ) return false;
+        const lastActivityDate = new Date(lastActivity!);
+        return !isNaN(lastActivityDate.getTime()) &&
+          lastActivityDate >= selectedDateRange.startDate &&
+          lastActivityDate <= selectedDateRange.endDate;
       });
     }
 
@@ -362,73 +372,15 @@ const Reports: React.FC = () => {
   }));
 
   const roleDistributionData = [
-    { name: 'Sales Rep', value: performances.filter(p => p.role === 'Sales Rep').length },
-    { name: 'Team Leader', value: performances.filter(p => p.role === 'Team Leader').length },
-    { name: 'Sales Admin', value: performances.filter(p => p.role === 'Sales Admin').length },
-    { name: 'Admin', value: performances.filter(p => p.role === 'Admin').length }
+    { name: 'Sales Rep', value: performances.filter(p => p.role === 'sales_rep').length },
+    { name: 'Team Leader', value: performances.filter(p => p.role === 'team_leader').length },
+    { name: 'Sales Admin', value: performances.filter(p => p.role === 'sales_admin').length },
+    { name: 'Admin', value: performances.filter(p => p.role === 'admin').length }
   ].filter(item => item.value > 0);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-  // Export functions
-  const exportToCSV = (data: any[], filename: string) => {
-    const csv = Papa.unparse(data);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
-  const exportToJSON = (data: any[], filename: string) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportToExcel = (data: any[], filename: string) => {
-    // For Excel export, we'll use CSV format which Excel can open
-    exportToCSV(data, filename);
-  };
-
-  const handleExport = (format: 'csv' | 'json' | 'excel') => {
-    const exportData = performances.map(p => ({
-      Name: p.name,
-      Role: p.role,
-      'Total Leads': p.totalLeads,
-      'Completed Calls': p.completedCalls,
-      'Total Calls': p.totalCalls,
-      'Call Completion Rate (%)': p.callCompletionRate,
-      'Completed Visits': p.completedVisits,
-      'Total Visits': p.totalVisits,
-      'Visit Completion Rate (%)': p.visitCompletionRate,
-      'Completed Meetings': p.completedMeetings,
-      'Total Meetings': p.totalMeetings,
-      'Meeting Completion Rate (%)': p.meetingCompletionRate,
-      'Closed Deals': p.closedDeals,
-      'Conversion Rate (%)': p.conversionRate,
-      'Last Activity': p.lastActivity,
-      'Status': p.isActive ? 'Active' : 'Inactive'
-    }));
-
-    switch (format) {
-      case 'csv':
-        exportToCSV(exportData, 'performance-report');
-        break;
-      case 'json':
-        exportToJSON(exportData, 'performance-report');
-        break;
-      case 'excel':
-        exportToExcel(exportData, 'performance-report');
-        break;
-    }
-  };
 
   if (!canAccessReports) {
     return (
@@ -440,6 +392,10 @@ const Reports: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  if (leadsLoading || meetingsLoading || usersLoading) {
+    return <div>{t('loading') || 'Loading...'}</div>;
   }
 
   return (
@@ -514,37 +470,9 @@ const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* Export Controls */}
+      {/* Filters and Controls */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <div className="flex flex-col gap-4">
-          {/* Export Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <span className="text-sm font-medium text-gray-700">{t('export.exportData')}</span>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => handleExport('csv')}
-                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
-              >
-                <Download className="h-4 w-4 inline mr-1" />
-                {t('export.csv')}
-              </button>
-              <button
-                onClick={() => handleExport('json')}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-              >
-                <Download className="h-4 w-4 inline mr-1" />
-                {t('export.json')}
-              </button>
-              <button
-                onClick={() => handleExport('excel')}
-                className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
-              >
-                <Download className="h-4 w-4 inline mr-1" />
-                {t('export.excel')}
-              </button>
-            </div>
-          </div>
-
           {/* Date Range Display */}
           {selectedDateRange.startDate && selectedDateRange.endDate && (
             <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
@@ -636,21 +564,21 @@ const Reports: React.FC = () => {
                 ...leads.map(lead => ({
                   type: 'lead',
                   action: t('activityFeed.leadUpdated'),
-                  user: lead.assignedTo,
-                  details: `${lead.name} - ${lead.status}`,
-                  date: lead.lastCallDate || lead.createdAt,
+                  user: users.find(u => u.id === lead.assignedToId)?.name || '',
+                  details: `${lead.nameEn || lead.nameAr || ''} - ${lead.status}`,
+                  date: String(lead.lastCallDate || lead.createdAt || ''),
                   priority: lead.status === LeadStatus.CLOSED_DEAL ? 'high' : 'medium'
                 })),
                 ...meetings.map(meeting => ({
                   type: 'meeting',
                   action: t('activityFeed.meeting'),
-                  user: meeting.assignedTo,
+                  user: users.find(u => u.id === meeting.assignedToId)?.name || '',
                   details: `${meeting.title} with ${meeting.client} - ${meeting.status}`,
-                  date: meeting.date,
+                  date: String(meeting.date || ''),
                   priority: meeting.status === 'Completed' ? 'high' : 'medium'
                 }))
               ].filter(activity => activity.date && activity.date !== '------')
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .sort((a, b) => new Date(String(b.date)).getTime() - new Date(String(a.date)).getTime())
                 .slice(0, 10);
 
               return allActivities.map((activity, index) => (

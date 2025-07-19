@@ -17,16 +17,114 @@ import './i18n';
 import './styles/rtl.css';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
-import axiosInterceptor from '../axiosInterceptor/axiosInterceptor';
-import { Developer, Zone } from './types';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProjects, getProperties, getUsers, getZones } from './queries/queries';
+
+// Custom hook for managing persisted view state with URL sync
+const usePersistedView = (defaultView: string) => {
+  const [currentView, setCurrentView] = useState(() => {
+    // First try to get from URL query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlView = urlParams.get('page');
+
+    if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
+      return urlView;
+    }
+
+    // Then try to get the saved view from sessionStorage
+    const savedView = sessionStorage.getItem('propai-current-view');
+    return savedView || defaultView;
+  });
+
+  // Update URL and sessionStorage whenever currentView changes
+  useEffect(() => {
+    // Update URL query parameter
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', currentView);
+    window.history.replaceState({}, '', url.toString());
+
+    // Save to sessionStorage
+    sessionStorage.setItem('propai-current-view', currentView);
+  }, [currentView]);
+
+  // Listen for browser back/forward buttons
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlView = urlParams.get('page');
+
+      if (urlView && ['dashboard', 'leads', 'inventory', 'meetings', 'contracts', 'reports', 'settings'].includes(urlView)) {
+        setCurrentView(urlView);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  return [currentView, setCurrentView] as const;
+};
 
 const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const { rtlMargin } = useLanguage();
-  const location = useLocation();
 
+
+  const [currentView, setCurrentView] = usePersistedView('dashboard');
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      queryClient.prefetchQuery({
+        queryKey: ['developers'],
+        queryFn: () => getDevelopers(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['zones'],
+        queryFn: () => getZones(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['leads'],
+        queryFn: () => getLeads(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['users'],
+        queryFn: () => getUsers(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['properties'],
+        queryFn: () => getProperties(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['meetings'],
+        queryFn: () => getMeetings(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['contracts'],
+        queryFn: () => getContracts(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['logs'],
+        queryFn: () => getLogs(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['projects'],
+        queryFn: () => getProjects(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+    }
+  }, [isAuthenticated]);
+
+
+  // Update page title with company name
   useEffect(() => {
     const companyName = settings?.companyName || 'Propai';
     document.title = `${companyName} - Real Estate CRM`;

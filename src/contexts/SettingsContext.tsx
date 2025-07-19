@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const defaultSettings = {
-  companyName: 'Red Ocean Real Estate',
+  companyName: 'James Map',
   companyImage: 'https://www.dpreview.com/files/p/articles/7952219469/google-imagen-lead-image.jpeg',
-  companyWebsite: 'www.propai.com',
-  companyEmail: 'info@propai.com',
+  companyWebsite: 'www.jamesmap.com',
+  companyEmail: 'info@jamesmap.com',
   companyAddress: '123 Main St, Alexandria, Egypt',
   notifications: {
     email: true,

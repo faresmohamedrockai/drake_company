@@ -2,20 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useData } from '../../contexts/DataContext';
 import { useTranslation } from 'react-i18next';
-import { 
-  Users, 
-  TrendingUp, 
-  Calendar, 
-  DollarSign, 
+import {
+  Users,
+  TrendingUp,
+  Calendar,
+  DollarSign,
   CheckCircle,
   Clock,
   Target
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 import { motion } from 'framer-motion';
-import LeadsSummaryCards from '../leads/LeadsSummaryCards';
-import { useNavigate } from 'react-router-dom';
-import UserFilterSelect from '../leads/UserFilterSelect';
+
+import { useQuery } from '@tanstack/react-query';
+import { getLeads, getLogs, getMeetings } from '../../queries/queries';
+import { Lead, Log, Meeting } from '../../types';
+import { Activity } from '../../types';
 
 interface DashboardProps {
   setCurrentView?: (view: string) => void;
@@ -28,29 +30,29 @@ const useCountAnimation = (endValue: number, duration: number = 2000, delay: num
   useEffect(() => {
     const startTime = Date.now();
     const startValue = 0;
-    
+
     const animate = () => {
       const currentTime = Date.now();
       const elapsed = currentTime - startTime - delay;
       const progress = Math.min(elapsed / duration, 1);
-      
+
       // Smoother easing function for more fluid animation
       const easeOutCubic = 1 - Math.pow(1 - progress, 3);
       const currentValue = Math.floor(startValue + (endValue - startValue) * easeOutCubic);
-      
+
       setCount(currentValue);
-      
+
       if (progress < 1) {
         requestAnimationFrame(animate);
       } else {
         setCount(endValue);
       }
     };
-    
+
     const timeoutId = setTimeout(() => {
       requestAnimationFrame(animate);
     }, delay);
-    
+
     return () => {
       clearTimeout(timeoutId);
     };
@@ -68,36 +70,62 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const stats = getStatistics(user ? { name: user.name, role: user.role, teamId: user.teamId } : undefined);
   const prevStats = getPreviousStats ? getPreviousStats() || stats : stats; // fallback to current if none
 
-  // Get real number of follow up leads
-  const followUpLeads = typeof stats.totalProspects === 'number' && stats.totalProspects > 0
-    ? Math.round((stats.conversionRates.leadsToFollowUp / 100) * stats.totalProspects)
-    : 0;
+
+  const { data: leads = [], isLoading: leadsLoading } = useQuery<Lead[]>({
+    queryKey: ['leads'],
+    queryFn: getLeads,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: meetings = [], isLoading: meetingsLoading } = useQuery<Meeting[]>({
+    queryKey: ['meetings'],
+    queryFn: getMeetings,
+    staleTime: 1000 * 60 * 5,
+  });
+  const { data: logs = [], isLoading: logsLoading } = useQuery<Log[]>({
+    queryKey: ['logs'],
+    queryFn: getLogs,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  const totalProspects = leads.length;
+  const activeLeads = leads.filter(l => ['fresh_lead', 'follow_up', 'scheduled_visit', 'open_deal'].includes(l.status)).length;
+  const todayMeetings = meetings.filter(m => m.date === today).length;
+  const followUpLeads = leads.filter(l => l.status === 'follow_up').length;
+
+  // Conversion rates (customize as needed)
+  const conversionRates = {
+    leadsToFollowUp: totalProspects ? Math.round((followUpLeads / totalProspects) * 100) : 0,
+    callsToMeetings: 0, // Add logic if you have call data
+    meetingsToDeals: meetings.length ? Math.round((meetings.filter(m => m.status === 'Completed').length / meetings.length) * 100) : 0,
+    callCompletionRate: 0, // Add logic if you have call data
+  };
 
   // Animated counts for KPI cards
-  const animatedTotalProspects = useCountAnimation(stats.totalProspects, 1000, 0);
-  const animatedActiveLeads = useCountAnimation(stats.activeLeads, 1000, 100);
-  const animatedTodayMeetings = useCountAnimation(stats.todayMeetings, 1000, 200);
+  const animatedTotalProspects = useCountAnimation(totalProspects, 1000, 0);
+  const animatedActiveLeads = useCountAnimation(activeLeads, 1000, 100);
+  const animatedTodayMeetings = useCountAnimation(todayMeetings, 1000, 200);
   const animatedFollowUpLeads = useCountAnimation(followUpLeads, 1000, 300);
 
   const kpiCards = [
     {
       title: t('totalLeads'),
       value: animatedTotalProspects.toString(),
-      change: getChangeForStat(stats.totalProspects, prevStats.totalProspects),
+      change: null, // You can implement change logic if you want
       icon: Users,
       description: t('overview')
     },
     {
       title: t('activeLeads'),
       value: animatedActiveLeads.toString(),
-      change: getChangeForStat(stats.activeLeads, prevStats.activeLeads),
+      change: null,
       icon: TrendingUp,
       description: t('overview')
     },
     {
       title: t('meetingScheduled'),
       value: animatedTodayMeetings.toString(),
-      change: getChangeForStat(stats.todayMeetings, prevStats.todayMeetings),
+      change: null,
       icon: Calendar,
       description: t('overview'),
       info: true
@@ -105,26 +133,20 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     {
       title: t('followUpLeads'),
       value: animatedFollowUpLeads.toString(),
-      change: getChangeForStat(followUpLeads, Math.round((prevStats.conversionRates.leadsToFollowUp / 100) * prevStats.totalProspects)),
+      change: null,
       icon: CheckCircle,
       description: t('overview')
     }
   ];
 
-  const conversionRates = [
-    { stage: t('leadsToFollowUp'), rate: stats.conversionRates.leadsToFollowUp, color: 'bg-blue-500' },
-    { stage: t('callsToMeetings'), rate: stats.conversionRates.callsToMeetings, color: 'bg-gray-400' },
-    { stage: t('meetingsToDeals'), rate: stats.conversionRates.meetingsToDeals, color: 'bg-gray-300' }
-  ];
-
   // Animated conversion rates
-  const animatedLeadsToFollowUp = useCountAnimation(stats.conversionRates.leadsToFollowUp, 1000, 400);
-  const animatedCallCompletion = useCountAnimation(stats.conversionRates.callCompletionRate, 1000, 500);
-  const animatedMeetingSuccess = useCountAnimation(stats.conversionRates.meetingsToDeals, 1000, 600);
-  const animatedCallsToMeetings = useCountAnimation(stats.conversionRates.callsToMeetings, 1000, 700);
+  const animatedLeadsToFollowUp = useCountAnimation(conversionRates.leadsToFollowUp, 1000, 400);
+  const animatedCallCompletion = useCountAnimation(conversionRates.callCompletionRate, 1000, 500);
+  const animatedMeetingSuccess = useCountAnimation(conversionRates.meetingsToDeals, 1000, 600);
+  const animatedCallsToMeetings = useCountAnimation(conversionRates.callsToMeetings, 1000, 700);
   const animatedActiveLeadsRate = useCountAnimation(
-    Math.round((stats.activeLeads / Math.max(stats.totalProspects, 1)) * 100), 
-    1000, 
+    totalProspects ? Math.round((activeLeads / totalProspects) * 100) : 0,
+    1000,
     800
   );
 
@@ -132,38 +154,35 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     {
       label: t('leadFollowUpRate'),
       value: `${animatedLeadsToFollowUp}%`,
-      change: getChangeForStat(stats.conversionRates.leadsToFollowUp, prevStats.conversionRates.leadsToFollowUp)
+      change: null
     },
     {
       label: t('callCompletionRate'),
       value: `${animatedCallCompletion}%`,
-      change: getChangeForStat(stats.conversionRates.callCompletionRate, prevStats.conversionRates.callCompletionRate)
+      change: null
     },
     {
       label: t('meetingSuccessRate'),
       value: `${animatedMeetingSuccess}%`,
-      change: getChangeForStat(stats.conversionRates.meetingsToDeals, prevStats.conversionRates.meetingsToDeals)
+      change: null
     },
     {
       label: t('callsToMeetingsRate'),
       value: `${animatedCallsToMeetings}%`,
-      change: getChangeForStat(stats.conversionRates.callsToMeetings, prevStats.conversionRates.callsToMeetings)
+      change: null
     },
     {
       label: t('activeLeadsRate'),
       value: `${animatedActiveLeadsRate}%`,
-      change: getChangeForStat(
-        Math.round((stats.activeLeads / Math.max(stats.totalProspects, 1)) * 100),
-        Math.round((prevStats.activeLeads / Math.max(prevStats.totalProspects, 1)) * 100)
-      )
+      change: null
     }
   ];
 
   // Prepare data for Recharts
   const conversionChartData = [
-    { stage: t('leadsToFollowUp'), value: stats.conversionRates.leadsToFollowUp },
-    { stage: t('callsToMeetings'), value: stats.conversionRates.callsToMeetings },
-    { stage: t('meetingsToDeals'), value: stats.conversionRates.meetingsToDeals }
+    { stage: t('leadsToFollowUp'), value: conversionRates.leadsToFollowUp },
+    { stage: t('callsToMeetings'), value: conversionRates.callsToMeetings },
+    { stage: t('meetingsToDeals'), value: conversionRates.meetingsToDeals }
   ];
 
   // --- LEADS SUMMARY CARDS LOGIC (copied and adapted from LeadsList) ---
@@ -245,6 +264,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   const [showAllStatusCards, setShowAllStatusCards] = useState(false);
 
+
   return (
     <motion.div
       className="p-6 bg-gray-50 min-h-screen"
@@ -271,18 +291,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
           return (
             <div key={index} className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
               <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-full ${
-                  index === 0 ? 'bg-blue-100' : 
-                  index === 1 ? 'bg-purple-100' : 
-                  index === 2 ? 'bg-orange-100' : 
-                  index === 3 ? 'bg-green-100' : 'bg-gray-100'
-                }`}>
-                  <card.icon className={`h-6 w-6 ${
-                    index === 0 ? 'text-blue-600' : 
-                    index === 1 ? 'text-purple-600' : 
-                    index === 2 ? 'text-orange-600' : 
-                    index === 3 ? 'text-green-600' : 'text-gray-600'
-                  }`} />
+                <div className={`p-3 rounded-full ${index === 0 ? 'bg-blue-100' :
+                  index === 1 ? 'bg-purple-100' :
+                    index === 2 ? 'bg-orange-100' :
+                      index === 3 ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
+                  <card.icon className={`h-6 w-6 ${index === 0 ? 'text-blue-600' :
+                    index === 1 ? 'text-purple-600' :
+                      index === 2 ? 'text-orange-600' :
+                        index === 3 ? 'text-green-600' : 'text-gray-600'
+                    }`} />
                 </div>
                 {card.info ? (
                   <a
@@ -298,11 +316,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
                     {t('goToViewAllMeetings')}
                   </a>
                 ) : (
-                  <span className={`text-sm font-medium ${
-                    changeType === 'increase' ? 'text-green-600' : 
+                  <span className={`text-sm font-medium ${changeType === 'increase' ? 'text-green-600' :
                     changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
-                  }`}>
-                    {card.change > 0 && '+'}{card.change}%
+                    }`}>
+                    {card.change !== null && card.change !== undefined ? <>{card.change > 0 && '+'}{card.change}%</> : '--'}
                   </span>
                 )}
               </div>
@@ -383,7 +400,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
             {t('conversionMetrics')}
           </h3>
           <p className="text-sm text-gray-600 mb-6">{t('monitorSalesPerformance')}</p>
-          
+
           <div className="space-y-4">
             {conversionMetrics.map((metric, index) => {
               let changeType = 'neutral';
@@ -399,11 +416,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
                     <span className="text-sm font-medium text-gray-700">{metric.label}</span>
                     <div className="flex items-center">
                       <span className="text-sm font-bold text-gray-900 mr-2">{metric.value}</span>
-                      <span className={`text-xs font-medium ${
-                        changeType === 'increase' ? 'text-green-600' : 
+                      <span className={`text-xs font-medium ${changeType === 'increase' ? 'text-green-600' :
                         changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
-                      }`}>
-                        {metric.change > 0 && '+'}{metric.change}%
+                        }`}>
+                        {metric.change !== null && metric.change !== undefined ? <>{metric.change > 0 && '+'}{metric.change}%</> : '--'}
                       </span>
                     </div>
                   </div>
@@ -429,20 +445,29 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
           {t('recentActivityFeed')}
         </h3>
         <p className="text-sm text-gray-600 mb-6">{t('latestActionsUpdates')}</p>
-        
+
         <div className="space-y-4">
-          {activities.slice(0, 10).map((activity) => (
-            <div key={activity.id} className="flex items-start space-x-3">
+          {logs.slice(0, 10).map((log) => (
+            <div key={log.id} className="flex items-start space-x-3">
               <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                {activity.user.split(' ').map(n => n[0]).join('')}
+                {log.userName?.split(' ').map((n: string) => n[0]).join('')}
               </div>
               <div className="flex-1">
-                <p className="text-sm text-gray-900">{activity.action}</p>
-                <p className="text-xs text-gray-500">{activity.time}</p>
+                <p className="text-sm text-gray-900">{log.action}</p>
+                <p className="text-xs text-gray-500">{log.description}</p>
+                <p className="text-xs text-gray-500">{
+                  new Date(log.createdAt).toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                }</p>
               </div>
             </div>
           ))}
-          {activities.length === 0 && (
+          {logs.length === 0 && (
             <p className="text-gray-500 text-center py-4">{t('noRecentActivities')}</p>
           )}
         </div>

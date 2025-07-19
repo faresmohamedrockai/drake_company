@@ -5,17 +5,10 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { toast } from 'react-toastify';
-
-interface Developer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  projects: number;
-  established: string;
-  location: string;
-  logo: string;
-}
+import { getDevelopers } from '../../queries/queries';
+import { Developer } from '../../types';
+import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
+import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
 
 const DevelopersTab: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('propai_user') || '{}');
@@ -31,29 +24,21 @@ const DevelopersTab: React.FC = () => {
     createdBy: user?.name || 'System'
   });
   const queryClient = useQueryClient();
-  const [developers, setDevelopers] = useState<Developer[]>([]);
-
-  useEffect(() => {
-    const fetchDevelopers = async () => {
-      const response = await axiosInterceptor.get('/developers');
-      console.log("response", response);
-      setDevelopers(response.data.developers as Developer[]);
-    };
-    fetchDevelopers();
-  }, []);
-
-  // const { data: developers, isLoading, isError } = useQuery<Developer[]>({
-  //   queryKey: ['developers'],
-  //   queryFn: () => getDevelopers(),
-  // });
+  const { data: developers, isLoading, isError } = useQuery<Developer[]>({
+    queryKey: ['developers'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getDevelopers(),
+  });
   const { mutateAsync: addDeveloperMutation, isPending: isAdding } = useMutation({
     mutationFn: (developerData: any) => addDeveloper(developerData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['developers'] });
       toast.success(t('developerAdded'));
+      setShowForm(false);
     },
     onError: (error: any) => {
       toast.error(error.response.data.message);
+      setShowForm(false);
     }
   });
 
@@ -62,9 +47,11 @@ const DevelopersTab: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['developers'] });
       toast.success(t('developerUpdated'));
+      setShowForm(false);
     },
     onError: (error: any) => {
       toast.error(error.response.data.message);
+      setShowForm(false);
     }
   });
 
@@ -79,10 +66,10 @@ const DevelopersTab: React.FC = () => {
     }
   });
 
-  const getDevelopers = async () => {
-    const response = await axiosInterceptor.get('/developers');
-    return response.data.developers as Developer[];
-  }
+  // const getDevelopers = async () => {
+  //   const response = await axiosInterceptor.get('/developers');
+  //   return response.data.developers as Developer[];
+  // }
 
   const addDeveloper = async (developerData: any) => {
     const response = await axiosInterceptor.post('/developers/create', developerData);
@@ -108,6 +95,8 @@ const DevelopersTab: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [filteredDevelopers, setFilteredDevelopers] = useState<Developer[]>([]);
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   // Add image and bilingual name to form state
 
   // Helper function to get language-appropriate developer name
@@ -165,7 +154,23 @@ const DevelopersTab: React.FC = () => {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPhoneError('');
+    setEmailError('');
+    
     if (!user) return;
+
+    // Phone validation
+    if (form.phone && !validatePhoneNumber(form.phone)) {
+      setPhoneError(getPhoneErrorMessage(form.phone, language));
+      return;
+    }
+
+    // Email validation (only if email is provided)
+    if (form.email && !validateEmail(form.email)) {
+      setEmailError(getEmailErrorMessage(form.email, language));
+      return;
+    }
+
     const developerData = {
       ...form,
       name: form.nameEn + (form.nameAr ? ' / ' + form.nameAr : ''),
@@ -179,7 +184,7 @@ const DevelopersTab: React.FC = () => {
     } else {
       addDeveloperMutation(developerData as any);
     }
-    setShowForm(false);
+    // setShowForm(false);
   };
 
   const handleDelete = (id: string) => {
@@ -189,7 +194,6 @@ const DevelopersTab: React.FC = () => {
   };
 
   useEffect(() => {
-    console.log("developers", developers);
     if (developers) {
       setFilteredDevelopers(developers.filter((developer: any) =>
         getDeveloperName(developer).toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -240,7 +244,7 @@ const DevelopersTab: React.FC = () => {
                   {developer.logo ? (
                     <img
                       src={developer.logo}
-                      alt={developer.name}
+                      alt={developer.nameEn}
                       className="object-cover w-full h-full"
                       onError={e => {
                         const target = e.target as HTMLImageElement;
@@ -274,11 +278,11 @@ const DevelopersTab: React.FC = () => {
                     onClick={(e) => {
                       e.preventDefault();
                       // Custom event or navigation logic to go to Projects tab and filter by developer
-                      const event = new CustomEvent('navigateToProjects', { detail: { developer: developer.name } });
+                      const event = new CustomEvent('navigateToProjects', { detail: { developer: developer.nameEn } });
                       window.dispatchEvent(event);
                     }}
                   >
-                    {developer.projects}
+                    {developer.projects.length}
                   </a>
                 </div>
               </div>
@@ -291,7 +295,7 @@ const DevelopersTab: React.FC = () => {
                 </button>
               </div>
             </div>
-          )) : <div className="w-full text-center text-gray-500">No developers found</div>}
+          )) : isLoading ? <div className="spinner-border text-blue-600" role="status"></div> : <div className="w-full text-center text-gray-500">No developers found</div>}
       </div>
 
       {/* Add/Edit Developer Modal */}
@@ -337,13 +341,55 @@ const DevelopersTab: React.FC = () => {
                 </label>
                 <input type="text" name="established" value={form.established} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
               </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                </label>
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={form.phone} 
+                  onChange={(e) => {
+                    handleFormChange(e);
+                    setPhoneError(''); // Clear error when user types
+                  }} 
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 ${
+                    phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`} 
+                  placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
+                />
+                {phoneError && (
+                  <p className="text-red-600 text-sm mt-1">{phoneError}</p>
+                )}
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {language === 'ar' ? 'البريد الإلكتروني' : 'Email'}
+                </label>
+                <input 
+                  type="email" 
+                  name="email" 
+                  value={form.email} 
+                  onChange={(e) => {
+                    handleFormChange(e);
+                    setEmailError(''); // Clear error when user types
+                  }} 
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 ${
+                    emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`} 
+                  placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
+                />
+                {emailError && (
+                  <p className="text-red-600 text-sm mt-1">{emailError}</p>
+                )}
+              </div>
 
               <div className="col-span-2 flex justify-end space-x-3 pt-4">
                 <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg bg-white transition-colors">
                   {language === 'ar' ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors">
-                  {isAdding ? <div className="spinner-border text-white" role="status"></div> : editId ? (language === 'ar' ? 'تحديث المطور' : 'Update Developer') : (language === 'ar' ? 'إضافة المطور' : 'Add Developer')}
+                  {isAdding ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : editId ? (language === 'ar' ? 'تحديث المطور' : 'Update Developer') : (language === 'ar' ? 'إضافة المطور' : 'Add Developer')}
                 </button>
               </div>
             </form>

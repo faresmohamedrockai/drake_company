@@ -115,7 +115,11 @@ const initialUsers: User[] = [
     password: 'password',
     role: 'sales_admin',
     createdAt: '2025-01-01',
-    isActive: true
+    isActive: true,
+    refreshToken: null,
+    image: null,
+    teamLeaderId: null,
+    teamId: null
   },
   {
     id: '3',

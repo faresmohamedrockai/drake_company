@@ -1,27 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Trash2 } from 'lucide-react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
-import { Developer, Zone } from '../../types';
+import { Developer, Property, Zone } from '../../types';
+import { Id, toast } from 'react-toastify';
+import { getDevelopers, getProjects, getProperties, getZones } from '../../queries/queries';
 
-interface Project {
-  id: string;
-  name: string;
+export interface PaymentPlan {
+  downpayment: number;
+  installment: number;
+  delivery: number;
+  schedule: string;
+  yearsToPay: number;
+  installmentPeriod: 'monthly' | 'quarterly' | 'yearly' | 'custom';
+  installmentMonthsCount: number;
+  firstInstallmentDate: string;
+  deliveryDate: string;
+}
+export interface Project {
+  id?: string;
+  nameEn: string;
+  nameAr: string;
   developer: string;
+  developerId: string;
   zone: string;
+  zoneId: string;
   type: string;
-  paymentPlan: {
-    downPayment: number;
-    installments: number;
-    delivery: number;
-    schedule: string;
-  };
+  paymentPlans: PaymentPlan[];
+  propertyIds: string[];
   // Add images property
   images?: string[];
+  // Add developer object for nested data
+  developerObj?: Developer;
 }
 
 // Utility: Generate payment schedule for a property price and payment plan
@@ -31,23 +45,23 @@ interface Project {
  * @param {object} plan - The payment plan object from the project
  * @returns {Array<{no: number, dueDate: string, amount: number, label?: string}>}
  */
-export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{ no: number, dueDate: string, amount: number, label?: string }> {
+export function generatePaymentSchedule(totalPrice: number, plan: PaymentPlan): Array<{ no: number, dueDate: string, amount: number, label?: string }> {
   if (!plan || !totalPrice) return [];
-  const downPaymentAmount = (plan.downPayment / 100) * totalPrice;
+  const downPaymentAmount = (plan.downpayment / 100) * totalPrice;
   const deliveryAmount = (plan.delivery / 100) * totalPrice;
   let periods = 0;
   let intervalMonths = 1;
   if (plan.installmentPeriod === 'monthly') {
-    periods = plan.payYears * 12;
+    periods = plan.yearsToPay * 12;
     intervalMonths = 1;
   } else if (plan.installmentPeriod === 'quarterly') {
-    periods = plan.payYears * 4;
+    periods = plan.yearsToPay * 4;
     intervalMonths = 3;
   } else if (plan.installmentPeriod === 'yearly') {
-    periods = plan.payYears;
+    periods = plan.yearsToPay;
     intervalMonths = 12;
   } else if (plan.installmentPeriod === 'custom') {
-    periods = Math.floor((plan.payYears * 12) / plan.installmentMonthsCount);
+    periods = Math.floor((plan.yearsToPay * 12) / plan.installmentMonthsCount);
     intervalMonths = plan.installmentMonthsCount;
   }
   if (!periods || !plan.firstInstallmentDate) return [];
@@ -58,7 +72,7 @@ export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{ 
 
   // Down Payment row
   const schedule: Array<{ no: number, dueDate: string, amount: number, label?: string }> = [
-    { no: 0, dueDate: plan.firstInstallmentDate, amount: downPaymentAmount, label: `Down Payment (${plan.downPayment}%)` }
+    { no: 0, dueDate: plan.firstInstallmentDate, amount: downPaymentAmount, label: `Down Payment (${plan.downpayment}%)` }
   ];
 
   // Generate Installments (start 1 month after down payment)
@@ -106,26 +120,116 @@ export function generatePaymentSchedule(totalPrice: number, plan: any): Array<{ 
   return schedule;
 }
 
+// Utility to format date to mm-dd-yyyy
+function formatDateMMDDYYYY(dateStr?: string) {
+  if (!dateStr) return '-';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '-';
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${mm}-${dd}-${yyyy}`;
+}
+
 const ProjectsTab: React.FC = () => {
+  const queryClient = useQueryClient();
+  const { data: properties } = useQuery<Property[]>({
+    queryKey: ['properties'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProperties()
+  });
+  const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProjects()
+  });
+
   const { data: developers } = useQuery<Developer[]>({
     queryKey: ['developers'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getDevelopers()
   });
-  const getDevelopers = async () => {
-    const response = await axiosInterceptor.get('/developers');
-    return response.data as Developer[];
-  }
+
   const { data: zones } = useQuery<Zone[]>({
     queryKey: ['zones'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getZones()
   });
-  const getZones = async () => {
-    const response = await axiosInterceptor.get('/zones');
-    return response.data as Zone[];
+
+  const addProject = async (project: any) => {
+    const response = await axiosInterceptor.post('/projects/create', project);
+    return response.data.project as Project;
   }
-  const { addProject, updateProject, deleteProject, properties, projects } = useData();
+  const updateProject = async (project: any) => {
+    const response = await axiosInterceptor.patch(`/projects/${project.id}`, project);
+    return response.data.project as Project;
+  }
+  const { mutateAsync: updateProjectMutation, isPending: isUpdating } = useMutation({
+    mutationFn: (project: any) => updateProject(project),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success(t('projectUpdated'));
+      setShowEditForm(false);
+      setEditId(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.response.data.message);
+      setShowEditForm(false);
+      setEditId(null);
+    }
+  });
+  const deleteProject = async (id: string) => {
+    const response = await axiosInterceptor.delete(`/projects/${id}`);
+    return response.data.project as Project;
+  }
+
+  const { mutateAsync: deleteProjectMutation, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => deleteProject(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success(t('projectDeleted'));
+      toast.dismiss(loadingToastId);
+    },
+    onError: (error: any) => {
+      toast.error(error.response.data.message);
+      toast.dismiss(loadingToastId);
+    }
+  });
+  useEffect(() => {
+    if (isDeleting) {
+      setLoadingToastId(toast.loading('Deleting project...'));
+    }
+  }, [isDeleting]);
+
+  const { mutateAsync: addProjectMutation, isPending: isAdding } = useMutation({
+    mutationFn: (project: any) => addProject(project),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success(t('projectAdded'));
+      setShowAddForm(false);
+      setNewProject({
+        nameEn: '',
+        nameAr: '',
+        developerId: '',
+        zoneId: '',
+        type: '',
+        paymentPlans: [
+          { downpayment: 0, installment: 0, delivery: 0, schedule: '', yearsToPay: 1, installmentPeriod: 'monthly' as 'monthly' | 'quarterly' | 'yearly' | 'custom', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
+        ],
+        propertyIds: [],
+        images: [],
+        developer: '',
+        zone: ''
+      });
+      setAddStep(0);
+    },
+    onError: (error: any) => {
+      toast.error(error.response.data.message);
+      setShowAddForm(false);
+      setAddStep(0);
+    }
+  });
+  const [loadingToastId, setLoadingToastId] = useState<Id>(0);
   const { user } = useAuth();
   const { language } = useLanguage(); // Add language context
   const { t } = useTranslation('inventory');
@@ -133,8 +237,19 @@ const ProjectsTab: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [newProject, setNewProject] = useState({
-    name: '',
+  const [newProject, setNewProject] = useState<Project>({
+    nameEn: '',
+    nameAr: '',
+    developerId: '',
+    zoneId: '',
+    type: '',
+    paymentPlans: [],
+    propertyIds: [],
+    images: [],
+    developer: '',
+    zone: ''
+  });
+  const [editProject, setEditProject] = useState<Project>({
     nameEn: '',
     nameAr: '',
     developerId: '',
@@ -142,12 +257,12 @@ const ProjectsTab: React.FC = () => {
     type: '',
     paymentPlans: [
       {
-        downPayment: 0,
-        installments: 0,
+        downpayment: 0,
+        installment: 0,
         delivery: 0,
         schedule: '',
-        payYears: 1,
-        installmentPeriod: 'monthly',
+        yearsToPay: 1,
+        installmentPeriod: 'monthly' as 'monthly' | 'quarterly' | 'yearly' | 'custom',
         installmentMonthsCount: 1,
         firstInstallmentDate: '',
         deliveryDate: ''
@@ -155,32 +270,10 @@ const ProjectsTab: React.FC = () => {
     ],
     propertyIds: [] as string[],
     images: [] as string[],
-    createdBy: user?.name || 'System'
+    developer: '',
+    zone: ''
   });
-  const [editProject, setEditProject] = useState({
-    name: '',
-    nameEn: '',
-    nameAr: '',
-    developerId: '',
-    zoneId: '',
-    type: '',
-    paymentPlans: [
-      {
-        downPayment: 0,
-        installments: 0,
-        delivery: 0,
-        schedule: '',
-        payYears: 1,
-        installmentPeriod: 'monthly',
-        installmentMonthsCount: 1,
-        firstInstallmentDate: '',
-        deliveryDate: ''
-      }
-    ],
-    propertyIds: [] as string[],
-    images: [] as string[],
-    createdBy: user?.name || 'System'
-  });
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [addStep, setAddStep] = useState(0); // Stepper for add form
   const addSteps = [
     t('stepBasicInfo'),
@@ -198,11 +291,17 @@ const ProjectsTab: React.FC = () => {
     return project.nameEn || project.name;
   };
 
-  const filteredProjects = projects?.filter(project =>
-    getProjectName(project).toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (developers?.find(d => d.id === project.developerId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (zones?.find(z => z.id === project.zoneId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (projects) {
+      setFilteredProjects(projects?.filter((project: Project | any) =>
+        getProjectName(project).toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (developers?.find(d => d.id === project.developerId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (zones?.find(z => z.id === project.zoneId)?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
+      ) as unknown as Project[]);
+    }
+  }, [projects, searchTerm, developers, zones]);
+
+
 
   const handleAddPlan = (isEdit = false) => {
     if (isEdit) {
@@ -210,7 +309,7 @@ const ProjectsTab: React.FC = () => {
         ...prev,
         paymentPlans: [
           ...prev.paymentPlans,
-          { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
+          { downpayment: 0, installment: 0, delivery: 0, schedule: '', yearsToPay: 1, installmentPeriod: 'monthly' as 'monthly' | 'quarterly' | 'yearly' | 'custom', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
         ]
       }));
     } else {
@@ -218,7 +317,7 @@ const ProjectsTab: React.FC = () => {
         ...prev,
         paymentPlans: [
           ...prev.paymentPlans,
-          { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
+          { downpayment: 0, installment: 0, delivery: 0, schedule: '', yearsToPay: 1, installmentPeriod: 'monthly' as 'monthly' | 'quarterly' | 'yearly' | 'custom', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
         ]
       }));
     }
@@ -239,53 +338,25 @@ const ProjectsTab: React.FC = () => {
 
   const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
-    const developerName = developers?.find(d => d.id === newProject.developerId)?.name || '';
-    const zoneName = zones?.find(z => z.id === newProject.zoneId)?.name || '';
-    // Calculate installments for each plan
-    const paymentPlans = newProject.paymentPlans.map(plan => ({
-      ...plan,
-      installments: 100 - (plan.downPayment || 0) - (plan.delivery || 0)
-    }));
-    addProject({
-      ...newProject,
-      name: newProject.nameEn + (newProject.nameAr ? ' / ' + newProject.nameAr : ''), // Combine names for display
-      paymentPlans,
-      developer: developerName,
-      zone: zoneName,
-      createdBy: user?.name || 'System'
-    });
-    setShowAddForm(false);
-    setNewProject({
-      name: '',
-      nameEn: '',
-      nameAr: '',
-      developerId: '',
-      zoneId: '',
-      type: '',
-      paymentPlans: [
-        { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
-      ],
-      propertyIds: [],
-      images: [],
-      createdBy: user?.name || 'System'
-    });
+    addProjectMutation(newProject);
   };
 
   const openEditForm = (project: any) => {
     setEditId(project.id);
     setEditProject({
-      name: project.name,
+      id: project.id,
       nameEn: project.nameEn || '',
       nameAr: project.nameAr || '',
-      developerId: developers?.find(d => d.name === project.developer)?.id || '',
-      zoneId: zones?.find(z => z.name === project.zone)?.id || '',
+      developerId: project.developerId || '',
+      zoneId: project.zoneId || '',
       type: project.type,
       paymentPlans: project.paymentPlans || [
-        { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
+        { downpayment: 0, installment: 0, delivery: 0, schedule: '', yearsToPay: 1, installmentPeriod: 'monthly' as 'monthly' | 'quarterly' | 'yearly' | 'custom', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
       ],
       propertyIds: project.propertyIds || [],
       images: project.images || [],
-      createdBy: project.createdBy || user?.name || 'System'
+      developer: project.developer || '',
+      zone: project.zone || ''
     });
     setShowEditForm(true);
   };
@@ -295,27 +366,25 @@ const ProjectsTab: React.FC = () => {
     if (editId) {
       const developerName = developers?.find(d => d.id === editProject.developerId)?.name || '';
       const zoneName = zones?.find(z => z.id === editProject.zoneId)?.name || '';
-      // Calculate installments for each plan
-      const paymentPlans = editProject.paymentPlans.map(plan => ({
-        ...plan,
-        installments: 100 - (plan.downPayment || 0) - (plan.delivery || 0)
-      }));
-      updateProject(editId, {
+      // // Calculate installments for each plan
+      // const paymentPlans = editProject.paymentPlans.map(plan => ({
+      //   ...plan,
+      //   installment: 100 - (plan.downpayment || 0) - (plan.delivery || 0)
+      // }));
+      updateProjectMutation({
+        id: editId,
         ...editProject,
-        name: editProject.nameEn + (editProject.nameAr ? ' / ' + editProject.nameAr : ''), // Combine names for display
-        paymentPlans,
         developer: developerName,
         zone: zoneName,
         createdBy: user?.name || 'System'
       });
-      setShowEditForm(false);
-      setEditId(null);
+
     }
   };
 
   const handleDelete = (id: string) => {
     if (window.confirm(t('confirmDeleteProject'))) {
-      deleteProject(id);
+      deleteProjectMutation(id);
     }
   };
 
@@ -334,9 +403,9 @@ const ProjectsTab: React.FC = () => {
       });
       Promise.all(readers).then(images => {
         if (isEdit) {
-          setEditProject(prev => ({ ...prev, images: [...prev.images, ...images] }));
+          setEditProject(prev => ({ ...prev, images: [...(prev.images || []), ...images] }));
         } else {
-          setNewProject(prev => ({ ...prev, images: [...prev.images, ...images] }));
+          setNewProject(prev => ({ ...prev, images: [...(prev.images || []), ...images] }));
         }
       });
     }
@@ -345,19 +414,20 @@ const ProjectsTab: React.FC = () => {
   const handleCancelAddProject = () => {
     setShowAddForm(false);
     setNewProject({
-      name: '',
       nameEn: '',
       nameAr: '',
       developerId: '',
       zoneId: '',
       type: '',
       paymentPlans: [
-        { downPayment: 0, installments: 0, delivery: 0, schedule: '', payYears: 1, installmentPeriod: 'monthly', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
+        { downpayment: 0, installment: 0, delivery: 0, schedule: '', yearsToPay: 1, installmentPeriod: 'monthly' as 'monthly' | 'quarterly' | 'yearly' | 'custom', installmentMonthsCount: 1, firstInstallmentDate: '', deliveryDate: '' }
       ],
       propertyIds: [],
       images: [],
-      createdBy: user?.name || 'System'
+      developer: '',
+      zone: ''
     });
+    setAddStep(0);
   };
 
   return (
@@ -388,94 +458,94 @@ const ProjectsTab: React.FC = () => {
       </div>
 
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProjects.map((project) => (
-          <div key={project.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">{getProjectName(project)}</h3>
-              <div className="flex space-x-2">
-                <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(project)}>
-                  <Edit className="h-4 w-4" />
-                </button>
-                <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(project.id)}>
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            {Array.isArray((project as any).images) && (project as any).images.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
-                {((project as any).images as string[]).map((img: string, idx: number) => (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt={`Project ${project.name} image ${idx + 1}`}
-                    className="h-24 w-32 object-cover rounded-lg border shadow-sm flex-shrink-0"
-                    style={{ minWidth: '8rem' }}
-                  />
-                ))}
-              </div>
-            )}
+      {
+        isProjectsLoading ? <div className="flex justify-center items-center h-full"><div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" role="status"></div></div> :
+          filteredProjects.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <div key={project.id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">{getProjectName(project)}</h3>
+                  <div className="flex space-x-2">
+                    <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(project)}>
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(project.id || '')}>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+                {Array.isArray((project as any).images) && (project as any).images.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
+                    {((project as any).images as string[]).map((img: string, idx: number) => (
+                      <img
+                        key={idx}
+                        src={img}
+                        alt={`Project ${project.nameEn} image ${idx + 1}`}
+                        className="h-24 w-32 object-cover rounded-lg border shadow-sm flex-shrink-0"
+                        style={{ minWidth: '8rem' }}
+                      />
+                    ))}
+                  </div>
+                )}
 
-            <div className="space-y-3 mb-4">
-              <div>
-                <span className="text-sm font-medium text-gray-700">{t('developer')}: </span>
-                <span className="text-sm text-gray-900">
-                  {(() => {
-                    const developer = developers?.find(d => d.id === project.developerId);
-                    if (!developer) return 'N/A';
-                    return language === 'ar' && developer.nameAr ? developer.nameAr : (developer.nameEn || developer.name);
-                  })()}
-                </span>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">{t('zone')}: </span>
-                <span className="text-sm text-gray-900">
-                  {(() => {
-                    const zone = zones?.find(z => z.id === project.zoneId);
-                    if (!zone) return 'N/A';
-                    return language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name);
-                  })()}
-                </span>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">{t('projectType')}: </span>
-                <span className="text-sm text-gray-900">{project.type}</span>
-              </div>
-            </div>
+                <div className="space-y-3 mb-4">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">{t('developer')}: </span>
+                    <span className="text-sm text-gray-900">
+                      {(() => {
+                        const developer = developers?.find(d => d.id === project.developerId);
+                        if (!developer) return 'N/A';
+                        return language === 'ar' && developer.nameAr ? developer.nameAr : (developer.nameEn || developer.name);
+                      })()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">{t('zone')}: </span>
+                    <span className="text-sm text-gray-900">
+                      {(() => {
+                        const zone = zones?.find(z => z.id === project.zoneId);
+                        if (!zone) return 'N/A';
+                        return language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name);
+                      })()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">{t('projectType')}: </span>
+                    <span className="text-sm text-gray-900">{project.type}</span>
+                  </div>
+                </div>
 
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">{t('paymentPlans')}</h4>
-              {project.paymentPlans && project.paymentPlans.length > 0 ? (
-                project.paymentPlans.map((plan, idx) => {
-                  // For demo, use a sample price (e.g., 1,000,000 EGP)
-                  const samplePrice = 1000000;
-                  const schedule = generatePaymentSchedule(samplePrice, plan);
-                  return (
-                    <div key={idx} className="mb-4 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-200 shadow-sm">
-                      <div className="flex flex-wrap gap-3 mb-2">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>{t('downPayment')}: {plan.downPayment}%</span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" /></svg>{t('installments')}: {100 - (plan.downPayment || 0) - (plan.delivery || 0)}%</span>
-                        <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-orange-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12,2 22,22 2,22" /></svg>{t('delivery')}: {plan.delivery}%</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-700 mb-2">
-                        <div><span className="font-semibold">{t('yearsToPay')}:</span> {(plan as any).payYears ?? '-'}</div>
-                        <div><span className="font-semibold">{t('installmentPeriod')}:</span> {(plan as any).installmentPeriod ?? '-'}{(plan as any).installmentPeriod === 'custom' && ` (${(plan as any).installmentMonthsCount ?? '-'} months)`}</div>
-                        <div><span className="font-semibold">{t('firstInstallmentDate')}:</span> {(plan as any).firstInstallmentDate ?? '-'}</div>
-                        <div><span className="font-semibold">{t('deliveryDate')}:</span> {(plan as any).deliveryDate ?? '-'}</div>
-                        {(plan as any).schedule && (
-                          <div className="col-span-2"><span className="font-semibold">{t('scheduleDescription')}:</span> {(plan as any).schedule}</div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-xs text-gray-400">{t('noPaymentPlansAvailable')}</div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">{t('paymentPlans')}</h4>
+                  {project.paymentPlans && project.paymentPlans.length > 0 ? (
+                    project.paymentPlans.map((plan, idx) => {
+                      // For demo, use a sample price (e.g., 1,000,000 EGP)
+                      return (
+                        <div key={idx} className="mb-4 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-white border border-blue-200 shadow-sm">
+                          <div className="flex flex-wrap gap-3 mb-2">
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-blue-100 text-blue-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /></svg>{t('downPayment')}: {plan.downpayment}%</span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-green-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4" /></svg>{t('installments')}: {plan.installment}%</span>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-800 font-semibold text-xs"><svg className="w-4 h-4 mr-1 text-orange-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polygon points="12,2 22,22 2,22" /></svg>{t('delivery')}: {plan.delivery}%</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-700 mb-2">
+                            <div><span className="font-semibold">{t('yearsToPay')}:</span> {(plan as any).yearsToPay ?? '-'}</div>
+                            <div><span className="font-semibold">{t('installmentPeriod')}:</span> {(plan as any).installmentPeriod ?? '-'}{(plan as any).installmentPeriod === 'custom' && ` (${(plan as any).installmentMonthsCount ?? '-'} months)`}</div>
+                            <div><span className="font-semibold">{t('firstInstallmentDate')}:</span> {formatDateMMDDYYYY((plan as any).firstInstallmentDate)}</div>
+                            <div><span className="font-semibold">{t('deliveryDate')}:</span> {formatDateMMDDYYYY((plan as any).deliveryDate)}</div>
+                            {(plan as any).schedule && (
+                              <div className="col-span-2"><span className="font-semibold">{t('scheduleDescription')}:</span> {(plan as any).schedule}</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-xs text-gray-400">{t('noPaymentPlansAvailable')}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div> : <div className="text-center text-gray-500">No projects found</div>}
 
       {/* Add Project Modal */}
       {showAddForm && (
@@ -531,7 +601,7 @@ const ProjectsTab: React.FC = () => {
                                 title={t('removeImage')}
                                 onClick={() => setNewProject(prev => ({
                                   ...prev,
-                                  images: prev.images.filter((_, i) => i !== idx)
+                                  images: prev.images?.filter((_, i) => i !== idx) || []
                                 }))}
                               >
                                 &times;
@@ -574,7 +644,7 @@ const ProjectsTab: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('selectProperties')}</label>
                     <select multiple value={newProject.propertyIds} onChange={e => setNewProject({ ...newProject, propertyIds: Array.from(e.target.selectedOptions, option => option.value) })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 h-32 text-base">
-                      {properties.map(property => (
+                      {properties?.map(property => (
                         <option key={property.id} value={property.id}>
                           {(() => {
                             if (language === 'ar' && property.titleAr) {
@@ -597,11 +667,11 @@ const ProjectsTab: React.FC = () => {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">{t('downPayment')} (%)</label>
-                            <input type="number" value={plan.downPayment} onChange={e => {
+                            <input type="number" value={plan.downpayment} onChange={e => {
                               const val = Number(e.target.value);
                               setNewProject(prev => ({
                                 ...prev,
-                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downPayment: val } : p)
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downpayment: val } : p)
                               }));
                             }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                           </div>
@@ -627,11 +697,11 @@ const ProjectsTab: React.FC = () => {
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">{t('yearsToPay')}</label>
-                            <input type="number" value={plan.payYears} onChange={e => {
+                            <input type="number" value={plan.yearsToPay} onChange={e => {
                               const val = Number(e.target.value);
                               setNewProject(prev => ({
                                 ...prev,
-                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, yearsToPay: val } : p)
                               }));
                             }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                           </div>
@@ -641,7 +711,7 @@ const ProjectsTab: React.FC = () => {
                               const val = e.target.value;
                               setNewProject(prev => ({
                                 ...prev,
-                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
+                                paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val as 'monthly' | 'quarterly' | 'yearly' | 'custom' } : p)
                               }));
                             }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                               <option value="monthly">{t('installmentPeriodOptions.monthly')}</option>
@@ -707,7 +777,7 @@ const ProjectsTab: React.FC = () => {
                     })()}</div>
                     <div><span className="font-semibold">{t('projectType')}:</span> {newProject.type}</div>
                     <div><span className="font-semibold">{t('properties')}:</span> {newProject.propertyIds.map(pid => {
-                      const property = properties.find(p => p.id === pid);
+                      const property = properties?.find(p => p.id === pid);
                       if (!property) return '';
                       if (language === 'ar' && property.titleAr) {
                         return property.titleAr;
@@ -715,6 +785,17 @@ const ProjectsTab: React.FC = () => {
                       return property.titleEn || property.title;
                     }).join(', ')}</div>
                     <div><span className="font-semibold">{t('paymentPlans')}:</span> {newProject.paymentPlans.length}</div>
+                    {newProject.paymentPlans.map((plan, idx) => (
+                      <div key={idx} className="border rounded-lg p-2 mb-2 bg-gray-50">
+                        <div><span className="font-semibold">{t('downPayment')}:</span> {plan.downpayment}%</div>
+                        <div><span className="font-semibold">{t('delivery')}:</span> {plan.delivery}%</div>
+                        <div><span className="font-semibold">{t('yearsToPay')}:</span> {plan.yearsToPay}</div>
+                        <div><span className="font-semibold">{t('installmentPeriod')}:</span> {plan.installmentPeriod}{plan.installmentPeriod === 'custom' && ` (${plan.installmentMonthsCount} months)`}</div>
+                        <div><span className="font-semibold">{t('firstInstallmentDate')}:</span> {formatDateMMDDYYYY(plan.firstInstallmentDate)}</div>
+                        <div><span className="font-semibold">{t('deliveryDate')}:</span> {formatDateMMDDYYYY(plan.deliveryDate)}</div>
+                        {plan.schedule && <div><span className="font-semibold">{t('scheduleDescription')}:</span> {plan.schedule}</div>}
+                      </div>
+                    ))}
                   </div>
                 )}
                 {/* Stepper Navigation */}
@@ -728,7 +809,9 @@ const ProjectsTab: React.FC = () => {
                       <button type="button" onClick={() => setAddStep(s => s + 1)} className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 w-full sm:w-auto">{t('next')}</button>
                     )}
                     {addStep === addSteps.length - 1 && (
-                      <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">{t('addProject')}</button>
+                      <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm font-semibold transition-colors w-full sm:w-auto">{
+                        isAdding ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('addProject')
+                      }</button>
                     )}
                   </div>
                 </div>
@@ -775,7 +858,7 @@ const ProjectsTab: React.FC = () => {
                             title={t('removeImage')}
                             onClick={() => setEditProject(prev => ({
                               ...prev,
-                              images: prev.images.filter((_, i) => i !== idx)
+                              images: prev.images?.filter((_, i) => i !== idx) || []
                             }))}
                           >
                             &times;
@@ -818,11 +901,11 @@ const ProjectsTab: React.FC = () => {
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">{t('downPayment')} (%)</label>
-                          <input type="number" value={plan.downPayment} onChange={e => {
+                          <input type="number" value={plan.downpayment} onChange={e => {
                             const val = Number(e.target.value);
                             setEditProject(prev => ({
                               ...prev,
-                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downPayment: val } : p)
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, downpayment: val } : p)
                             }));
                           }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                         </div>
@@ -848,11 +931,11 @@ const ProjectsTab: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">{t('yearsToPay')}</label>
-                          <input type="number" value={plan.payYears} onChange={e => {
+                          <input type="number" value={plan.yearsToPay} onChange={e => {
                             const val = Number(e.target.value);
                             setEditProject(prev => ({
                               ...prev,
-                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, payYears: val } : p)
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, yearsToPay: val } : p)
                             }));
                           }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                         </div>
@@ -862,7 +945,7 @@ const ProjectsTab: React.FC = () => {
                             const val = e.target.value;
                             setEditProject(prev => ({
                               ...prev,
-                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val } : p)
+                              paymentPlans: prev.paymentPlans.map((p, i) => i === idx ? { ...p, installmentPeriod: val as 'monthly' | 'quarterly' | 'yearly' | 'custom' } : p)
                             }));
                           }} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="monthly">{t('installmentPeriodOptions.monthly')}</option>
@@ -885,7 +968,7 @@ const ProjectsTab: React.FC = () => {
                         )}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">{t('firstInstallmentDate')}</label>
-                          <input type="date" value={plan.firstInstallmentDate} onChange={e => {
+                          <input type="date" value={plan.firstInstallmentDate ? plan.firstInstallmentDate.slice(0, 10) : ''} onChange={e => {
                             const val = e.target.value;
                             setEditProject(prev => ({
                               ...prev,
@@ -895,7 +978,7 @@ const ProjectsTab: React.FC = () => {
                         </div>
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">{t('deliveryDate')}</label>
-                          <input type="date" value={plan.deliveryDate} onChange={e => {
+                          <input type="date" value={plan.deliveryDate ? plan.deliveryDate.slice(0, 10) : ''} onChange={e => {
                             const val = e.target.value;
                             setEditProject(prev => ({
                               ...prev,
@@ -913,7 +996,7 @@ const ProjectsTab: React.FC = () => {
                 </div>
                 <div className="flex justify-end space-x-3 pt-4">
                   <button type="button" onClick={() => setShowEditForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">{t('cancel')}</button>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{t('updateProject')}</button>
+                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{isUpdating ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('updateProject')}</button>
                 </div>
               </form>
             </div>

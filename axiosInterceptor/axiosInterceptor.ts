@@ -1,18 +1,27 @@
-import axios from 'axios';
+import axios from "axios";
 
-const axiosInterceptor = axios.create({
-    baseURL: 'https://ca582cea704f.ngrok-free.app/api',
+const axiosInstance = axios.create({
+  baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
+  // baseURL: `http://localhost:3000/api`,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  withCredentials: true,
 });
 
-axiosInterceptor.interceptors.request.use((config) => {
-    const token = localStorage.getItem('token');
-    console.log("token", token);
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        config.headers.Accept = 'application/json';
-        // config.withCredentials = true;
-    }
+axiosInstance.interceptors.request.use(
+  (config) => {
+    // No need to manually attach tokens; server will read from cookies
     return config;
-});
+  },
+  (error) => Promise.reject(error)
+);
 
-export default axiosInterceptor;
+axiosInstance.interceptors.response.use(
+  (response) => {
+    // No need to manually store tokens; server should set cookies via Set-Cookie
+    return response;
+  },
+);
+
+export default axiosInstance;

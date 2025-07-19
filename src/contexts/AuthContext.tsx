@@ -9,6 +9,7 @@ export interface User {
   role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep';
   teamId?: string;
   image?: string | null;
+
 }
 
 interface AuthContextType {
@@ -35,15 +36,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     // Simple authentication logic - you can replace this with your actual auth logic
     // For now, we'll use a simple check against mock users
-    const foundUser = await axiosInterceptor.post('/auth/login', { email, password });
-    if (foundUser.data.user) {
-      // In a real app, you would verify the password here
-      // For demo purposes, we'll accept any user from the mock list
-      setUser(foundUser.data.user);
-      setIsAuthenticated(true);
-      localStorage.setItem('token', foundUser.data.access_token);
-      localStorage.setItem('propai_user', JSON.stringify(foundUser.data.user));
-      return true;
+    try {
+      const foundUser = await axiosInterceptor.post('/auth/login', { email, password });
+      if (foundUser.data.user) {
+        // In a real app, you would verify the password here
+        // For demo purposes, we'll accept any user from the mock list
+        setUser(foundUser.data.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('token', foundUser.data.access_token);
+        localStorage.setItem('propai_user', JSON.stringify(foundUser.data.user));
+        return true;
+      }
+    } catch (error: any) {
+      toast.error(error.response.data.message);
+      console.error('Error logging in:', error);
+      return false;
     }
     return false;
   };

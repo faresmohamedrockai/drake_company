@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
@@ -7,47 +6,88 @@ import { Search, Plus, Edit, Trash2, User, Shield, Eye, EyeOff } from 'lucide-re
 import { User as UserType } from '../../types';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Id, toast } from 'react-toastify';
+import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
 
 const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
-  console.log("users", users);
-  // const { addUser, deleteUser } = useData();
   const { user: currentUser } = useAuth();
   const { isRTL, rtlClass, rtlMargin } = useLanguage();
   const { t } = useTranslation('settings');
-  const user = JSON.parse(localStorage.getItem('propai_user') || '{}') as UserType;
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [toastId, setToastId] = useState<Id | null>(null);
   const [updateUserResponse, setUpdateUserResponse] = useState<UserType | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
     email: '',
-    username: '',
-    password: null,
-    role: 'Sales Rep' as UserType['role'],
-    teamId: '',
-    isActive: true,
-    imageBase64: '',
+    password: '',
+    name: '',
+    role: 'sales_rep',
+    teamLeaderId: '',
+    image: '',
   });
+  const [emailError, setEmailError] = useState('');
   const queryClient = useQueryClient();
   const { mutateAsync: updateUserMutation, isPending } = useMutation({
     mutationFn: (data: { id: string; formData: any }) => updateUser(data.id, data.formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.dismiss(toastId!);
+      toast.success("User updated successfully");
+    },
+    onError: (error) => {
+      console.error('Error updating user:', error);
+      toast.dismiss(toastId!);
+      toast.error("Error updating user");
+    }
+  })
+  const { mutateAsync: addUserMutation, isPending: isAdding } = useMutation({
+    mutationFn: (data: { formData: any }) => addUser(data.formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setFormData({
+        email: '',
+        password: '',
+        name: '',
+        role: 'sales_rep',
+        teamLeaderId: '',
+        image: '',
+      });
+      setShowAddModal(false);
+      toast.dismiss(toastId!);
+      setToastId(toast.success(t('user.added')));
+    },
+    onError: (error) => {
+      console.error('Error adding user:', error);
+      toast.dismiss(toastId!);
+      toast.error("Error adding user");
     }
   })
   const { mutateAsync: deleteUserMutation, isPending: isDeleting } = useMutation({
     mutationFn: (userId: string) => deleteUser(userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.dismiss(toastId!);
+      toast.success("User deleted successfully");
     }
   })
+
+  const addUser = async (formData: any) => {
+    const response = await axiosInterceptor.post(`/auth/add-user`, formData);
+    return response.data;
+  }
 
   const updateUser = async (userId: string, formData: any) => {
     const response = await axiosInterceptor.patch(`/auth/update-user/${userId}`, formData);
     return response.data;
   }
+
+  useEffect(() => {
+    if (isAdding || isDeleting || isPending) {
+      setToastId(toast.loading("Loading..."));
+    }
+  }, [isAdding, isDeleting, isPending]);
 
   const canManageUsers = currentUser?.role === 'admin';
   const canDeleteUsers = currentUser?.role === 'admin';
@@ -64,6 +104,13 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailError('');
+
+    // Email validation
+    if (!validateEmail(formData.email)) {
+      setEmailError(getEmailErrorMessage(formData.email, isRTL ? 'ar' : 'en'));
+      return;
+    }
 
     // For team leaders, set their team ID to their own user ID (will be generated)
     const submitData = { ...formData };
@@ -71,7 +118,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       // For new users, we'll set this after user creation
       // For editing, we'll keep the existing team ID
       if (!editingUser) {
-        submitData.teamId = 'auto-assign'; // Will be set to user ID after creation
+        submitData.teamLeaderId = 'auto-assign'; // Will be set to user ID after creation
       }
     }
 
@@ -79,20 +126,11 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       const response = await updateUserMutation({ id: editingUser.id, formData: submitData });
       setUpdateUserResponse(response);
     } else {
-      // addUser(submitData);
+      addUserMutation({ formData: submitData });
+
     }
 
-    setFormData({
-      name: '',
-      email: '',
-      username: '',
-      password: null,
-      role: 'sales_rep',
-      teamId: '',
-      isActive: true,
-      imageBase64: '',
-    });
-    setShowAddModal(false);
+
   };
 
   const handleEdit = (user: UserType) => {
@@ -100,12 +138,10 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     setFormData({
       name: user.name,
       email: user.email,
-      username: user.username,
-      password: null,
+      password: '',
       role: user.role,
-      teamId: user.teamId || '',
-      isActive: user.isActive,
-      imageBase64: user.image || '',
+      teamLeaderId: user.teamLeaderId || '',
+      image: user.image || '',
     });
     setShowAddModal(true);
   };
@@ -162,6 +198,11 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear email error when user types
+    if (name === 'email') {
+      setEmailError('');
+    }
   }
 
   return (
@@ -177,12 +218,10 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
             setFormData({
               name: '',
               email: '',
-              username: '',
-              password: null,
+              password: '',
               role: 'sales_rep',
-              teamId: '',
-              isActive: true,
-              imageBase64: '',
+              teamLeaderId: '',
+              image: '',
             });
             setShowAddModal(true);
           }}
@@ -310,8 +349,8 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
               <div className="flex flex-col items-center">
                 <label htmlFor="avatar-upload" className="cursor-pointer group relative">
                   <div className="h-20 w-20 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden border-4 border-blue-200 shadow-md">
-                    {formData.imageBase64 ? (
-                      <img src={formData.imageBase64} alt="avatar" className="object-cover w-full h-full" />
+                    {formData.image ? (
+                      <img src={formData.image} alt="avatar" className="object-cover w-full h-full" />
                     ) : (
                       <span className="text-2xl text-blue-600 font-bold">{formData.name.charAt(0)}</span>
                     )}
@@ -332,7 +371,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                         const reader = new FileReader();
                         reader.readAsDataURL(file);
                         reader.onloadend = () => {
-                          setFormData(prev => ({ ...prev, imageBase64: reader.result as string }));
+                          setFormData(prev => ({ ...prev, image: reader.result as string }));
                         };
                       }
                     }}
@@ -359,10 +398,16 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                   value={formData.email}
                   name='email'
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${isRTL ? 'font-arabic' : ''} ${
+                    emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                   // required
                   dir={isRTL ? 'rtl' : 'ltr'}
+                  placeholder={isRTL ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
                 />
+                {emailError && (
+                  <p className="text-red-600 text-sm mt-1">{emailError}</p>
+                )}
               </div>
 
               {/* <div>
@@ -399,7 +444,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                 </div>
               </div>
               {
-                user?.role === 'admin' && (
+                currentUser?.role === 'admin' && (
 
                   <div>
                     <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.role')}</label>
@@ -408,7 +453,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                       name='role'
                       onChange={(e) => {
                         const newRole = e.target.value as UserType['role'];
-                        let newTeamId = formData.teamId;
+                        let newTeamId = formData.teamLeaderId;
 
                         // If changing to team leader, set team ID to auto-assign
                         if (newRole === 'team_leader') {
@@ -418,7 +463,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                           newTeamId = '';
                         }
 
-                        setFormData({ ...formData, role: newRole, teamId: newTeamId });
+                        setFormData({ ...formData, role: newRole, teamLeaderId: newTeamId });
                       }}
                       className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                       dir={isRTL ? 'rtl' : 'ltr'}
@@ -432,45 +477,27 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                 )
               }
 
-              {/* Team Leader ID */}
-              {formData.role === 'team_leader' && (
-                <div>
-                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>
-                    {isRTL ? 'معرف قائد الفريق' : 'Team Leader ID'}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.teamId}
-                    onChange={handleInputChange}
-                    name='teamId'
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''} bg-gray-100`}
-                    dir={isRTL ? 'rtl' : 'ltr'}
-                    placeholder={isRTL ? "سيتم تعيين معرف الفريق تلقائياً" : "Team ID will be auto-assigned"}
-                    readOnly
-                  />
-                </div>
-              )}
 
               {/* Team ID for Sales Rep */}
               {formData.role === 'sales_rep' && (
                 <div>
                   <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>
-                    {t('user.teamId')}
+                    {isRTL ? 'اسم قائد الفريق' : 'Team Leader Name'}
                   </label>
                   <select
-                    value={formData.teamId}
+                    value={formData.teamLeaderId}
                     onChange={handleInputChange}
-                    name='teamId'
+                    name='teamLeaderId'
                     className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                     dir={isRTL ? 'rtl' : 'ltr'}
                     required
                   >
-                    <option value="">{isRTL ? "اختر معرف الفريق" : "Select team identifier"}</option>
+                    <option value="">{isRTL ? "اختر اسم قائد الفريق" : "Select team leader name"}</option>
                     {users
-                      .filter(user => user.role === 'team_leader' && user.isActive)
+                      .filter(user => user.role === 'team_leader')
                       .map(teamLeader => (
                         <option key={teamLeader.id} value={teamLeader.id}>
-                          {teamLeader.name} ({teamLeader.username})
+                          {teamLeader.name} ({teamLeader.email})
                         </option>
                       ))
                     }
