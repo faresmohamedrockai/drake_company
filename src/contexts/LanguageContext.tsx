@@ -30,7 +30,6 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const isRTL = language === 'ar';
-
   // RTL utility functions
   const rtlClass = (ltrClass: string, rtlClass: string) => {
     return isRTL ? rtlClass : ltrClass;
