@@ -1,7 +1,7 @@
 {
   "version": 2,
   "builds": [
-    { "src": "index.html", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+    { "src": "package.json", "use": "@vercel/static-build" }
   ],
   "routes": [
     { "src": "/dashboard", "dest": "/index.html" },
@@ -13,5 +13,8 @@
     { "src": "/settings", "dest": "/index.html" },
     { "src": "/", "dest": "/index.html" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ]
+  ],
+  "staticBuild": {
+    "distDir": "dist"
+  }
 } 
