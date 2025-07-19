@@ -200,18 +200,18 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   }
   // Use filteredLeads for dashboardCards, callOutcomeCards, visitStatusCards
   const dashboardCards = [
-    { key: 'all', label: getCardLabel('allLeads', t), count: filteredLeads.length },
-    { key: 'duplicate', label: getCardLabel('duplicateLeads', t), count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx).length },
-    { key: 'fresh_lead', label: getCardLabel('freshLeads', t), count: filteredLeads.filter(lead => lead.status === 'fresh_lead').length },
-    { key: 'cold_call', label: getCardLabel('coldCalls', t), count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
-    { key: 'follow_up', label: getCardLabel('followUp', t), count: filteredLeads.filter(lead => lead.status === 'follow_up').length },
-    { key: 'scheduled_visit', label: getCardLabel('scheduledVisit', t), count: filteredLeads.filter(lead => lead.status === 'scheduled_visit').length },
-    { key: 'open_deal', label: getCardLabel('openDeal', t), count: filteredLeads.filter(lead => lead.status === 'open_deal').length },
-    { key: 'closed_deal', label: getCardLabel('closedDeal', t), count: filteredLeads.filter(lead => lead.status === 'closed_deal').length },
-    { key: 'cancellation', label: getCardLabel('cancellation', t), count: filteredLeads.filter(lead => lead.status === 'cancellation').length },
-    { key: 'no_answer', label: getCardLabel('noAnswer', t), count: filteredLeads.filter(lead => lead.status === 'no_answer').length },
-    { key: 'not_interested_now', label: getCardLabel('notInterestedNow', t), count: filteredLeads.filter(lead => lead.status === 'not_interested_now').length },
-    { key: 'reservation', label: getCardLabel('reservation', t), count: filteredLeads.filter(lead => lead.status === 'reservation').length },
+    { key: 'all', count: filteredLeads.length },
+    { key: 'duplicate', count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx).length },
+    { key: 'fresh_lead', count: filteredLeads.filter(lead => lead.status === 'fresh_lead').length },
+    { key: 'cold_call', count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
+    { key: 'follow_up', count: filteredLeads.filter(lead => lead.status === 'follow_up').length },
+    { key: 'scheduled_visit', count: filteredLeads.filter(lead => lead.status === 'scheduled_visit').length },
+    { key: 'open_deal', count: filteredLeads.filter(lead => lead.status === 'open_deal').length },
+    { key: 'closed_deal', count: filteredLeads.filter(lead => lead.status === 'closed_deal').length },
+    { key: 'cancellation', count: filteredLeads.filter(lead => lead.status === 'cancellation').length },
+    { key: 'no_answer', count: filteredLeads.filter(lead => lead.status === 'no_answer').length },
+    { key: 'not_interested_now', count: filteredLeads.filter(lead => lead.status === 'not_interested_now').length },
+    { key: 'reservation', count: filteredLeads.filter(lead => lead.status === 'reservation').length },
   ];
   const compactCards = dashboardCards.slice(0, 4);
   const fullCards = dashboardCards;
@@ -223,12 +223,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   // Count leads for each outcome/status (always from all leads)
   const callOutcomeCards = allCallOutcomes.map(outcome => ({
     key: outcome,
-    label: getCardLabel(outcome, t),
     count: filteredLeads.filter(lead => (lead.calls || []).some(call => call.outcome === outcome)).length,
   }));
   const visitStatusCards = allVisitStatuses.map(status => ({
     key: status,
-    label: getCardLabel(status, t),
     count: filteredLeads.filter(lead => (lead.visits || []).some(visit => visit.status === status)).length,
   }));
 

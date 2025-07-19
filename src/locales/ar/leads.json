@@ -167,10 +167,20 @@
   "Follow Up Required": "مطلوب متابعة",
   "Meeting Scheduled": "اجتماع مجدول",
   "Completed": "مكتمل",
-  "Cancelled": "ملغاة",
+  "Cancelled": "ملغي",
   "Rescheduled": "أعيدت جدولتها",
   "manager": "المدير",
   "salesRep": "مندوب المبيعات",
   "allManagers": "جميع المديرين",
-  "allSalesReps": "جميع مندوبي المبيعات"
+  "allSalesReps": "جميع مندوبي المبيعات",
+  "all": "جميع العملاء المحتملين",
+  "duplicate": "العملاء المحتملين المكررين",
+  "cold_call": "المكالمات الباردة",
+  "fresh_lead": "عميل محتمل جديد",
+  "follow_up": "متابعة",
+  "scheduled_visit": "زيارة مجدولة",
+  "open_deal": "صفقة مفتوحة",
+  "closed_deal": "صفقة مغلقة",
+  "no_answer": "لا يوجد رد",
+  "not_interested_now": "غير مهتم الآن"
 } 

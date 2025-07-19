@@ -64,10 +64,16 @@ function getCardLabel(key: string, t: (k: string) => string) {
   return translated !== key ? translated : addSpacesToCamelCase(key);
 }
 
+// Helper function to get translated section titles
+function getSectionTitle(key: string, t: (k: string) => string) {
+  const translated = t(key);
+  return translated !== key ? translated : addSpacesToCamelCase(key);
+}
+
 // Card type
 interface CardData {
   key: string;
-  label: string;
+  label?: string; // Optional since we now use translation function
   count: number;
   change?: number; // for status cards
 }
@@ -114,7 +120,7 @@ const LeadsSummaryCards: React.FC<LeadsSummaryCardsProps> = ({
       <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900 flex items-center">
-            {t('leadStatusCards') !== 'leadStatusCards' ? t('leadStatusCards') : addSpacesToCamelCase('Lead Status')}
+            {getSectionTitle('leadStatusCards', t)}
           </h2>
         </div>
         <motion.div
@@ -126,7 +132,7 @@ const LeadsSummaryCards: React.FC<LeadsSummaryCardsProps> = ({
             const icon = statusCardIcons[card.key] || <User className="h-6 w-6 text-white" />;
             const iconBg = statusCardColors[card.key] || 'bg-gray-400';
             const isActive = activeStatusCard === card.key;
-            const label = card.label || getCardLabel(card.key, t);
+            const label = getCardLabel(card.key, t);
             const change = card.change ?? 0;
             return (
               <motion.div
@@ -162,7 +168,7 @@ const LeadsSummaryCards: React.FC<LeadsSummaryCardsProps> = ({
       {callOutcomeCards.length > 0 && (
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            {t('callOutcomesCards') !== 'callOutcomesCards' ? t('callOutcomesCards') : addSpacesToCamelCase('Call Outcomes')}
+            {getSectionTitle('callOutcomesCards', t)}
           </h2>
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"
@@ -173,7 +179,7 @@ const LeadsSummaryCards: React.FC<LeadsSummaryCardsProps> = ({
               const icon = outcomeIcons[card.key] || <Phone className="h-6 w-6 text-white" />;
               const iconBg = outcomeColors[card.key] || 'bg-blue-400';
               const isActive = activeCallOutcomeCard === card.key;
-              const label = card.label || getCardLabel(card.key, t);
+              const label = getCardLabel(card.key, t);
               return (
                 <motion.div
                   key={card.key}
@@ -207,7 +213,7 @@ const LeadsSummaryCards: React.FC<LeadsSummaryCardsProps> = ({
       {visitStatusCards.length > 0 && (
         <div>
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
-            {t('visitStatusCards') !== 'visitStatusCards' ? t('visitStatusCards') : addSpacesToCamelCase('Visit Statuses')}
+            {getSectionTitle('visitStatusCards', t)}
           </h2>
           <motion.div
             className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"
@@ -218,7 +224,7 @@ const LeadsSummaryCards: React.FC<LeadsSummaryCardsProps> = ({
               const icon = visitIcons[card.key] || <CalendarIcon className="h-6 w-6 text-white" />;
               const iconBg = visitColors[card.key] || 'bg-purple-400';
               const isActive = activeVisitStatusCard === card.key;
-              const label = card.label || getCardLabel(card.key, t);
+              const label = getCardLabel(card.key, t);
               return (
                 <motion.div
                   key={card.key}

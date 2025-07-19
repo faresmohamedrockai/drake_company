@@ -173,5 +173,15 @@
   "manager": "Manager",
   "salesRep": "Sales Representative",
   "allManagers": "All Managers",
-  "allSalesReps": "All Sales Representatives"
+  "allSalesReps": "All Sales Representatives",
+  "all": "All Leads",
+  "duplicate": "Duplicate Leads",
+  "cold_call": "Cold Calls",
+  "fresh_lead": "Fresh Lead",
+  "follow_up": "Follow Up",
+  "scheduled_visit": "Scheduled Visit",
+  "open_deal": "Open Deal",
+  "closed_deal": "Closed Deal",
+  "no_answer": "No Answer",
+  "not_interested_now": "Not Interested Now"
 } 

@@ -362,18 +362,18 @@ const LeadsList: React.FC = () => {
 
   // Add card definitions for all valid LeadStatus values
   const dashboardCards = [
-    { key: 'all', label: getCardLabel('allLeads', t), count: leads.length },
-    { key: 'duplicate', label: getCardLabel('duplicateLeads', t), count: leads.filter((lead, idx, arr) => arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx).length },
-    { key: 'fresh_lead', label: getCardLabel('freshLeads', t), count: leads.filter(lead => lead.status === 'fresh_lead').length },
-    { key: 'cold_call', label: getCardLabel('coldCalls', t), count: leads.filter(lead => lead.source === 'Cold Call').length },
-    { key: 'follow_up', label: getCardLabel('followUp', t), count: leads.filter(lead => lead.status === 'follow_up').length },
-    { key: 'scheduled_visit', label: getCardLabel('scheduledVisit', t), count: leads.filter(lead => lead.status === 'scheduled_visit').length },
-    { key: 'open_deal', label: getCardLabel('openDeal', t), count: leads.filter(lead => lead.status === 'open_deal').length },
-    { key: 'closed_deal', label: getCardLabel('closedDeal', t), count: leads.filter(lead => lead.status === 'closed_deal').length },
-    { key: 'cancellation', label: getCardLabel('cancellation', t), count: leads.filter(lead => lead.status === 'cancellation').length },
-    { key: 'no_answer', label: getCardLabel('noAnswer', t), count: leads.filter(lead => lead.status === 'no_answer').length },
-    { key: 'not_interested_now', label: getCardLabel('notInterestedNow', t), count: leads.filter(lead => lead.status === 'not_interested_now').length },
-    { key: 'reservation', label: getCardLabel('reservation', t), count: leads.filter(lead => lead.status === 'reservation').length },
+    { key: 'all', count: leads.length },
+    { key: 'duplicate', count: leads.filter((lead, idx, arr) => arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx).length },
+    { key: 'fresh_lead', count: leads.filter(lead => lead.status === 'fresh_lead').length },
+    { key: 'cold_call', count: leads.filter(lead => lead.source === 'Cold Call').length },
+    { key: 'follow_up', count: leads.filter(lead => lead.status === 'follow_up').length },
+    { key: 'scheduled_visit', count: leads.filter(lead => lead.status === 'scheduled_visit').length },
+    { key: 'open_deal', count: leads.filter(lead => lead.status === 'open_deal').length },
+    { key: 'closed_deal', count: leads.filter(lead => lead.status === 'closed_deal').length },
+    { key: 'cancellation', count: leads.filter(lead => lead.status === 'cancellation').length },
+    { key: 'no_answer', count: leads.filter(lead => lead.status === 'no_answer').length },
+    { key: 'not_interested_now', count: leads.filter(lead => lead.status === 'not_interested_now').length },
+    { key: 'reservation', count: leads.filter(lead => lead.status === 'reservation').length },
   ];
   const compactCards = dashboardCards.slice(0, 4);
   const fullCards = dashboardCards;
@@ -385,12 +385,10 @@ const LeadsList: React.FC = () => {
   // Count leads for each outcome/status (always from all leads)
   const callOutcomeCards = allCallOutcomes.map(outcome => ({
     key: outcome,
-    label: getCardLabel(outcome, t),
     count: leads.filter(lead => (lead.calls || []).some(call => call.outcome === outcome)).length,
   }));
   const visitStatusCards = allVisitStatuses.map(status => ({
     key: status,
-    label: getCardLabel(status, t),
     count: leads.filter(lead => (lead.visits || []).some(visit => visit.status === status)).length,
   }));
 
@@ -461,7 +459,7 @@ const LeadsList: React.FC = () => {
                   {icon}
                 </div>
                 <div className="flex-1">
-                  <div className="text-gray-700 font-medium">{card.label}</div>
+                  <div className="text-gray-700 font-medium">{getCardLabel(card.key, t)}</div>
                   <div className="text-2xl font-bold">{card.count}</div>
                   <div className={`flex items-center text-sm mt-1 ${change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-400'}`}>
                     {change > 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : change < 0 ? <TrendingDown className="h-4 w-4 mr-1" /> : <Minus className="h-4 w-4 mr-1" />}
@@ -503,7 +501,7 @@ const LeadsList: React.FC = () => {
                     {icon}
                   </div>
                   <div className="flex-1">
-                    <div className="text-gray-700 font-medium">{card.label}</div>
+                    <div className="text-gray-700 font-medium">{getCardLabel(card.key, t)}</div>
                     <div className="text-2xl font-bold">{card.count}</div>
                     <div className="flex items-center text-sm mt-1 text-gray-400">
                       <Minus className="h-4 w-4 mr-1" />0%
@@ -535,7 +533,7 @@ const LeadsList: React.FC = () => {
                     {icon}
                   </div>
                   <div className="flex-1">
-                    <div className="text-gray-700 font-medium">{card.label}</div>
+                    <div className="text-gray-700 font-medium">{getCardLabel(card.key, t)}</div>
                     <div className="text-2xl font-bold">{card.count}</div>
                     <div className="flex items-center text-sm mt-1 text-gray-400">
                       <Minus className="h-4 w-4 mr-1" />0%
