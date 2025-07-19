@@ -7,7 +7,8 @@ import { Download, Smartphone, CheckCircle, AlertCircle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import imageCompression from 'browser-image-compression';
-// import { useLanguage } from '../../contexts/LanguageContext';
+import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface UserProfileModalProps {
   user: UserType | null;
@@ -19,7 +20,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const { logout, user: authUser } = useAuth();
   const { settings } = useSettings();
   const { t } = useTranslation('settings');
-  // const { language } = useLanguage();
+  const { language } = useLanguage();
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -48,6 +49,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const [showInstallSuccess, setShowInstallSuccess] = useState(false);
   const [showInstallError, setShowInstallError] = useState(false);
   const [installMessage, setInstallMessage] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   if (!user) return null;
 
@@ -68,6 +70,11 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // Clear email error when user types
+    if (name === 'email') {
+      setEmailError('');
+    }
   };
 
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -98,6 +105,13 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setEmailError('');
+
+    // Email validation
+    if (formData.email && !validateEmail(formData.email)) {
+      setEmailError(getEmailErrorMessage(formData.email, language));
+      return;
+    }
 
     // Update user in DataContext
     await updateUserMutation({ id: user.id, formData });
@@ -264,9 +278,15 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                  emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                }`}
                 required
+                placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
               />
+              {emailError && (
+                <p className="text-red-600 text-sm mt-1">{emailError}</p>
+              )}
             </div>
 
             {/* Add to Home Screen Section */}

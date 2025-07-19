@@ -56,8 +56,8 @@ const MeetingsManagement: React.FC = () => {
         locationType: 'Online',
       });
     },
-    onError: () => {
-      toast.error(t('meetingAddFailed'));
+    onError: (error: any) => {
+      toast.error(error.response.data.message[0] || "Error adding meeting");
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     }
   });
@@ -84,8 +84,8 @@ const MeetingsManagement: React.FC = () => {
         locationType: 'Online',
       });
     },
-    onError: () => {
-      toast.error(t('meetingUpdateFailed'));
+    onError: (error: any) => {
+      toast.error(error.response.data.message[0] || "Error updating meeting");
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     }
   });
@@ -96,8 +96,8 @@ const MeetingsManagement: React.FC = () => {
       toast.success("Meeting deleted successfully");
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     },
-    onError: () => {
-      toast.error(t('meetingDeleteFailed'));
+    onError: (error: any) => {
+      toast.error(error.response.data.message);
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     }
   });
@@ -259,7 +259,17 @@ const MeetingsManagement: React.FC = () => {
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+
+    // If meeting type is changed to "Site Visit", automatically set location type to "Offline"
+    if (name === 'type' && value === 'Site Visit') {
+      setForm((prev) => ({
+        ...prev,
+        [name]: value,
+        locationType: 'Offline'
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -529,12 +539,16 @@ const MeetingsManagement: React.FC = () => {
                   name="locationType"
                   value={form.locationType}
                   onChange={handleFormChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${form.type === 'Site Visit' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                   required
+                  disabled={form.type === 'Site Visit'}
                 >
                   <option value="Online">{t('locationTypes.online')}</option>
                   <option value="Offline">{t('locationTypes.offline')}</option>
                 </select>
+                {form.type === 'Site Visit' && (
+                  <p className="text-xs text-gray-500 mt-1">{t('siteVisitLocationNote', { defaultValue: 'Site visits are automatically set to offline location' })}</p>
+                )}
               </div>
               {form.locationType === 'Offline' && (
                 <div>

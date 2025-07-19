@@ -8,7 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { Developer, Property, Zone } from '../../types';
 import { Id, toast } from 'react-toastify';
-import { getProjects, getProperties } from '../../queries/queries';
+import { getDevelopers, getProjects, getProperties, getZones } from '../../queries/queries';
 
 export interface PaymentPlan {
   downpayment: number;
@@ -34,6 +34,8 @@ export interface Project {
   propertyIds: string[];
   // Add images property
   images?: string[];
+  // Add developer object for nested data
+  developerObj?: Developer;
 }
 
 // Utility: Generate payment schedule for a property price and payment plan
@@ -138,6 +140,7 @@ const ProjectsTab: React.FC = () => {
   });
   const { data: projects, isLoading: isProjectsLoading } = useQuery<Project[]>({
     queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProjects()
   });
 
@@ -146,19 +149,13 @@ const ProjectsTab: React.FC = () => {
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getDevelopers()
   });
-  const getDevelopers = async () => {
-    const response = await axiosInterceptor.get('/developers');
-    return response.data.developers as Developer[];
-  }
+
   const { data: zones } = useQuery<Zone[]>({
     queryKey: ['zones'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getZones()
   });
-  const getZones = async () => {
-    const response = await axiosInterceptor.get('/zones');
-    return response.data.zones as Zone[];
-  }
+
   const addProject = async (project: any) => {
     const response = await axiosInterceptor.post('/projects/create', project);
     return response.data.project as Project;

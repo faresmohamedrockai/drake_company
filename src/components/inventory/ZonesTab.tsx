@@ -144,13 +144,6 @@ const ZonesTab: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          {t('addZone')}
-        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
@@ -162,7 +155,22 @@ const ZonesTab: React.FC = () => {
             setShowAddZoneModal={setShowAddModal}
             zones={zones}
           />
-          <p className="text-sm text-gray-500 mt-2">{t('clickMapToAddZones')}</p>
+          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <MapPin className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-800 mb-1">
+                  {language === 'ar' ? 'إضافة منطقة جديدة' : 'Add New Zone'}
+                </p>
+                <p className="text-sm text-blue-700">
+                  {language === 'ar' 
+                    ? 'انقر على الخريطة لإنشاء منطقة جديدة. يمكنك تحديد الموقع بدقة وإضافة تفاصيل المنطقة.'
+                    : 'Click on the map to create a new zone. You can precisely select the location and add zone details.'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Zones List */}

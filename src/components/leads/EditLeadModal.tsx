@@ -9,6 +9,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { getLeads, getProperties, getUsers } from '../../queries/queries';
 import { Project } from '../inventory/ProjectsTab';
+import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
+import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 
 interface EditLeadModalProps {
@@ -42,13 +45,17 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       onClose();
 
     },
-    onError: () => {
-      toast.error(t('leadUpdateFailed'));
+    onError: (error: any) => {
+      console.log("asdasdasdasda");
+      
+      console.log(error);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.error(error.response.data.message[0] || "Error updating lead");
     }
   });
   const { user } = useAuth();
   const { t, i18n } = useTranslation('leads');
+  const { language } = useLanguage();
   const [formData, setFormData] = useState<Lead>({
     nameEn: '',
     nameAr: '',
@@ -61,6 +68,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     assignedToId: ''
   });
   const [error, setError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
 
   // Initialize form data when lead changes
   useEffect(() => {
@@ -83,8 +92,28 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setPhoneError('');
+    setEmailError('');
 
     if (!lead) return;
+
+    // Phone validation
+    if (!validatePhoneNumber(formData.contact)) {
+      setPhoneError(getPhoneErrorMessage(formData.contact, language));
+      return;
+    }
+
+    // Email validation (only if email is provided)
+    if (formData.email && !validateEmail(formData.email)) {
+      setEmailError(getEmailErrorMessage(formData.email, language));
+      return;
+    }
+
+    // Client-side validation
+    if (!formData.inventoryInterestId) {
+      setError('Please select an inventory interest');
+      return;
+    }
 
     // Check for duplicate phone number (excluding current lead)
     const existingLead = leads?.find(l => l.contact === formData.contact && l.id !== lead.id);
@@ -164,10 +193,19 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <input
               type="tel"
               value={formData.contact}
-              onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+              onChange={(e) => {
+                setFormData({ ...formData, contact: e.target.value });
+                setPhoneError(''); // Clear error when user types
+              }}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${
+                phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+              }`}
               required
+              placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
             />
+            {phoneError && (
+              <p className="text-red-600 text-sm mt-1">{phoneError}</p>
+            )}
           </div>
 
           <div className="col-span-1">
@@ -175,9 +213,18 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <input
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+              onChange={(e) => {
+                setFormData({ ...formData, email: e.target.value });
+                setEmailError(''); // Clear error when user types
+              }}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${
+                emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+              }`}
+              placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
             />
+            {emailError && (
+              <p className="text-red-600 text-sm mt-1">{emailError}</p>
+            )}
           </div>
 
           <div className="col-span-1">
@@ -218,21 +265,13 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('budgetRequired')}</label>
             <select
               value={formData.budget}
-              onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-              required
+              onChange={e => setFormData({ ...formData, budget: e.target.value })}
+              className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
             >
-              <option value="">{t('selectBudgetRange')}</option>
-              <option value="EGP 800,000 - 1,200,000">EGP 800,000 - 1,200,000</option>
-              <option value="EGP 1,200,000 - 1,800,000">EGP 1,200,000 - 1,800,000</option>
-              <option value="EGP 1,500,000 - 2,500,000">EGP 1,500,000 - 2,500,000</option>
-              <option value="EGP 1,800,000 - 2,500,000">EGP 1,800,000 - 2,500,000</option>
-              <option value="EGP 2,000,000 - 3,000,000">EGP 2,000,000 - 3,000,000</option>
-              <option value="EGP 2,500,000 - 3,500,000">EGP 2,500,000 - 3,500,000</option>
-              <option value="EGP 3,000,000 - 4,500,000">EGP 3,000,000 - 4,500,000</option>
-              <option value="EGP 3,500,000 - 5,000,000">EGP 3,500,000 - 5,000,000</option>
-              <option value="EGP 4,000,000 - 6,000,000">EGP 4,000,000 - 6,000,000</option>
-              <option value="EGP 5,500,000 - 8,000,000">EGP 5,500,000 - 8,000,000</option>
+              <option value="">{t('allBudgets')}</option>
+              {leads?.map((lead: Lead) => (
+                <option key={lead.id} value={lead.budget}>{lead.budget}</option>
+              ))}
             </select>
           </div>
 

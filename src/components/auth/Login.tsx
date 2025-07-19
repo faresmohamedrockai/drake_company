@@ -15,27 +15,23 @@ const Login: React.FC = () => {
   // const { login } = useAuth();
   const { settings } = useSettings();
   const { t } = useTranslation('auth');
-const { login } = useAuth(); // ✅ استدعاء الـ context
+  const { login } = useAuth(); // ✅ استدعاء الـ context
 
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
-  setError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
 
-  const success = await login(email, password);
+    const success = await login(email, password);
 
-  if (!success) {
-    setError(t('errorOccurred'));
-  }
-
-  setIsLoading(false);
-};
+    setIsLoading(false);
+  };
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left side - Branding with Background Image */}
-      <div 
+      <div
         className="flex-1 relative p-6 lg:p-12 flex flex-col justify-center items-center text-white min-h-[50vh] lg:min-h-screen"
         style={{
           backgroundImage: 'url(/src/aspects/loginphoto.jpg)',
@@ -46,14 +42,14 @@ const handleSubmit = async (e: React.FormEvent) => {
       >
         {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-purple-700/80"></div>
-        
+
         {/* Content with relative positioning to appear above overlay */}
         <div className="relative z-10 max-w-md w-full flex flex-col items-center text-center">
           <div className="flex items-center mb-6 lg:mb-8">
             <Building2 className="h-6 w-6 lg:h-8 lg:w-8 mr-2 lg:mr-3" />
             <h1 className="text-xl lg:text-2xl font-bold">{settings?.companyName || 'Propai'}</h1>
           </div>
-          
+
           <h2 className="text-2xl lg:text-4xl font-bold mb-4 lg:mb-6">{t('completeSolution')}</h2>
           <p className="text-base lg:text-xl mb-6 lg:mb-8 text-blue-100 px-4">
             {t('description')}

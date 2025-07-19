@@ -17,7 +17,7 @@ import './i18n';
 import './styles/rtl.css';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
-import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProperties, getUsers, getZones } from './queries/queries';
+import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProjects, getProperties, getUsers, getZones } from './queries/queries';
 
 // Custom hook for managing persisted view state with URL sync
 const usePersistedView = (defaultView: string) => {
@@ -65,7 +65,6 @@ const usePersistedView = (defaultView: string) => {
 };
 
 const AppContent: React.FC = () => {
-  const { checkAuth } = useAuth();
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const { rtlMargin } = useLanguage();
@@ -73,8 +72,6 @@ const AppContent: React.FC = () => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    console.log("isAuthenticated", isAuthenticated);
-    checkAuth();
     if (isAuthenticated) {
       queryClient.prefetchQuery({
         queryKey: ['developers'],
@@ -114,6 +111,11 @@ const AppContent: React.FC = () => {
       queryClient.prefetchQuery({
         queryKey: ['logs'],
         queryFn: () => getLogs(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
+      queryClient.prefetchQuery({
+        queryKey: ['projects'],
+        queryFn: () => getProjects(),
         staleTime: 1000 * 60 * 5 // 5 minutes
       });
     }

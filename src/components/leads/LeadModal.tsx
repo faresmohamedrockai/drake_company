@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -9,7 +9,7 @@ import { RotateCw } from 'lucide-react';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project } from '../inventory/ProjectsTab';
-import { toast } from 'react-toastify';
+import { Id, toast } from 'react-toastify';
 
 interface LeadModalProps {
   lead: Lead;
@@ -45,7 +45,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentLead, setCurrentLead] = useState(lead);
   const [isUpdating, setIsUpdating] = useState(false);
-
+  const [notes, setNotes] = useState<string[]>(currentLead.notes || []);
   const queryClient = useQueryClient();
   const getProperties = async () => {
     const response = await axiosInterceptor.get('/properties');
@@ -72,10 +72,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     const response = await axiosInterceptor.get(`/visits/${currentLead.id}`);
     return response.data.visits as VisitLog[];
   }
-  const getNotes = async () => {
-    const response = await axiosInterceptor.get(`/notes/${currentLead.id}`);
-    return response.data.data as string[];
-  }
   const { data: leads, isLoading: isLoadingLeads } = useQuery<Lead[]>({
     queryKey: ['leads'],
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -86,13 +82,17 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProjects()
   });
-  const { mutate: updateLead } = useMutation({
-    mutationFn: (lead: Lead) => axiosInterceptor.put(`/leads/${lead.id}`, lead),
+  const { mutate: updateLead, isPending: isUpdatingLead } = useMutation({
+    mutationFn: (lead: Lead) => axiosInterceptor.patch(`/leads/${lead.id}`, lead),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.dismiss(toastId!);
+      toast.success("Lead updated successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error updating lead:', error);
+      toast.dismiss(toastId!);
+      toast.error(error.response.data.message || "Error updating lead");
     }
   });
   const { mutate: addCallLog, isPending: isCreatingCall } = useMutation({
@@ -109,9 +109,9 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       setShowCallForm(false);
       toast.success("Call log added successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error adding call log:', error);
-      toast.error("Error adding call log");
+      toast.error(error.response.data.message[0] || "Error adding call log");
     }
   });
   const { mutate: addVisitLog, isPending: isCreatingVisit } = useMutation({
@@ -132,21 +132,9 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       setShowVisitForm(false);
       toast.success("Visit log added successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error adding visit log:', error);
-      toast.error("Error adding visit log");
-    }
-  });
-  const { mutate: addNote } = useMutation({
-    mutationFn: (note: any) => axiosInterceptor.post(`/notes/${currentLead.id}`, note),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`notes-${currentLead.id}`] });
-      setNewNote('');
-      toast.success("Note added successfully");
-    },
-    onError: (error) => {
-      console.error('Error adding note:', error);
-      toast.error("Error adding note");
+      toast.error(error.response.data.message[0] || "Error adding visit log");
     }
   });
   const { data: calls, isLoading: isLoadingCalls } = useQuery<CallLog[]>({
@@ -158,11 +146,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     queryKey: [`visits-${currentLead.id}`],
     staleTime: 1000 * 60 * 5,
     queryFn: () => getVisits()
-  });
-  const { data: notes, isLoading: isLoadingNotes } = useQuery<string[]>({
-    queryKey: [`notes-${currentLead.id}`],
-    staleTime: 1000 * 60 * 5,
-    queryFn: () => getNotes()
   });
   // Sync currentLead with prop lead and refreshKey
   React.useEffect(() => {
@@ -177,25 +160,40 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   const canEdit = user?.role === 'admin' || user?.role === 'sales_admin' ||
     user?.role === 'team_leader' ||
-    (user?.role === 'sales_rep' && currentLead.assignedTo === user.name);
+    (user?.role === 'sales_rep' && currentLead.assignedToId === user.id);
 
+  const [isUpdate, setIsUpdate] = useState(false);
   // Dynamic stages based on status order (remove Cancellation)
   const statusStages = [
     { id: 'fresh', label: t('freshLead'), value: 'fresh_lead' },
     { id: 'follow', label: t('followUp'), value: 'follow_up' },
     { id: 'visit', label: t('scheduledVisit'), value: 'scheduled_visit' },
     { id: 'open', label: t('openDeal'), value: 'open_deal' },
-    { id: 'closed', label: t('closedDeal'), value: 'closed_deal' }
+    { id: 'closed', label: t('closedDeal'), value: 'closed_deal' },
+    { id: 'cancellation', label: t('cancellation'), value: 'cancellation' },
+    { id: 'not Answered', label: t('notAnswered'), value: 'no_answer' },
+    { id: 'not Interested', label: t('notInterested'), value: 'not_intersted_now' },
   ];
+  const [toastId, setToastId] = useState<Id | null>(null);
   const isCancelled = currentLead.status === 'cancellation';
   const currentStatusIndex = isCancelled ? -1 : statusStages.findIndex(s => s.value === currentLead.status);
 
   const handleStatusUpdate = (newStatus: Lead['status']) => {
     if (canEdit) {
+      setIsUpdate(true);
       updateLead({ ...currentLead, status: newStatus });
       setCurrentLead({ ...currentLead, status: newStatus }); // Update local state immediately
     }
   };
+  useEffect(() => {
+    if (isUpdate) {
+      setToastId(toast.loading("Updating lead..."));
+    }
+  }, [isUpdate]);
+
+  // useEffect(() => {
+  //   setIsUpdate(true);
+  // }, [currentLead.status]);
 
   const handleAddCall = (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,12 +217,20 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   const handleAddNote = () => {
     if (newNote.trim()) {
-      addNote([
-        ...currentLead.notes || [],
+      setIsUpdate(true);
+      setNotes([
+        ...notes,
         newNote
       ]);
+      setNewNote('');
     }
   };
+
+  useEffect(() => {
+    if (isUpdate) {
+      updateLead({ ...currentLead, notes: notes });
+    }
+  }, [notes]);
 
   // Add update button handler
   const handleRefresh = () => {
@@ -236,25 +242,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-2xl font-bold text-gray-900">{currentLead.nameEn}</h2>
-            <button
-              onClick={handleRefresh}
-              className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow font-semibold flex items-center space-x-2 text-base transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
-              style={{ minWidth: 120 }}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <RotateCw className="h-5 w-5 animate-spin mr-2" />
-              ) : (
-                <RotateCw className="h-5 w-5 mr-2" />
-              )}
-              <span>{isUpdating ? t('updating') : t('update')}</span>
-            </button>
-          </div>
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10">
+          <h2 className="text-xl font-semibold text-gray-900">{t('leadDetails')}</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -285,50 +276,54 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           {/* Animated Deal Progress Bar */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">{t('dealProgress')}</label>
-            <div className="flex items-center justify-center space-x-0 md:space-x-3 overflow-x-auto py-2 w-full">
-              {statusStages.map((stage, index) => {
-                const isCompleted = !isCancelled && index < currentStatusIndex;
-                const isActive = !isCancelled && index === currentStatusIndex;
-                return (
-                  <React.Fragment key={stage.id}>
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0.5 }}
-                      animate={{ scale: isActive ? 1.1 : 1, opacity: 1 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                      className={`flex flex-col items-center relative`}
-                    >
-                      <div
-                        className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
-                          ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
-                            isCompleted ? 'bg-green-500 border-green-500 text-white' :
-                              isActive ? 'bg-blue-600 border-blue-600 text-white' :
-                                'bg-gray-200 border-gray-300 text-gray-600'}
-                        `}
-                      >
-                        {index + 1}
-                      </div>
-                      <span className={`mt-2 text-xs font-medium text-center w-20
-                        ${isCancelled ? 'text-red-500' :
-                          isCompleted ? 'text-green-600' :
-                            isActive ? 'text-blue-600' :
-                              'text-gray-500'}
-                      `}>{stage.label}</span>
-                    </motion.div>
-                    {index < statusStages.length - 1 && (
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: 40 }}
-                        transition={{ duration: 0.5, delay: 0.1 * index }}
-                        className={`h-1 mx-1 md:mx-2 rounded-full transition-colors duration-300
-                          ${isCancelled ? 'bg-red-500' :
-                            index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
-                        `}
-                        style={{ minWidth: 24, maxWidth: 40 }}
-                      />
-                    )}
-                  </React.Fragment>
-                );
-              })}
+            <div className="relative w-full">
+              <div className="flex items-center justify-start space-x-1 md:space-x-2 overflow-x-auto py-2 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                <div className="flex items-center min-w-max">
+                  {statusStages.map((stage, index) => {
+                    const isCompleted = !isCancelled && index < currentStatusIndex;
+                    const isActive = !isCancelled && index === currentStatusIndex;
+                    return (
+                      <React.Fragment key={stage.id}>
+                        <motion.div
+                          initial={{ scale: 0.8, opacity: 0.5 }}
+                          animate={{ scale: isActive ? 1.1 : 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                          className={`flex flex-col items-center relative flex-shrink-0`}
+                        >
+                          <div
+                            className={`w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
+                              ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
+                                isCompleted ? 'bg-green-500 border-green-500 text-white' :
+                                  isActive ? 'bg-blue-600 border-blue-600 text-white' :
+                                    'bg-gray-200 border-gray-300 text-gray-600'}
+                            `}
+                          >
+                            {index + 1}
+                          </div>
+                          <span className={`mt-1 md:mt-2 text-xs font-medium text-center w-16 md:w-20
+                            ${isCancelled ? 'text-red-500' :
+                              isCompleted ? 'text-green-600' :
+                                isActive ? 'text-blue-600' :
+                                  'text-gray-500'}
+                          `}>{stage.label}</span>
+                        </motion.div>
+                        {index < statusStages.length - 1 && (
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: 20 }}
+                            transition={{ duration: 0.5, delay: 0.1 * index }}
+                            className={`h-1 mx-1 rounded-full transition-colors duration-300 flex-shrink-0
+                              ${isCancelled ? 'bg-red-500' :
+                                index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
+                            `}
+                            style={{ minWidth: 16, maxWidth: 32 }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             {isCancelled && (
               <div className="mt-1 text-xs text-red-600 font-semibold text-center">{t('dealCancelled')}</div>
@@ -363,6 +358,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <option value="open_deal">{t('openDeal')}</option>
                 <option value="closed_deal">{t('closedDeal')}</option>
                 <option value="cancellation">{t('cancellation')}</option>
+                <option value="no_answer">{"Not Answered"}</option>
+                <option value="not_intersted_now">{"Not Interested Now"}</option>
               </select>
             )}
           </div>
@@ -527,7 +524,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     onClick={handleAddNote}
                     className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    {t('addNote')}
+                    {isUpdatingLead ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('addNote')}
                   </button>
                 </div>
               </div>
@@ -608,7 +605,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     onChange={(e) => setCallForm({ ...callForm, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                    required
                   />
                 </div>
                 <div className="flex justify-end space-x-3">
@@ -672,7 +668,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     <option value="">{t('selectStatus')}</option>
                     <option value="Completed">{t('completed')}</option>
                     <option value="Cancelled">{t('cancelled')}</option>
-                    <option value="Rescheduled">{t('rescheduled')}</option>
+                    <option value="Scheduled">{t('scheduled')}</option>
                   </select>
                 </div>
                 <div>
@@ -692,7 +688,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     onChange={(e) => setVisitForm({ ...visitForm, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     rows={3}
-                    required
                   />
                 </div>
                 <div className="flex justify-end space-x-3">

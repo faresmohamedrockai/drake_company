@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Users, Shield, Settings as SettingsIcon, Database, ChevronDown, ChevronLeft, ChevronRight, Lock, AlertTriangle, Bell, Mail, Calendar, FileText, Volume2, Smartphone, Monitor } from 'lucide-react';
-import UserManagement from './UserManagement';
 import { useData } from '../../contexts/DataContext';
 import Papa from 'papaparse';
 import { useSettings } from '../../contexts/SettingsContext';
@@ -11,6 +10,9 @@ import notificationService from '../../utils/notificationService';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { User } from '../../types';
+import { getContracts, getProperties, getLeads, getDevelopers, getProjects, getUsers, getMeetings, getZones } from '../../queries/queries';
+import UserManagement from './UserManagement';
+import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
 
 const SYSTEM_SETTINGS_KEY = 'propai_system_settings';
 const BACKUP_DATE_KEY = 'propai_last_backup_date';
@@ -52,13 +54,39 @@ const defaultSettings = {
 
 const Settings: React.FC = () => {
 
-  const { leads, properties, contracts, addLead, users, projects, developers, meetings, zones } = useData();
-  const [usersData, setUsersData] = useState<User[]>([]);
-  const { data: usersDataQuery } = useQuery({
+  const {data: leads} = useQuery({
+    queryKey: ['leads'],
+    queryFn: () => getLeads(),
+  })
+  const {data: properties} = useQuery({
+    queryKey: ['properties'],
+    queryFn: () => getProperties(),
+  })
+  const {data: contracts} = useQuery({
+    queryKey: ['contracts'],
+    queryFn: () => getContracts(),
+  })
+  const {data: users} = useQuery({  
     queryKey: ['users'],
     queryFn: () => getUsers(),
   })
-  // setUsersData(usersDataQuery as User[]);
+  const {data: projects} = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => getProjects(),
+  })
+  const {data: developers} = useQuery({
+    queryKey: ['developers'],
+    queryFn: () => getDevelopers(),
+  })
+  const {data: meetings} = useQuery({
+    queryKey: ['meetings'],
+    queryFn: () => getMeetings(),
+  })
+  const {data: zones} = useQuery({
+    queryKey: ['zones'],
+    queryFn: () => getZones(),
+  })
+
   const { user } = useAuth();
   const { t } = useTranslation('settings');
   const { language } = useLanguage();
@@ -92,6 +120,7 @@ const Settings: React.FC = () => {
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState('');
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem(BACKUP_DATE_KEY));
+  const [emailErrors, setEmailErrors] = useState<{[key: string]: string}>({});
 
   // Check user access permissions
   const hasAdminAccess = user?.role === 'admin';
@@ -143,6 +172,11 @@ const Settings: React.FC = () => {
       setSettingsChanged(true);
       return updated;
     });
+    
+    // Clear email error when user types
+    if (field === 'companyEmail') {
+      setEmailErrors(prev => ({ ...prev, companyEmail: '' }));
+    }
   };
   const handleNotificationChange = (path: string, value: any) => {
     setSettings((prev: any) => {
@@ -161,6 +195,13 @@ const Settings: React.FC = () => {
       setSettingsChanged(true);
       return updated;
     });
+    
+    // Clear email errors when user types
+    if (path === 'email.fromEmail') {
+      setEmailErrors(prev => ({ ...prev, fromEmail: '' }));
+    } else if (path === 'email.mirrorEmail') {
+      setEmailErrors(prev => ({ ...prev, mirrorEmail: '' }));
+    }
   };
   const handleCompanyImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -172,6 +213,26 @@ const Settings: React.FC = () => {
     reader.readAsDataURL(file);
   };
   const handleSaveSettings = () => {
+    // Email validation
+    const newEmailErrors: {[key: string]: string} = {};
+    
+    if (settings.companyEmail && !validateEmail(settings.companyEmail)) {
+      newEmailErrors.companyEmail = getEmailErrorMessage(settings.companyEmail, language);
+    }
+    
+    if (settings.notifications.email.fromEmail && !validateEmail(settings.notifications.email.fromEmail)) {
+      newEmailErrors.fromEmail = getEmailErrorMessage(settings.notifications.email.fromEmail, language);
+    }
+    
+    if (settings.notifications.email.mirrorEmail && !validateEmail(settings.notifications.email.mirrorEmail)) {
+      newEmailErrors.mirrorEmail = getEmailErrorMessage(settings.notifications.email.mirrorEmail, language);
+    }
+    
+    if (Object.keys(newEmailErrors).length > 0) {
+      setEmailErrors(newEmailErrors);
+      return;
+    }
+    
     localStorage.setItem(SYSTEM_SETTINGS_KEY, JSON.stringify(settings));
 
     // Sync notification settings with notification service
@@ -199,9 +260,9 @@ const Settings: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
   };
-  const handleExportLeads = () => downloadCSV(leads, 'leads.csv');
-  const handleExportProperties = () => downloadCSV(properties, 'properties.csv');
-  const handleExportContracts = () => downloadCSV(contracts, 'contracts.csv');
+  const handleExportLeads = () => downloadCSV(leads || [], 'leads.csv');
+  const handleExportProperties = () => downloadCSV(properties || [], 'properties.csv');
+  const handleExportContracts = () => downloadCSV(contracts || [], 'contracts.csv');
 
   // Data Import (Leads)
   const handleImportLeads = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -224,7 +285,9 @@ const Settings: React.FC = () => {
             visits: [],
             createdBy: user?.name || 'System',
           }));
-          importedLeads.forEach((lead: any) => addLead(lead));
+          // importedLeads.forEach((lead: any) => {
+          //   axiosInterceptor.post('leads', lead);
+          // });
           setImportSuccess('Leads imported successfully!');
         } catch (err) {
           setImportError('Failed to import leads.');
@@ -341,7 +404,7 @@ const Settings: React.FC = () => {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'users':
-        return usersDataQuery && <UserManagement users={usersDataQuery} />;
+        return users && <UserManagement users={users} />;
       case 'permissions':
         return (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
@@ -425,8 +488,13 @@ const Settings: React.FC = () => {
                       value={settings.companyEmail}
                       onChange={e => handleSettingsChange('companyEmail', e.target.value)}
                       placeholder={t('companyEmailPlaceholder')}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${
+                        emailErrors.companyEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                      }`}
                     />
+                    {emailErrors.companyEmail && (
+                      <p className="text-red-600 text-sm mt-1">{emailErrors.companyEmail}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('companyAddress')}</label>
@@ -536,8 +604,14 @@ const Settings: React.FC = () => {
                             type="email"
                             value={settings.notifications.email.fromEmail}
                             onChange={e => handleNotificationChange('email.fromEmail', e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${
+                              emailErrors.fromEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                            }`}
+                            placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
                           />
+                          {emailErrors.fromEmail && (
+                            <p className="text-red-600 text-sm mt-1">{emailErrors.fromEmail}</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">{t('fromName')}</label>
@@ -574,8 +648,14 @@ const Settings: React.FC = () => {
                               type="email"
                               value={settings.notifications.email.mirrorEmail}
                               onChange={e => handleNotificationChange('email.mirrorEmail', e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${
+                                emailErrors.mirrorEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                              }`}
+                              placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
                             />
+                            {emailErrors.mirrorEmail && (
+                              <p className="text-red-600 text-sm mt-1">{emailErrors.mirrorEmail}</p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -785,15 +865,6 @@ const Settings: React.FC = () => {
                   {importing && <div className="text-blue-600 text-sm">{t('importing')}</div>}
                   {importSuccess && <div className="text-green-600 text-sm">{importSuccess}</div>}
                   {importError && <div className="text-red-600 text-sm">{importError}</div>}
-                </div>
-              </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">{t('dataBackup')}</h3>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-3 sm:space-y-0">
-                  <div>
-                    <p className="text-yellow-800 mb-1 text-sm">{t('lastBackup')}: {lastBackup || t('never')}</p>
-                  </div>
-                  <button onClick={handleBackup} className="w-full sm:w-auto bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors text-sm">{t('createBackupNow')}</button>
                 </div>
               </div>
             </div>

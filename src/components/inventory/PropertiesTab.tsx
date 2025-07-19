@@ -15,6 +15,7 @@ import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { Zone } from './ZonesTab';
 import { Developer } from '../../types';
 import { Lead } from '../../types';
+import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
 
 // Fix default marker icon for leaflet in React
 if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
@@ -186,6 +187,7 @@ const PropertiesTab: React.FC = () => {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportStep, setReportStep] = useState<'input' | 'preview'>("input");
   const [reportPhone, setReportPhone] = useState('');
+  const [reportPhoneError, setReportPhoneError] = useState('');
   const [reportLead, setReportLead] = useState<any>(null);
   const [reportProperty, setReportProperty] = useState<any>(null);
   const [reportNotes, setReportNotes] = useState('');
@@ -452,8 +454,17 @@ const PropertiesTab: React.FC = () => {
   function handleReportPhoneSubmit(e: React.FormEvent) {
     e.preventDefault();
     setReportError('');
+    setReportPhoneError('');
+
+    // Phone validation
+    if (!validatePhoneNumber(reportPhone)) {
+      setReportPhoneError(getPhoneErrorMessage(reportPhone, language));
+      return;
+    }
+
     // Access control: Team Leader can only for their team, Sales Rep only for their own
     let found = leads?.find(l => l.contact === reportPhone);
+    console.log("found", found);
     if (!found) {
       setReportError('No client found with this number. Please check and try again.');
       return;
@@ -482,7 +493,7 @@ const PropertiesTab: React.FC = () => {
       style.innerHTML = '.no-pdf { display: none !important; }';
       element.prepend(style);
       const html2pdf = (await import('html2pdf.js')).default;
-      await html2pdf().from(element).save(`${reportProperty?.title}-${reportLead?.name}-Report.pdf`);
+      await html2pdf().from(element).save(`${reportProperty?.title}-${language === 'ar' && reportLead?.nameAr ? reportLead.nameAr : (reportLead?.nameEn || 'Unknown')}-Report.pdf`);
       style.remove();
     }
   }
@@ -494,6 +505,42 @@ const PropertiesTab: React.FC = () => {
   // Helper to get selected project's payment plans
   const selectedProject = projects?.find(p => p.id === form.projectId);
   const paymentPlans = selectedProject?.paymentPlans || [];
+
+  // Helper function to get developer name properly
+  const getDeveloperName = (project: any, language: string) => {
+    // First try to get from developers array
+    const developerFromArray = developers?.find(d => d.id === project?.developerId);
+    if (developerFromArray) {
+      return language === 'ar' && developerFromArray.nameAr ? developerFromArray.nameAr : developerFromArray.nameEn || developerFromArray.name;
+    }
+    
+    // Then try to get from nested developer object
+    if (project?.developer && typeof project.developer === 'object') {
+      return language === 'ar' && project.developer.nameAr ? project.developer.nameAr : project.developer.nameEn || project.developer.name;
+    }
+    
+    // Finally, try to get from developer string field
+    if (project?.developer && typeof project.developer === 'string') {
+      return project.developer;
+    }
+    
+    return '-';
+  };
+
+  // Helper function to get project name from project object
+  const getProjectDisplayName = (project: any, language: string) => {
+    if (!project) return '-';
+    
+    if (typeof project === 'object') {
+      return language === 'ar' && project.nameAr ? project.nameAr : project.nameEn || project.name || '-';
+    }
+    
+    if (typeof project === 'string') {
+      return project;
+    }
+    
+    return '-';
+  };
 
   return (
     <div>
@@ -1089,7 +1136,20 @@ const PropertiesTab: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {language === 'ar' ? 'أدخل رقم هاتف العميل' : 'Enter Client Phone Number'}
                 </label>
-                <input type="text" value={reportPhone} onChange={e => setReportPhone(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <input 
+                  type="tel" 
+                  value={reportPhone} 
+                  onChange={e => {
+                    setReportPhone(e.target.value);
+                    setReportPhoneError(''); // Clear error when user types
+                  }} 
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
+                    reportPhoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`} 
+                  required 
+                  placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
+                />
+                {reportPhoneError && <div className="text-red-600 text-sm">{reportPhoneError}</div>}
                 {reportError && <div className="text-red-600 text-sm">{reportError}</div>}
                 <div className="flex justify-end gap-2">
                   <button type="button" onClick={() => setShowReportModal(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">
@@ -1127,24 +1187,24 @@ const PropertiesTab: React.FC = () => {
                   </div>
                 </div>
                 {/* Client Info */}
-                {reportLead && (
+                {/* {reportLead && (
                   <>
-                    {(reportLead.name || reportLead.phone || reportLead.budget || reportLead.status || reportLead.assignedTo) && (
+                    {(reportLead.nameEn || reportLead.nameAr || reportLead.contact || reportLead.budget || reportLead.status || reportLead.assignedToId) && (
                       <div className="mb-4">
                         <h3 className="text-lg font-semibold text-gray-800 mb-1">
                           {language === 'ar' ? 'معلومات العميل' : 'Client Information'}
                         </h3>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          {reportLead.name && <div><span className="font-medium">{t('name')}:</span> {reportLead.name}</div>}
-                          {reportLead.phone && <div><span className="font-medium">{t('phone')}:</span> {reportLead.phone}</div>}
+                          {(reportLead.nameEn || reportLead.nameAr) && <div><span className="font-medium">{t('name')}:</span> {language === 'ar' && reportLead.nameAr ? reportLead.nameAr : (reportLead.nameEn || '')}</div>}
+                          {reportLead.contact && <div><span className="font-medium">{t('phone')}:</span> {reportLead.contact}</div>}
                           {reportLead.budget && <div><span className="font-medium">{t('budget')}:</span> {reportLead.budget}</div>}
                           {reportLead.status && <div><span className="font-medium">{t('status')}:</span> {reportLead.status}</div>}
-                          {reportLead.assignedTo && <div><span className="font-medium">{t('assignedRep')}:</span> {reportLead.assignedTo}</div>}
+                          {reportLead.assignedToId && <div><span className="font-medium">{t('assignedRep')}:</span> {reportLead.assignedToId}</div>}
                         </div>
                       </div>
                     )}
                   </>
-                )}
+                )} */}
                 {/* Property Info */}
                 {reportProperty && (
                   <>
@@ -1162,7 +1222,7 @@ const PropertiesTab: React.FC = () => {
                           {reportProperty.bedrooms && <div><span className="font-medium">{t('bedrooms')}:</span> {reportProperty.bedrooms}</div>}
                           {reportProperty.bathrooms && <div><span className="font-medium">{t('bathrooms')}:</span> {reportProperty.bathrooms}</div>}
                           {reportProperty.amenities && <div><span className="font-medium">{t('amenities')}:</span> {Array.isArray(reportProperty.amenities) ? reportProperty.amenities.join(', ') : reportProperty.amenities}</div>}
-                          {reportProperty.project && <div><span className="font-medium">{t('project')}:</span> {reportProperty.project}</div>}
+                          {reportProperty.project && <div><span className="font-medium">{t('project')}:</span> {getProjectDisplayName(reportProperty.project, language)}</div>}
                         </div>
                       </div>
                     )}
@@ -1171,7 +1231,10 @@ const PropertiesTab: React.FC = () => {
                 {/* Payment Plan Table - Full Installments */}
                 {(() => {
                   // Find the linked project and its selected payment plan
-                  const project = projects?.find(p => p.id === reportProperty?.projectId);
+                  // First try to use nested project object from property, then fallback to projects array
+                  const project = reportProperty?.project && typeof reportProperty.project === 'object' 
+                    ? reportProperty.project 
+                    : projects?.find(p => p.id === reportProperty?.projectId);
                   let plan = null;
                   if (project && Array.isArray(project.paymentPlans)) {
                     const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
@@ -1198,7 +1261,7 @@ const PropertiesTab: React.FC = () => {
                   return (
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                        {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {project?.nameEn ? ` ${project.nameEn}` : ''}
+                        {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(project, language)}
                       </h3>
                       {/* Summary Card */}
                       <div className="flex flex-wrap gap-4 mb-4">
@@ -1259,7 +1322,7 @@ const PropertiesTab: React.FC = () => {
                         <div>{language === 'ar' ? 'السعر الإجمالي' : 'Total Price'}: <span className="text-blue-700">{price.toLocaleString()} EGP</span></div>
                         <div>{language === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}: <span className="text-green-700">{downPayment.toLocaleString()} EGP</span></div>
                         <div>{language === 'ar' ? 'الأقساط' : 'Installments'}: <span className="text-orange-700">{installmentsTotal.toLocaleString()} EGP</span></div>
-                        <div>{language === 'ar' ? 'المطور' : 'Developer'}: <span className="text-gray-700">{developers?.find(d => d.id === project?.developerId)?.nameEn || project?.developer || '-'}</span></div>
+                        <div>{language === 'ar' ? 'المطور' : 'Developer'}: <span className="text-gray-700">{getDeveloperName(project, language)}</span></div>
                       </div>
                     </div>
                   );
@@ -1269,8 +1332,10 @@ const PropertiesTab: React.FC = () => {
                   // Get property images
                   const propertyImages = reportProperty && Array.isArray(reportProperty.images) ? reportProperty.images : [];
 
-                  // Get project images
-                  const project = projects?.find(p => p.id === reportProperty?.projectId);
+                  // Get project images - first try nested project object, then fallback to projects array
+                  const project = reportProperty?.project && typeof reportProperty.project === 'object' 
+                    ? reportProperty.project 
+                    : projects?.find(p => p.id === reportProperty?.projectId);
                   const projectImages = project && Array.isArray(project.images) ? project.images : [];
 
                   // Combine all images

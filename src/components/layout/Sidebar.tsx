@@ -52,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
 
   // Sidebar content for reuse
   const sidebarContent = (
-    <div className="bg-white shadow-lg h-full w-64 flex flex-col">
+    <div className="bg-white shadow-lg h-full w-100 flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b">
         <div className="flex items-center justify-between">
@@ -70,7 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
             ) : null}
             <Building className={`h-8 w-8 text-blue-600 mr-3 ${settings?.companyImage ? 'hidden' : ''}`} />
             {(() => {
-              const companyName = settings?.companyName || 'Propai';
+              const companyName = settings?.companyName || 'James Map';
               const words = companyName.split(' ');
               const firstLine = words.slice(0, 2).join(' ');
               const secondLine = words.length > 2 ? words.slice(2).join(' ') : null;
@@ -155,17 +155,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setCurrentView }) => {
       <div className="p-4 border-t">
         <div className="flex items-center mb-4 justify-between">
           <div className="flex items-center">
-            <button
+            {/* <button
               className="h-14 w-14 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-2xl border-4 border-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 relative overflow-hidden"
               onClick={() => setProfileModalOpen(true)}
               aria-label="Open profile"
             >
-              {(user as UserType)?.avatar ? (
-                <img src={(user as UserType)?.avatar} alt="avatar" className="object-cover w-full h-full rounded-full" />
+              {user?.avatar ? (
+                <img src={user?.avatar} alt="avatar" className="object-cover w-full h-full rounded-full" />
               ) : (
                 user?.name ? user.name.charAt(0) : '?'
               )}
-            </button>
+            </button> */}
             <div className="ml-3">
               <div className="text-base font-semibold text-gray-900">{user?.name}</div>
               <div className="text-xs text-gray-500">{user?.role}</div>

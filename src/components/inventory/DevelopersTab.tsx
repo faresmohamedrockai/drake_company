@@ -7,6 +7,8 @@ import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { toast } from 'react-toastify';
 import { getDevelopers } from '../../queries/queries';
 import { Developer } from '../../types';
+import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
+import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
 
 
 const DevelopersTab: React.FC = () => {
@@ -94,6 +96,8 @@ const DevelopersTab: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [filteredDevelopers, setFilteredDevelopers] = useState<Developer[]>([]);
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
   // Add image and bilingual name to form state
 
   // Helper function to get language-appropriate developer name
@@ -151,7 +155,23 @@ const DevelopersTab: React.FC = () => {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setPhoneError('');
+    setEmailError('');
+    
     if (!user) return;
+
+    // Phone validation
+    if (form.phone && !validatePhoneNumber(form.phone)) {
+      setPhoneError(getPhoneErrorMessage(form.phone, language));
+      return;
+    }
+
+    // Email validation (only if email is provided)
+    if (form.email && !validateEmail(form.email)) {
+      setEmailError(getEmailErrorMessage(form.email, language));
+      return;
+    }
+
     const developerData = {
       ...form,
       name: form.nameEn + (form.nameAr ? ' / ' + form.nameAr : ''),
@@ -321,6 +341,48 @@ const DevelopersTab: React.FC = () => {
                   {language === 'ar' ? 'تاريخ التأسيس' : 'Established'}
                 </label>
                 <input type="text" name="established" value={form.established} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" required />
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {language === 'ar' ? 'رقم الهاتف' : 'Phone Number'}
+                </label>
+                <input 
+                  type="tel" 
+                  name="phone" 
+                  value={form.phone} 
+                  onChange={(e) => {
+                    handleFormChange(e);
+                    setPhoneError(''); // Clear error when user types
+                  }} 
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 ${
+                    phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`} 
+                  placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
+                />
+                {phoneError && (
+                  <p className="text-red-600 text-sm mt-1">{phoneError}</p>
+                )}
+              </div>
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {language === 'ar' ? 'البريد الإلكتروني' : 'Email'}
+                </label>
+                <input 
+                  type="email" 
+                  name="email" 
+                  value={form.email} 
+                  onChange={(e) => {
+                    handleFormChange(e);
+                    setEmailError(''); // Clear error when user types
+                  }} 
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 ${
+                    emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`} 
+                  placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
+                />
+                {emailError && (
+                  <p className="text-red-600 text-sm mt-1">{emailError}</p>
+                )}
               </div>
 
               <div className="col-span-2 flex justify-end space-x-3 pt-4">

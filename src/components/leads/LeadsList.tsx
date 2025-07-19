@@ -12,7 +12,7 @@ import { Lead, Property } from '../../types';
 import { useQuery } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { User } from '../../types';
-import { Project } from '../inventory/ProjectsTab';
+import { PaymentPlan, Project } from '../inventory/ProjectsTab';
 
 const LeadsList: React.FC = () => {
   // const { leads, deleteLead } = useData();
@@ -114,7 +114,6 @@ const LeadsList: React.FC = () => {
     source: '',
     status: '',
     assignedTo: '',
-    lastCallDate: '',
     lastVisitDate: '',
   });
 
@@ -125,44 +124,105 @@ const LeadsList: React.FC = () => {
     // Role-based filtering
     if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own leads
-      userLeads = leads?.filter(lead => lead.assignedTo === user.name);
+      userLeads = leads?.filter(lead => lead.assignedToId === user.id);
     } else if (user?.role === 'team_leader') {
       // Team leaders see their own leads and their sales reps' leads
-      const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
-      userLeads = leads?.filter(lead => lead.assignedTo === user.name || salesReps?.includes(lead.assignedTo));
+      const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.id);
+      userLeads = leads?.filter(lead => lead.assignedToId === user.id || salesReps?.includes(lead.assignedToId));
     } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Sales Admin and Admin can see all leads
       userLeads = leads;
     }
 
-    // Search filtering - now includes both English and Arabic names
-    let filtered = userLeads?.filter(lead => {
-      const searchableName = getSearchableName(lead);
-      return searchableName.includes(searchTerm.toLowerCase()) ||
-        lead.contact.includes(searchTerm) ||
-        lead.source.toLowerCase().includes(searchTerm.toLowerCase());
-    });
+    // Apply search term filtering
+    let filtered = userLeads;
+    if (searchTerm.trim()) {
+      const trimmedSearchTerm = searchTerm.trim().toLowerCase();
+      filtered = userLeads?.filter(lead => {
+        const searchableName = getSearchableName(lead);
+        return searchableName.includes(trimmedSearchTerm) ||
+          lead.contact.includes(trimmedSearchTerm) ||
+          lead.source.toLowerCase().includes(trimmedSearchTerm);
+      });
+    }
 
-    // Column filters
+    // Apply column filters
     filtered = filtered?.filter(lead => {
       const displayName = getDisplayName(lead);
-      return (filters.name === '' || displayName.toLowerCase().includes(filters.name.toLowerCase())) &&
-        (filters.contact === '' || lead.contact.includes(filters.contact)) &&
-        (filters.budget === '' || lead.budget === filters.budget) &&
-        (filters.inventoryInterestId === '' || lead.inventoryInterestId === filters.inventoryInterestId) &&
-        (filters.source === '' || lead.source === filters.source) &&
-        (filters.status === '' || lead.status === filters.status) &&
-        (filters.assignedTo === '' || lead.assignedTo === filters.assignedTo) &&
-        (filters.lastCallDate === '' || lead.lastCallDate.includes(filters.lastCallDate)) &&
-        (filters.lastVisitDate === '' || lead.lastVisitDate.includes(filters.lastVisitDate));
+
+      // Name filter
+      if (filters.name && !displayName.toLowerCase().includes(filters.name.trim().toLowerCase())) {
+        return false;
+      }
+
+      // Contact filter
+      if (filters.contact && !lead.contact.toLowerCase().includes(filters.contact.toLowerCase())) {
+        return false;
+      }
+
+      // Budget filter
+      if (filters.budget && lead.budget !== filters.budget) {
+        return false;
+      }
+
+      // Inventory interest filter - find project by name and compare with project ID
+      if (filters.inventoryInterestId) {
+        const selectedProperty = properties?.find(property => property.id === filters.inventoryInterestId);
+        if (!selectedProperty || lead.inventoryInterestId !== selectedProperty.id) {
+          return false;
+        }
+      }
+
+      // Source filter
+      if (filters.source && lead.source !== filters.source) {
+        return false;
+      }
+
+      // Status filter
+      if (filters.status && lead.status !== filters.status) {
+        return false;
+      }
+
+      // Assigned to filter
+      if (filters.assignedTo) {
+        // Check both assignedToId and owner.id for compatibility
+        const isAssignedToUser = lead.assignedToId === filters.assignedTo ||
+          lead.owner?.id === filters.assignedTo;
+
+        // Debug: Log filter comparison
+        if (filters.assignedTo && (lead.assignedToId || lead.owner?.id)) {
+          console.log('User filter debug:', {
+            filterValue: filters.assignedTo,
+            leadAssignedToId: lead.assignedToId,
+            leadOwnerId: lead.owner?.id,
+            leadOwnerName: lead.owner?.name,
+            isMatch: isAssignedToUser
+          });
+        }
+
+        if (!isAssignedToUser) {
+          return false;
+        }
+      }
+      return true;
     });
+
     return filtered;
   };
   useEffect(() => {
     if (leads) {
+      // Debug: Log some lead data to understand the structure
+      if (leads.length > 0) {
+        console.log('Sample lead data:', {
+          firstLead: leads[0],
+          assignedToId: leads[0].assignedToId,
+          owner: leads[0].owner,
+          users: users?.slice(0, 3) // First 3 users for comparison
+        });
+      }
       setFilteredLeads(getFilteredLeads() || []);
     }
-  }, [leads, users, projects, searchTerm, filters]);
+  }, [leads, users, projects, searchTerm, filters, user?.role, user?.id]);
   // KPI calculations (moved here)
   const allLeadsCount = filteredLeads?.length || 0;
   // Duplicate: same phone or email (excluding empty values)
@@ -174,7 +234,7 @@ const LeadsList: React.FC = () => {
 
   // Performance tracking for reports
   const userPerformance = React.useMemo(() => {
-    const userLeads = leads?.filter(lead => lead.assignedTo === user?.name);
+    const userLeads = leads?.filter(lead => lead.assignedToId === user?.id);
     const totalCalls = userLeads?.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0) || 0;
     const completedCalls = userLeads?.reduce((sum, lead) =>
       sum + (lead.calls?.filter((call: any) =>
@@ -194,7 +254,7 @@ const LeadsList: React.FC = () => {
       completedVisits: completedVisits || 0,
       visitCompletionRate: totalVisits > 0 ? Math.round((completedVisits || 0 / totalVisits) * 100) : 0
     };
-  }, [leads, user?.name]);
+  }, [leads, user?.id]);
 
   // Save performance data to localStorage for reports
   React.useEffect(() => {
@@ -265,6 +325,23 @@ const LeadsList: React.FC = () => {
     }
   };
 
+  const clearAllFilters = () => {
+    setFilters({
+      name: '',
+      contact: '',
+      budget: '',
+      inventoryInterestId: '',
+      source: '',
+      status: '',
+      assignedTo: '',
+      lastVisitDate: '',
+    });
+    setSearchTerm('');
+  };
+
+  // Check if any filters are active
+  const activeFiltersCount = Object.values(filters).filter(value => value !== '').length + (searchTerm ? 1 : 0);
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="mb-8">
@@ -277,22 +354,18 @@ const LeadsList: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
           <span className="text-gray-700 text-base font-medium mb-2">{t('allLeads')}</span>
           <span className="text-3xl font-bold text-gray-900 mb-1">{leads?.length || 0}</span>
-          <span className={`text-sm font-medium ${allLeadsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{allLeadsChange >= 0 ? '↑' : '↓'}{Math.abs(allLeadsChange)}%</span>
         </div>
         <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
           <span className="text-gray-700 text-base font-medium mb-2">{t('duplicateLeads')}</span>
           <span className="text-3xl font-bold text-gray-900 mb-1">{duplicateLeadsCount}</span>
-          <span className={`text-sm font-medium ${duplicateLeadsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{duplicateLeadsChange >= 0 ? '↑' : '↓'}{Math.abs(duplicateLeadsChange)}%</span>
         </div>
         <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
           <span className="text-gray-700 text-base font-medium mb-2">{t('freshLeads')}</span>
           <span className="text-3xl font-bold text-gray-900 mb-1">{freshLeadsCount}</span>
-          <span className={`text-sm font-medium ${freshLeadsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{freshLeadsChange >= 0 ? '↑' : '↓'}{Math.abs(freshLeadsChange)}%</span>
         </div>
         <div className="bg-white rounded-lg shadow p-5 flex flex-col items-start">
           <span className="text-gray-700 text-base font-medium mb-2">{t('coldCalls')}</span>
           <span className="text-3xl font-bold text-gray-900 mb-1">{coldCallsCount}</span>
-          <span className={`text-sm font-medium ${coldCallsChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{coldCallsChange >= 0 ? '↑' : '↓'}{Math.abs(coldCallsChange)}%</span>
         </div>
       </div>
 
@@ -313,11 +386,19 @@ const LeadsList: React.FC = () => {
             <div className="flex flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-6">
               <button
                 onClick={() => setShowFilterPopup(true)}
-                className="flex items-center justify-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors text-gray-700 w-full sm:w-auto"
+                className={`flex items-center justify-center px-3 py-2 border rounded-lg transition-colors w-full sm:w-auto ${activeFiltersCount > 0
+                  ? 'bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200'
+                  : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                  }`}
                 title={t('filterLeads')}
               >
                 <Filter className="h-5 w-5 mr-1" />
                 <span className="hidden xs:inline">{t('filterLeads')}</span>
+                {activeFiltersCount > 0 && (
+                  <span className="ml-1 bg-blue-600 text-white text-xs rounded-full px-2 py-0.5 min-w-[20px] flex items-center justify-center">
+                    {activeFiltersCount}
+                  </span>
+                )}
               </button>
               <button
                 onClick={() => setShowAddModal(true)}
@@ -364,11 +445,9 @@ const LeadsList: React.FC = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">{t('allBudgets')}</option>
-                <option value="EGP100,000-300,000">EGP 100,000-300,000</option>
-                <option value="EGP300,000-500,000">EGP 300,000-500,000</option>
-                <option value="EGP500,000-1,000,000">EGP 500,000-1,000,000</option>
-                <option value="EGP1,000,000-2,000,000">EGP 1,000,000-2,000,000</option>
-                <option value="EGP2,000,000+">EGP 2,000,000+</option>
+                {leads?.map((lead: Lead) => (
+                  <option key={lead.id} value={lead.budget}>{lead.budget}</option>
+                ))}
               </select>
               <select
                 value={filters.inventoryInterestId}
@@ -376,8 +455,8 @@ const LeadsList: React.FC = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">{t('allInterests')}</option>
-                {projects?.map((project: Project) => (
-                  <option key={project.id} value={project.nameEn}>{project.nameEn}</option>
+                {properties?.map((property: Property) => (
+                  <option key={property.id} value={property.id}>{property.titleEn}</option>
                 ))}
               </select>
               <select
@@ -413,29 +492,19 @@ const LeadsList: React.FC = () => {
               >
                 <option value="">{t('allUsers')}</option>
                 {users?.map(user => (
-                  <option key={user.id} value={user.name}>{user.name}</option>
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.role})
+                  </option>
                 ))}
               </select>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-500 mb-1 flex items-center"><CalendarIcon className="h-4 w-4 mr-1" />{t('lastCallDate')}</label>
-                <input
-                  type="date"
-                  value={filters.lastCallDate}
-                  onChange={e => setFilters(f => ({ ...f, lastCallDate: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-xs text-gray-500 mb-1 flex items-center"><CalendarIcon className="h-4 w-4 mr-1" />{t('lastVisitDate')}</label>
-                <input
-                  type="date"
-                  value={filters.lastVisitDate}
-                  onChange={e => setFilters(f => ({ ...f, lastVisitDate: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
-                />
-              </div>
             </div>
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-between mt-6 gap-3">
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors w-full sm:w-auto"
+              >
+                {t('clearFilters')}
+              </button>
               <button
                 onClick={() => setShowFilterPopup(false)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"

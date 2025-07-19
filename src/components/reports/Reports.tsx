@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
 import {
   Search,
-  Download,
   Filter,
   TrendingUp,
   Users,
@@ -26,7 +25,6 @@ import {
   EyeOff
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import Papa from 'papaparse';
 import { LeadStatus } from '../../types';
 
 interface UserPerformance {
@@ -105,7 +103,7 @@ const Reports: React.FC = () => {
 
   // Calculate user performance
   const calculateUserPerformance = (user: any): UserPerformance => {
-    const userLeads = leads.filter(lead => lead.assignedToId === user.id);
+    const userLeads = leads.filter(lead => lead.owner?.id === user.id);
     const userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
 
     const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
@@ -382,65 +380,7 @@ const Reports: React.FC = () => {
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
-  // Export functions
-  const exportToCSV = (data: any[], filename: string) => {
-    const csv = Papa.unparse(data);
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
-  const exportToJSON = (data: any[], filename: string) => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const exportToExcel = (data: any[], filename: string) => {
-    // For Excel export, we'll use CSV format which Excel can open
-    exportToCSV(data, filename);
-  };
-
-  const handleExport = (format: 'csv' | 'json' | 'excel') => {
-    const exportData = performances.map(p => ({
-      Name: p.name,
-      Role: p.role,
-      'Total Leads': p.totalLeads,
-      'Completed Calls': p.completedCalls,
-      'Total Calls': p.totalCalls,
-      'Call Completion Rate (%)': p.callCompletionRate,
-      'Completed Visits': p.completedVisits,
-      'Total Visits': p.totalVisits,
-      'Visit Completion Rate (%)': p.visitCompletionRate,
-      'Completed Meetings': p.completedMeetings,
-      'Total Meetings': p.totalMeetings,
-      'Meeting Completion Rate (%)': p.meetingCompletionRate,
-      'Closed Deals': p.closedDeals,
-      'Conversion Rate (%)': p.conversionRate,
-      'Last Activity': p.lastActivity,
-      'Status': p.isActive ? 'Active' : 'Inactive'
-    }));
-
-    switch (format) {
-      case 'csv':
-        exportToCSV(exportData, 'performance-report');
-        break;
-      case 'json':
-        exportToJSON(exportData, 'performance-report');
-        break;
-      case 'excel':
-        exportToExcel(exportData, 'performance-report');
-        break;
-    }
-  };
 
   if (!canAccessReports) {
     return (
@@ -530,37 +470,9 @@ const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* Export Controls */}
+      {/* Filters and Controls */}
       <div className="bg-white rounded-lg shadow-md p-4 mb-6">
         <div className="flex flex-col gap-4">
-          {/* Export Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <span className="text-sm font-medium text-gray-700">{t('export.exportData')}</span>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => handleExport('csv')}
-                className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition-colors"
-              >
-                <Download className="h-4 w-4 inline mr-1" />
-                {t('export.csv')}
-              </button>
-              <button
-                onClick={() => handleExport('json')}
-                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
-              >
-                <Download className="h-4 w-4 inline mr-1" />
-                {t('export.json')}
-              </button>
-              <button
-                onClick={() => handleExport('excel')}
-                className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 transition-colors"
-              >
-                <Download className="h-4 w-4 inline mr-1" />
-                {t('export.excel')}
-              </button>
-            </div>
-          </div>
-
           {/* Date Range Display */}
           {selectedDateRange.startDate && selectedDateRange.endDate && (
             <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
