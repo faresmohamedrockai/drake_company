@@ -71,7 +71,6 @@ const AppContent: React.FC = () => {
   const { rtlMargin } = useLanguage();
 
 
-  const [currentView, setCurrentView] = usePersistedView('dashboard');
   const queryClient = useQueryClient();
 
   useEffect(() => {

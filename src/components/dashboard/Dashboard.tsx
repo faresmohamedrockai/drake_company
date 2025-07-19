@@ -18,9 +18,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getLeads, getLogs, getMeetings } from '../../queries/queries';
 import { Lead, Log, Meeting } from '../../types';
 import { Activity } from '../../types';
-import LeadsSummaryCards from '../leads/LeadsSummaryCards';
-import UserFilterSelect from '../leads/UserFilterSelect';
 import { useNavigate } from 'react-router-dom';
+import UserFilterSelect from '../leads/UserFilterSelect';
+import LeadsSummaryCards from '../leads/LeadsSummaryCards';
 
 interface DashboardProps {
   setCurrentView?: (view: string) => void;
@@ -66,12 +66,11 @@ const useCountAnimation = (endValue: number, duration: number = 2000, delay: num
 
 const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { user } = useAuth();
-  const { getStatistics, getPreviousStats, getChangeForStat, activities, users } = useData(); // removed leads
+  const { getStatistics, getPreviousStats, getChangeForStat, activities, users } = useData();
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   
   const stats = getStatistics(user ? { name: user.name, role: user.role, teamId: user.teamId } : undefined);
-  const prevStats = getPreviousStats ? getPreviousStats() || stats : stats; // fallback to current if none
 
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery<Lead[]>({
@@ -204,10 +203,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   // Filter leads based on user role and selected manager/sales rep
   let filteredLeads = leads;
   if (user?.role === 'sales_rep') {
-    filteredLeads = leads.filter(lead => lead.assignedToId === user.name);
+    filteredLeads = leads.filter(lead => lead.assignedToId === user.id);
   } else if (user?.role === 'team_leader') {
-    const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
-    filteredLeads = leads.filter(lead => lead.assignedToId === user.name || salesReps.includes(lead.assignedToId));
+    const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.teamId).map(u => u.name);
+    filteredLeads = leads.filter(lead => lead.assignedToId === user.id || salesReps.includes(lead.assignedToId));
     if (selectedSalesRep) {
       filteredLeads = filteredLeads.filter(lead => lead.assignedToId === selectedSalesRep);
     }
@@ -223,7 +222,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   // Use filteredLeads for dashboardCards, callOutcomeCards, visitStatusCards
   const dashboardCards = [
     { key: 'all', count: filteredLeads.length },
-    { key: 'duplicate', count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && lead.contact && l.contact === lead.contact) || (l.email && lead.email && l.email === lead.email)) !== idx).length },
+    // { key: 'duplicate', count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contact && l.contact.email === lead.contact.email)) !== idx).length },
     { key: 'fresh_lead', count: filteredLeads.filter(lead => lead.status === 'fresh_lead').length },
     { key: 'cold_call', count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
     { key: 'follow_up', count: filteredLeads.filter(lead => lead.status === 'follow_up').length },
