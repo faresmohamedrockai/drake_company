@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DataProvider } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
@@ -15,9 +15,10 @@ import Settings from './components/settings/Settings';
 import { AnimatePresence, motion } from 'framer-motion';
 import './i18n';
 import './styles/rtl.css';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
 import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProjects, getProperties, getUsers, getZones } from './queries/queries';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Custom hook for managing persisted view state with URL sync
 const usePersistedView = (defaultView: string) => {

@@ -18,6 +18,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getLeads, getLogs, getMeetings } from '../../queries/queries';
 import { Lead, Log, Meeting } from '../../types';
 import { Activity } from '../../types';
+import LeadsSummaryCards from '../leads/LeadsSummaryCards';
+import UserFilterSelect from '../leads/UserFilterSelect';
+import { useNavigate } from 'react-router-dom';
 
 interface DashboardProps {
   setCurrentView?: (view: string) => void;
@@ -63,7 +66,7 @@ const useCountAnimation = (endValue: number, duration: number = 2000, delay: num
 
 const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { user } = useAuth();
-  const { getStatistics, getPreviousStats, getChangeForStat, activities, leads, users } = useData();
+  const { getStatistics, getPreviousStats, getChangeForStat, activities, users } = useData(); // removed leads
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
   
@@ -201,26 +204,26 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   // Filter leads based on user role and selected manager/sales rep
   let filteredLeads = leads;
   if (user?.role === 'sales_rep') {
-    filteredLeads = leads.filter(lead => lead.assignedTo === user.name);
+    filteredLeads = leads.filter(lead => lead.assignedToId === user.name);
   } else if (user?.role === 'team_leader') {
     const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
-    filteredLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
+    filteredLeads = leads.filter(lead => lead.assignedToId === user.name || salesReps.includes(lead.assignedToId));
     if (selectedSalesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.assignedTo === selectedSalesRep);
+      filteredLeads = filteredLeads.filter(lead => lead.assignedToId === selectedSalesRep);
     }
   } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
     if (selectedManager) {
       const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager).map(u => u.name);
-      filteredLeads = leads.filter(lead => lead.assignedTo === selectedManager || salesReps.includes(lead.assignedTo));
+      filteredLeads = leads.filter(lead => lead.assignedToId === selectedManager || salesReps.includes(lead.assignedToId));
     }
     if (selectedSalesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.assignedTo === selectedSalesRep);
+      filteredLeads = filteredLeads.filter(lead => lead.assignedToId === selectedSalesRep);
     }
   }
   // Use filteredLeads for dashboardCards, callOutcomeCards, visitStatusCards
   const dashboardCards = [
     { key: 'all', count: filteredLeads.length },
-    { key: 'duplicate', count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx).length },
+    { key: 'duplicate', count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && lead.contact && l.contact === lead.contact) || (l.email && lead.email && l.email === lead.email)) !== idx).length },
     { key: 'fresh_lead', count: filteredLeads.filter(lead => lead.status === 'fresh_lead').length },
     { key: 'cold_call', count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
     { key: 'follow_up', count: filteredLeads.filter(lead => lead.status === 'follow_up').length },

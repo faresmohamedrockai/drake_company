@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, Eye, Calendar as CalendarIcon, Edit, Trash2, X, ArrowUp, ArrowDown, Minus, User, Phone, Check, Star, TrendingUp, TrendingDown, MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Clock, HelpCircle } from 'lucide-react';
+import { Search, Plus, Eye, Calendar as CalendarIcon, Edit, Trash2, X, ArrowUp, ArrowDown, Minus, Phone, Check, Star, TrendingUp, TrendingDown, MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Clock, HelpCircle, User as UserIcon } from 'lucide-react';
 import { Filter } from 'lucide-react';
 import LeadModal from './LeadModal';
 import AddLeadModal from './AddLeadModal';
@@ -13,12 +13,12 @@ import UserFilterSelect from './UserFilterSelect';
 import { Lead, Property } from '../../types';
 import { useQuery } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
-import { User } from '../../types';
-import { PaymentPlan, Project } from '../inventory/ProjectsTab';
+import { User } from '../../types'
+import type { PaymentPlan, Project } from '../inventory/ProjectsTab';
 
 // Icon and color mappings for status cards
 const statusCardIcons: Record<string, JSX.Element> = {
-  all: <User className="h-6 w-6 text-white" />, // All Leads
+  all: <UserIcon className="h-6 w-6 text-white" />, // All Leads
   duplicate: <AlertTriangle className="h-6 w-6 text-white" />, // Duplicate
   fresh_lead: <Star className="h-6 w-6 text-white" />, // Fresh
   cold_call: <Phone className="h-6 w-6 text-white" />, // Cold Call
@@ -86,7 +86,7 @@ function getCardLabel(key: string, t: (k: string) => string) {
 
 const LeadsList: React.FC = () => {
   // const { leads, deleteLead } = useData();
-  const { data: leads, isLoading: isLoadingLeads } = useQuery<Lead[]>({
+  const { data: leads = [], isLoading: isLoadingLeads } = useQuery<Lead[]>({
     queryKey: ['leads'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getLeads()
@@ -110,17 +110,17 @@ const LeadsList: React.FC = () => {
     const response = await axiosInterceptor.get('/properties');
     return response.data.properties as Property[];
   }
-  const { data: projects, isLoading: isLoadingProjects } = useQuery<Project[]>({
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
     queryKey: ['projects'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProjects()
   });
-  const { data: properties, isLoading: isLoadingProperties } = useQuery<Property[]>({
+  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<Property[]>({
     queryKey: ['properties'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProperties()
   });
-  const { data: users, isLoading: isLoadingUsers } = useQuery<User[]>({
+  const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ['users'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getUsers()
@@ -219,28 +219,44 @@ const LeadsList: React.FC = () => {
     lastVisitDate: '',
   });
 
+  // Calculate active filters count
+  const activeFiltersCount = Object.values(filters).filter(Boolean).length;
+
+  // Clear all filters function
+  const clearAllFilters = () => {
+    setFilters({
+      name: '',
+      contact: '',
+      budget: '',
+      inventoryInterestId: '',
+      source: '',
+      status: '',
+      assignedTo: '',
+      lastVisitDate: '',
+    });
+  };
+
   // Filter leads based on user role and selected manager/sales rep
   const getFilteredLeads = () => {
     let userLeads = leads;
 
     // Role-based filtering
     if (user?.role === 'sales_rep') {
-
       // Sales Reps can only see their own leads
       userLeads = leads?.filter(lead => lead.assignedToId === user.id);
     } else if (user?.role === 'team_leader') {
       // Team leaders see their own leads and their sales reps' leads
       const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.id);
-      userLeads = leads?.filter(lead => lead.assignedToId === user.id || salesReps?.includes(lead.assignedToId));
+      userLeads = leads?.filter(lead => lead.assignedToId === user.id || (salesReps?.includes(lead.assignedToId)));
     } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Filter by manager if selected
       if (selectedManager) {
-        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager).map(u => u.name);
-        userLeads = leads.filter(lead => lead.assignedTo === selectedManager || salesReps.includes(lead.assignedTo));
+        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager).map(u => u.id);
+        userLeads = leads.filter(lead => lead.assignedToId === selectedManager || salesReps.includes(lead.assignedToId));
       }
       // Filter by sales rep if selected
       if (selectedSalesRep) {
-        userLeads = userLeads.filter(lead => lead.assignedTo === selectedSalesRep);
+        userLeads = userLeads.filter(lead => lead.assignedToId === selectedSalesRep);
       }
     }
 
@@ -322,7 +338,7 @@ const LeadsList: React.FC = () => {
     if (activeStatusCard) {
       if (activeStatusCard === 'duplicate') {
         filtered = filtered.filter((lead, idx, arr) =>
-          arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx
+          arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx
         );
       } else if (activeStatusCard === 'cold_call') {
         filtered = filtered.filter(lead => lead.source === 'Cold Call');
@@ -358,14 +374,14 @@ const LeadsList: React.FC = () => {
           users: users?.slice(0, 3) // First 3 users for comparison
         });
       }
-      setFilteredLeads(getFilteredLeads() || []);
+      // setFilteredLeads(getFilteredLeads() || []); // This line was removed as per edit hint
     }
   }, [leads, users, projects, searchTerm, filters, user?.role, user?.id]);
   // KPI calculations (moved here)
-  const filteredLeads = getFilteredLeads();
+  const filteredLeads = getFilteredLeads() || [];
   const allLeadsCount = filteredLeads.length;
   const duplicateLeadsCount = filteredLeads.filter((lead, idx, arr) =>
-    arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx
+    arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx
   ).length;
   const freshLeadsCount = filteredLeads.filter(lead => lead.status === 'fresh_lead').length;
   const coldCallsCount = filteredLeads.filter(lead => lead.source === 'Cold Call').length;
@@ -472,7 +488,7 @@ const LeadsList: React.FC = () => {
   // Add card definitions for all valid LeadStatus values
   const dashboardCards = [
     { key: 'all', count: leads.length },
-    { key: 'duplicate', count: leads.filter((lead, idx, arr) => arr.findIndex(l => (l.phone && l.phone === lead.phone) || (l.email && l.email === lead.email)) !== idx).length },
+    { key: 'duplicate', count: leads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx).length },
     { key: 'fresh_lead', count: leads.filter(lead => lead.status === 'fresh_lead').length },
     { key: 'cold_call', count: leads.filter(lead => lead.source === 'Cold Call').length },
     { key: 'follow_up', count: leads.filter(lead => lead.status === 'follow_up').length },
@@ -488,8 +504,8 @@ const LeadsList: React.FC = () => {
   const fullCards = dashboardCards;
 
   // Extract unique call outcomes and visit statuses
-  const allCallOutcomes = Array.from(new Set(leads.flatMap(lead => lead.calls.map(call => call.outcome)))).filter(Boolean);
-  const allVisitStatuses = Array.from(new Set(leads.flatMap(lead => lead.visits.map(visit => visit.status)))).filter(Boolean);
+  const allCallOutcomes = Array.from(new Set(leads.flatMap(lead => (lead.calls || []).map(call => call.outcome)))).filter(Boolean);
+  const allVisitStatuses = Array.from(new Set(leads.flatMap(lead => (lead.visits || []).map(visit => visit.status)))).filter(Boolean);
 
   // Count leads for each outcome/status (always from all leads)
   const callOutcomeCards = allCallOutcomes.map(outcome => ({
@@ -555,7 +571,7 @@ const LeadsList: React.FC = () => {
         <h2 className="text-lg font-semibold mb-4">{t('leadStatusCards') !== 'leadStatusCards' ? t('leadStatusCards') : addSpacesToCamelCase('Lead Status')}</h2>
         <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6`}>
           {(showAllCards ? fullCards : compactCards).map(card => {
-            const icon = statusCardIcons[card.key] || <User className="h-6 w-6 text-white" />;
+            const icon = statusCardIcons[card.key] || <UserIcon className="h-6 w-6 text-white" />;
             const iconBg = statusCardColors[card.key] || 'bg-gray-400';
             const change = getStatusChange(card.key);
             const isActive = activeStatusCard === card.key;
