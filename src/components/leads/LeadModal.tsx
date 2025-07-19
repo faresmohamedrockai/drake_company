@@ -17,6 +17,10 @@ interface LeadModalProps {
   onClose: () => void;
 }
 
+function addSpacesToCamelCase(text: string) {
+  return text.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
 const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const { user } = useAuth();
   const { t } = useTranslation('leads');
@@ -178,6 +182,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const isCancelled = currentLead.status === 'cancellation';
   const currentStatusIndex = isCancelled ? -1 : statusStages.findIndex(s => s.value === currentLead.status);
 
+  // Only show main stages in the progress bar
+  const progressBarSpecialStatuses = ['no_answer', 'not_interested_now', 'reservation'];
+  const isSpecialStatus = progressBarSpecialStatuses.includes(currentLead.status);
+
   const handleStatusUpdate = (newStatus: Lead['status']) => {
     if (canEdit) {
       setIsUpdate(true);
@@ -276,6 +284,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           {/* Animated Deal Progress Bar */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">{t('dealProgress')}</label>
+
             <div className="relative w-full">
               <div className="flex items-center justify-start space-x-1 md:space-x-2 overflow-x-auto py-2 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 <div className="flex items-center min-w-max">
@@ -325,6 +334,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 </div>
               </div>
             </div>
+
             {isCancelled && (
               <div className="mt-1 text-xs text-red-600 font-semibold text-center">{t('dealCancelled')}</div>
             )}
@@ -350,7 +360,14 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <select
                 value={currentLead.status}
                 onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
+                  ${currentLead.status === 'reservation'
+                    ? 'text-blue-600'
+                    : currentLead.status === 'not_interested_now'
+                    ? 'text-gray-600'
+                    : currentLead.status === 'no_answer'
+                    ? 'text-orange-500'
+                    : ''}`}
               >
                 <option value="fresh_lead">{t('freshLead')}</option>
                 <option value="follow_up">{t('followUp')}</option>
@@ -358,6 +375,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <option value="open_deal">{t('openDeal')}</option>
                 <option value="closed_deal">{t('closedDeal')}</option>
                 <option value="cancellation">{t('cancellation')}</option>
+
                 <option value="no_answer">{"Not Answered"}</option>
                 <option value="not_intersted_now">{"Not Interested Now"}</option>
               </select>

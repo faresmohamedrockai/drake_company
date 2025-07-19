@@ -407,6 +407,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
                   <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
                   <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
+                  <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
+                  <option value={LeadStatus.NOT_INTERESTED_NOW}>{t('notInterestedNow')}</option>
+                  <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
                 </select>
                 <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
