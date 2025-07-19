@@ -32,7 +32,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true);
     }
   }, []);
-
   const login = async (email: string, password: string): Promise<boolean> => {
     // Simple authentication logic - you can replace this with your actual auth logic
     // For now, we'll use a simple check against mock users
