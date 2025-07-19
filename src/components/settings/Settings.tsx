@@ -113,7 +113,7 @@ const Settings: React.FC = () => {
       { id: 'users', label: t('tabs.users'), icon: Users, adminOnly: true },
       { id: 'permissions', label: t('tabs.permissions'), icon: Shield, adminOnly: true },
       { id: 'system', label: t('tabs.system'), icon: SettingsIcon, adminOnly: true },
-      { id: 'data', label: t('tabs.data'), icon: Database, adminOnly: true }
+      // { id: 'data', label: t('tabs.data'), icon: Database, adminOnly: true }
     ];
 
     return tabs.filter(tab => {
@@ -126,9 +126,9 @@ const Settings: React.FC = () => {
       if (tab.id === 'system') {
         return hasAdminAccess;
       }
-      if (tab.id === 'data') {
-        return hasAdminAccess || hasSalesAdminAccess;
-      }
+      // if (tab.id === 'data') {
+      //   return hasAdminAccess || hasSalesAdminAccess;
+      // }
       return false;
     });
   };
