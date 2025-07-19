@@ -10,7 +10,6 @@ import { Developer } from '../../types';
 import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
 import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
 
-
 const DevelopersTab: React.FC = () => {
   const user = JSON.parse(localStorage.getItem('propai_user') || '{}');
   const [form, setForm] = useState({
