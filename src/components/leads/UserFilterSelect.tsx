@@ -152,7 +152,7 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
 
   // Get all sales reps for a given manager
   const getSalesRepsForManager = (managerName: string) =>
-    users.filter((u) => u.role === 'sales_rep' && u.teamId === managerName);
+    users.filter((u) => u.role === 'sales_rep');
 
   // Role-based logic
   if (currentUser.role === 'sales_rep') {
