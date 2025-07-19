@@ -168,5 +168,9 @@
   "Meeting Scheduled": "اجتماع مجدول",
   "Completed": "مكتمل",
   "Cancelled": "ملغاة",
-  "Rescheduled": "أعيدت جدولتها"
+  "Rescheduled": "أعيدت جدولتها",
+  "manager": "المدير",
+  "salesRep": "مندوب المبيعات",
+  "allManagers": "جميع المديرين",
+  "allSalesReps": "جميع مندوبي المبيعات"
 } 

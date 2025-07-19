@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { User } from '../../contexts/AuthContext';
+import { User as UserIcon, ChevronDown } from 'lucide-react';
 
 interface UserFilterSelectProps {
   currentUser: User;
@@ -10,6 +11,129 @@ interface UserFilterSelectProps {
   selectedSalesRep: string;
   setSelectedSalesRep: (salesRep: string) => void;
 }
+
+// Helper function to get user avatar or default
+const getUserAvatar = (user: User, size: 'small' | 'normal' = 'normal') => {
+  const sizeClass = size === 'small' ? 'w-6 h-6' : 'w-8 h-8';
+  const textSize = size === 'small' ? 'text-xs' : 'text-sm';
+  const marginClass = size === 'small' ? '' : 'mr-2';
+  
+  if (user.image) {
+    return (
+      <div className="relative">
+        <img
+          src={user.image}
+          alt={`${user.name} avatar`}
+          className={`${sizeClass} rounded-full object-cover ${marginClass}`}
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+          }}
+        />
+        <div className={`${sizeClass} rounded-full bg-blue-600 flex items-center justify-center text-white ${textSize} font-semibold ${marginClass} absolute top-0 left-0 hidden`}>
+          {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={`${sizeClass} rounded-full bg-blue-600 flex items-center justify-center text-white ${textSize} font-semibold ${marginClass}`}>
+      {user.name ? user.name.charAt(0).toUpperCase() : '?'}
+    </div>
+  );
+};
+
+// Custom Dropdown Component
+interface CustomDropdownProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: User[];
+  placeholder: string;
+  disabled?: boolean;
+  className?: string;
+}
+
+const CustomDropdown: React.FC<CustomDropdownProps> = ({
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled = false,
+  className = ''
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedUser = options.find(option => option.name === value);
+
+  return (
+    <div className={`relative ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        className={`w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[180px] text-left flex items-center justify-between ${
+          disabled ? 'bg-gray-100 cursor-not-allowed' : 'cursor-pointer hover:border-gray-400'
+        }`}
+        disabled={disabled}
+      >
+        <div className="flex items-center">
+          {selectedUser && (
+            <div className="absolute left-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+              {getUserAvatar(selectedUser, 'small')}
+            </div>
+          )}
+          <span className={selectedUser ? '' : 'text-gray-500'}>
+            {selectedUser ? selectedUser.name : placeholder}
+          </span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+          <div
+            className="px-3 py-2 cursor-pointer hover:bg-gray-50 flex items-center"
+            onClick={() => {
+              onChange('');
+              setIsOpen(false);
+            }}
+          >
+            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+              <span className="text-xs text-gray-500">-</span>
+            </div>
+            <span className="ml-3 text-gray-500">{placeholder}</span>
+          </div>
+          {options.map((option) => (
+            <div
+              key={option.id}
+              className="px-3 py-2 cursor-pointer hover:bg-gray-50 flex items-center"
+              onClick={() => {
+                onChange(option.name);
+                setIsOpen(false);
+              }}
+            >
+              {getUserAvatar(option, 'small')}
+              <span className={`ml-3 ${value === option.name ? 'font-medium text-blue-600' : ''}`}>
+                {option.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
   currentUser,
@@ -58,57 +182,23 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
       {/* Manager Select */}
       <div className="flex flex-col">
         <label className="text-xs text-gray-500 mb-1">{t('manager')}</label>
-        <select
+        <CustomDropdown
           value={managerValue}
-          onChange={(e) => setSelectedManager(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[180px]"
+          onChange={setSelectedManager}
+          options={managerOptions}
+          placeholder={t('allManagers')}
           disabled={managerDisabled}
-        >
-          <option value="">{t('allManagers')}</option>
-          {managerOptions.map((manager) => (
-            <option key={manager.id} value={manager.name}>
-              {manager.name}
-            </option>
-          ))}
-        </select>
-        {/* Avatar and name display for selected manager */}
-        {managerOptions.length === 1 && managerOptions[0].image && (
-          <div className="flex items-center mt-2">
-            <img
-              src={managerOptions[0].image}
-              alt="avatar"
-              className="w-8 h-8 rounded-full object-cover mr-2"
-            />
-            <span className="text-sm text-gray-700">{managerOptions[0].name}</span>
-          </div>
-        )}
+        />
       </div>
       {/* Sales Rep Select */}
       <div className="flex flex-col">
         <label className="text-xs text-gray-500 mb-1">{t('salesRep')}</label>
-        <select
+        <CustomDropdown
           value={salesRepValue}
-          onChange={(e) => setSelectedSalesRep(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm min-w-[180px]"
-        >
-          <option value="">{t('allSalesReps')}</option>
-          {salesRepOptions.map((rep) => (
-            <option key={rep.id} value={rep.name}>
-              {rep.name}
-            </option>
-          ))}
-        </select>
-        {/* Avatar and name display for selected sales rep */}
-        {salesRepOptions.length === 1 && salesRepOptions[0].image && (
-          <div className="flex items-center mt-2">
-            <img
-              src={salesRepOptions[0].image}
-              alt="avatar"
-              className="w-8 h-8 rounded-full object-cover mr-2"
-            />
-            <span className="text-sm text-gray-700">{salesRepOptions[0].name}</span>
-          </div>
-        )}
+          onChange={setSelectedSalesRep}
+          options={salesRepOptions}
+          placeholder={t('allSalesReps')}
+        />
       </div>
     </div>
   );

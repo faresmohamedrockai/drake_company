@@ -39,7 +39,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       <Sidebar />
-      <main className={`flex-1 overflow-y-auto transition-all ${rtlMargin('md:ml-64', 'md:mr-64')}`}>
+      <main className={`flex-1 overflow-y-auto transition-all ${rtlMargin('md:ml-80', 'md:mr-80')}`}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={location.pathname}

@@ -169,5 +169,9 @@
   "cancellation": "Cancellation",
   "no_answer": "No Answer",
   "not_interested_now": "Not Interested Now",
-  "reservation": "Reservation"
+  "reservation": "Reservation",
+  "manager": "Manager",
+  "salesRep": "Sales Representative",
+  "allManagers": "All Managers",
+  "allSalesReps": "All Sales Representatives"
 } 

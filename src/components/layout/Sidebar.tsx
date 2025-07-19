@@ -56,7 +56,7 @@ const Sidebar: React.FC = () => {
 
   // Sidebar content for reuse
   const sidebarContent = (
-    <div className="bg-white shadow-lg h-full w-64 flex flex-col">
+    <div className="bg-white shadow-lg h-full w-80 flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b">
         <div className="flex items-center justify-between">
@@ -65,14 +65,14 @@ const Sidebar: React.FC = () => {
               <img
                 src={settings.companyImage}
                 alt="Company Logo"
-                className="h-8 w-8 rounded-lg mr-3 object-cover"
+                className="h-10 w-10 rounded-lg mr-4 object-cover"
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
                 }}
               />
             ) : null}
-            <Building className={`h-8 w-8 text-blue-600 mr-3 ${settings?.companyImage ? 'hidden' : ''}`} />
+            <Building className={`h-10 w-10 text-blue-600 mr-4 ${settings?.companyImage ? 'hidden' : ''}`} />
             {(() => {
               const companyName = settings?.companyName || 'Propai';
               const words = companyName.split(' ');
@@ -80,13 +80,13 @@ const Sidebar: React.FC = () => {
               const secondLine = words.length > 2 ? words.slice(2).join(' ') : null;
               return (
                 <h1
-                  className="text-base font-semibold text-gray-900 max-w-[120px] leading-tight"
+                  className="text-lg font-semibold text-gray-900 max-w-[150px] leading-tight"
                   title={companyName}
                   style={{ wordBreak: 'break-word' }}
                 >
                   <span className="block truncate">{firstLine}</span>
                   {secondLine && (
-                    <span className="block truncate text-xs text-gray-500">{secondLine}</span>
+                    <span className="block truncate text-sm text-gray-500">{secondLine}</span>
                   )}
                 </h1>
               );
@@ -123,8 +123,8 @@ const Sidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
-        <ul className="space-y-2">
+      <nav className="flex-1 p-6">
+        <ul className="space-y-3">
           {menuItems.map((item) => {
             // Check if user has access to this menu item
             const hasAccess = !item.adminOnly || 
@@ -143,13 +143,13 @@ const Sidebar: React.FC = () => {
                     navigate(item.path);
                     setSidebarOpen(false); // close sidebar on mobile after click
                   }}
-                  className={`w-full flex items-center px-4 py-3 text-left rounded-lg transition-colors ${isActive
+                  className={`w-full flex items-center px-6 py-4 text-left rounded-lg transition-colors ${isActive
                       ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                 >
-                  <item.icon className="h-5 w-5 mr-3" />
-                  {item.label}
+                  <item.icon className="h-6 w-6 mr-4" />
+                  <span className="text-base font-medium">{item.label}</span>
                 </button>
               </li>
             );
@@ -158,23 +158,23 @@ const Sidebar: React.FC = () => {
       </nav>
 
       {/* User Profile */}
-      <div className="p-4 border-t">
+      <div className="p-6 border-t">
         <div className="flex items-center mb-4 justify-between">
           <div className="flex items-center">
             <button
-              className="h-14 w-14 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-2xl border-4 border-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 relative overflow-hidden"
+              className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-2xl border-4 border-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 relative overflow-hidden"
               onClick={() => setProfileModalOpen(true)}
               aria-label="Open profile"
             >
-              {(user as UserType)?.avatar ? (
-                <img src={(user as UserType)?.avatar} alt="avatar" className="object-cover w-full h-full rounded-full" />
+              {user?.image ? (
+                <img src={user.image} alt="avatar" className="object-cover w-full h-full rounded-full" />
               ) : (
                 user?.name ? user.name.charAt(0) : '?'
               )}
             </button>
-            <div className="ml-3">
-              <div className="text-base font-semibold text-gray-900">{user?.name}</div>
-              <div className="text-xs text-gray-500">{user?.role}</div>
+            <div className="ml-4">
+              <div className="text-lg font-semibold text-gray-900">{user?.name}</div>
+              <div className="text-sm text-gray-500">{user?.role}</div>
             </div>
           </div>
 
@@ -216,7 +216,7 @@ const Sidebar: React.FC = () => {
       )}
 
       {/* Sidebar for desktop */}
-      <div className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-64 md:z-30 ${rtlPosition('md:left-0', 'md:right-0')}`}>
+      <div className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-80 md:z-30 ${rtlPosition('md:left-0', 'md:right-0')}`}>
         {sidebarContent}
       </div>
     </>
