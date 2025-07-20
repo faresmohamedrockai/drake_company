@@ -15,8 +15,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import { motion } from 'framer-motion';
 
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, getLogs, getMeetings } from '../../queries/queries';
-import { Lead, Log, Meeting } from '../../types';
+import { getLeads, getLogs, getMeetings, getUsers } from '../../queries/queries';
+import { Lead, Log, Meeting, User } from '../../types';
 import { Activity } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import UserFilterSelect from '../leads/UserFilterSelect';
@@ -66,12 +66,13 @@ const useCountAnimation = (endValue: number, duration: number = 2000, delay: num
 
 const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const { user } = useAuth();
-  const { getStatistics, getPreviousStats, getChangeForStat, activities, users } = useData();
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 1000 * 60 * 5,
+  });
   const { t } = useTranslation('dashboard');
   const navigate = useNavigate();
-  
-  const stats = getStatistics(user ? { name: user.name, role: user.role, teamId: user.teamId } : undefined);
-
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery<Lead[]>({
     queryKey: ['leads'],
@@ -198,25 +199,25 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     return translated !== key ? translated : addSpacesToCamelCase(key);
   }
   // Status cards
-  const [selectedManager, setSelectedManager] = useState('');
-  const [selectedSalesRep, setSelectedSalesRep] = useState('');
+  const [selectedManager, setSelectedManager] = useState<User | null>(null);
+  const [selectedSalesRep, setSelectedSalesRep] = useState<User | null>(null);
   // Filter leads based on user role and selected manager/sales rep
   let filteredLeads = leads;
   if (user?.role === 'sales_rep') {
-    filteredLeads = leads.filter(lead => lead.assignedToId === user.id);
+    filteredLeads = leads.filter(lead => lead.owner?.id === user.id);
   } else if (user?.role === 'team_leader') {
     const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.teamId).map(u => u.name);
-    filteredLeads = leads.filter(lead => lead.assignedToId === user.id || salesReps.includes(lead.assignedToId));
+    filteredLeads = leads.filter(lead => lead.owner?.id === user.id || salesReps.includes(lead.owner?.id || ''));
     if (selectedSalesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.assignedToId === selectedSalesRep);
+      filteredLeads = filteredLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
     }
   } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
     if (selectedManager) {
-      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager).map(u => u.name);
-      filteredLeads = leads.filter(lead => lead.assignedToId === selectedManager || salesReps.includes(lead.assignedToId));
+      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager.id).map(u => u.id);
+      filteredLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.owner?.id || ''));
     }
     if (selectedSalesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.assignedToId === selectedSalesRep);
+      filteredLeads = filteredLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
     }
   }
   // Use filteredLeads for dashboardCards, callOutcomeCards, visitStatusCards
@@ -347,8 +348,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
       {/* User Filter Select for Manager/Sales Rep */}
       {user && (
         <UserFilterSelect
-          currentUser={user}
-          users={users as import('../../contexts/AuthContext').User[]}
+          currentUser={user as User}
+          users={users}
           selectedManager={selectedManager}
           setSelectedManager={setSelectedManager}
           selectedSalesRep={selectedSalesRep}

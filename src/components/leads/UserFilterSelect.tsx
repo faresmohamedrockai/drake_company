@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User } from '../../contexts/AuthContext';
 import { User as UserIcon, ChevronDown } from 'lucide-react';
+import { User } from '../../types';
 
 interface UserFilterSelectProps {
   currentUser: User;
   users: User[];
-  selectedManager: string;
-  setSelectedManager: (manager: string) => void;
-  selectedSalesRep: string;
-  setSelectedSalesRep: (salesRep: string) => void;
+  selectedManager: User | null;
+  setSelectedManager: (manager: User | null) => void;
+  selectedSalesRep: User | null;
+  setSelectedSalesRep: (salesRep: User | null) => void;
 }
 
 // Helper function to get user avatar or default
@@ -45,8 +45,8 @@ const getUserAvatar = (user: User, size: 'small' | 'normal' = 'normal') => {
 
 // Custom Dropdown Component
 interface CustomDropdownProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: string; // This will be the user ID
+  onChange: (value: string) => void; // This will receive the user ID
   options: User[];
   placeholder: string;
   disabled?: boolean;
@@ -75,7 +75,7 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedUser = options.find(option => option.name === value);
+  const selectedUser = options.find(option => option.id === value);
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
@@ -119,12 +119,12 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
               key={option.id}
               className="px-3 py-2 cursor-pointer hover:bg-gray-50 flex items-center"
               onClick={() => {
-                onChange(option.name);
+                onChange(option.id);
                 setIsOpen(false);
               }}
             >
               {getUserAvatar(option, 'small')}
-              <span className={`ml-3 ${value === option.name ? 'font-medium text-blue-600' : ''}`}>
+              <span className={`ml-3 ${value === option.id ? 'font-medium text-blue-600' : ''}`}>
                 {option.name}
               </span>
             </div>
@@ -168,14 +168,22 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
 
   if (currentUser.role === 'team_leader') {
     // Team leader: manager select is their own name, not changeable
-    managerOptions = managers.filter((m) => m.name === currentUser.name);
-    managerValue = currentUser.name;
+    managerOptions = managers.filter((m) => m.id === currentUser.id);
+    managerValue = currentUser;
     managerDisabled = true;
     salesRepOptions = getSalesRepsForManager(currentUser.name);
   } else if (currentUser.role === 'sales_admin' || currentUser.role === 'admin') {
     // Admin/Sales Manager: can select any manager, and their sales reps
-    salesRepOptions = getSalesRepsForManager(selectedManager);
+    salesRepOptions = getSalesRepsForManager(selectedManager?.name || '');
   }
+
+  // Debug logging for selections
+  console.log('UserFilterSelect debug:', {
+    selectedManager: selectedManager?.id,
+    selectedSalesRep: selectedSalesRep?.id,
+    managerOptions: managerOptions.map(u => ({ id: u.id, name: u.name })),
+    salesRepOptions: salesRepOptions.map(u => ({ id: u.id, name: u.name }))
+  });
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
@@ -183,8 +191,12 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
       <div className="flex flex-col">
         <label className="text-xs text-gray-500 mb-1">{t('manager')}</label>
         <CustomDropdown
-          value={managerValue}
-          onChange={setSelectedManager}
+          value={managerValue?.id || ''}
+          onChange={(value) => {
+            const selectedUser = users.find(u => u.id === value) || null;
+            console.log('Manager selection changed:', { value, selectedUser });
+            setSelectedManager(selectedUser);
+          }}
           options={managerOptions}
           placeholder={t('allManagers')}
           disabled={managerDisabled}
@@ -194,8 +206,12 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
       <div className="flex flex-col">
         <label className="text-xs text-gray-500 mb-1">{t('salesRep')}</label>
         <CustomDropdown
-          value={salesRepValue}
-          onChange={setSelectedSalesRep}
+          value={salesRepValue?.id || ''}
+          onChange={(value) => {
+            const selectedUser = users.find(u => u.id === value) || null;
+            console.log('Sales rep selection changed:', { value, selectedUser });
+            setSelectedSalesRep(selectedUser);
+          }}
           options={salesRepOptions}
           placeholder={t('allSalesReps')}
         />

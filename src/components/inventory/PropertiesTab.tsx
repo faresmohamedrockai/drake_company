@@ -1391,13 +1391,10 @@ const PropertiesTab: React.FC = () => {
                     {language === 'ar' ? 'هذا التقرير سري' : 'This report is confidential'}
                   </div>
                 </div>
-                {/* Export Buttons (restored to original position) */}
+                {/* Print Button */}
                 <div className="flex justify-end gap-2 mt-6 print:hidden no-pdf" id="report-export-buttons">
                   <button onClick={handlePrint} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
                     {language === 'ar' ? 'طباعة' : 'Print'}
-                  </button>
-                  <button onClick={handleDownloadPDF} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-                    {language === 'ar' ? 'تحميل PDF' : 'Download PDF'}
                   </button>
                 </div>
               </div>

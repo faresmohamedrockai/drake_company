@@ -36,7 +36,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       toast.dismiss(toastId!);
       toast.success("User updated successfully");
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error updating user:', error);
       toast.dismiss(toastId!);
       toast.error("Error updating user");
@@ -58,10 +58,10 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       toast.dismiss(toastId!);
       setToastId(toast.success(t('user.added')));
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Error adding user:', error);
       toast.dismiss(toastId!);
-      toast.error("Error adding user");
+      toast.error(error.response.data.message[0]);
     }
   })
   const { mutateAsync: deleteUserMutation, isPending: isDeleting } = useMutation({

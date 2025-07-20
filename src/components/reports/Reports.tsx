@@ -46,12 +46,10 @@ interface UserPerformance {
   visitCompletionRate: number;
   meetingCompletionRate: number;
   lastActivity: string;
-  isActive: boolean;
 }
 
 interface PerformanceMetrics {
   totalUsers: number;
-  activeUsers: number;
   totalLeads: number;
   totalCalls: number;
   totalVisits: number;
@@ -73,7 +71,7 @@ const Reports: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [viewMode, setViewMode] = useState<'dashboard' | 'detailed'>('dashboard');
-  const [showInactive, setShowInactive] = useState(true);
+
   const [sortBy, setSortBy] = useState<'name' | 'performance' | 'activity'>('performance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showActivityFeed, setShowActivityFeed] = useState(false);
@@ -91,12 +89,12 @@ const Reports: React.FC = () => {
   // Get users based on hierarchy
   const getAccessibleUsers = () => {
     if (currentUser?.role === 'admin' || currentUser?.role === 'sales_admin') {
-      return users.filter(u => u.isActive || showInactive);
+      return users;
     } else if (currentUser?.role === 'team_leader') {
       return users.filter(u =>
         (u.role === 'sales_rep' && u.teamId === currentUser.teamId) ||
         (u.name === currentUser.name)
-      ).filter(u => u.isActive || showInactive);
+      );
     }
     return [];
   };
@@ -107,10 +105,23 @@ const Reports: React.FC = () => {
     const userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
 
     const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
-    const completedCalls = userLeads.reduce((sum, lead) =>
-      sum + (lead.calls?.filter((call: any) =>
-        ['Interested', 'Meeting Scheduled', 'Follow Up Required'].includes(call.outcome)
-      ).length || 0), 0);
+
+    // Debug: Log all lead statuses for this user
+    const allLeadStatuses = userLeads.map(lead => lead.status).filter(Boolean);
+    if (allLeadStatuses.length > 0) {
+      console.log(`Lead statuses for user ${user.name}:`, allLeadStatuses);
+    }
+
+    const completedCalls = userLeads.reduce((sum, lead) => {
+      // If lead status is "not answered", don't count any calls as completed
+      if (lead.status && lead.status.toLowerCase() === 'not answered') {
+        return sum;
+      }
+      console.log(`Lead status for user ${user.name}:`, lead.status);
+      // Otherwise, count all calls for this lead as completed
+      return sum + (lead.calls?.length || 0);
+    }, 0);
+    console.log(`Completed calls for user ${user.name}:`, completedCalls);
 
     const totalVisits = userLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
     const completedVisits = userLeads.reduce((sum, lead) =>
@@ -125,6 +136,12 @@ const Reports: React.FC = () => {
       ((closedDeals + openDeals) / userLeads.length) * 100 : 0;
 
     const callCompletionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
+
+    // Debug: Log call completion summary
+    if (totalCalls > 0) {
+      console.log(`Call completion for ${user.name}: ${completedCalls}/${totalCalls} = ${callCompletionRate.toFixed(1)}%`);
+    }
+
     const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0;
     const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
 
@@ -186,8 +203,7 @@ const Reports: React.FC = () => {
       callCompletionRate: Math.round(enhancedCallCompletionRate * 10) / 10,
       visitCompletionRate: Math.round(enhancedVisitCompletionRate * 10) / 10,
       meetingCompletionRate: Math.round(enhancedMeetingCompletionRate * 10) / 10,
-      lastActivity: lastActivity || 'No activity',
-      isActive: user.isActive
+      lastActivity: lastActivity || 'No activity'
     };
   };
 
@@ -197,7 +213,6 @@ const Reports: React.FC = () => {
     const performances = accessibleUsers.map(calculateUserPerformance);
 
     const totalUsers = accessibleUsers.length;
-    const activeUsers = accessibleUsers.filter(u => u.isActive).length;
     const totalLeads = performances.reduce((sum, p) => sum + p.totalLeads, 0);
     const totalCalls = performances.reduce((sum, p) => sum + p.totalCalls, 0);
     const totalVisits = performances.reduce((sum, p) => sum + p.totalVisits, 0);
@@ -214,7 +229,6 @@ const Reports: React.FC = () => {
 
     return {
       totalUsers,
-      activeUsers,
       totalLeads,
       totalCalls,
       totalVisits,
@@ -257,19 +271,58 @@ const Reports: React.FC = () => {
 
     // Filter by date range
     if (selectedDateRange.startDate && selectedDateRange.endDate) {
-      performances = performances.filter(p => {
-        const lastActivity = p.lastActivity;
-        if (
-          typeof lastActivity !== 'string' ||
-          !lastActivity ||
-          !selectedDateRange.startDate ||
-          !selectedDateRange.endDate
-        ) return false;
-        const lastActivityDate = new Date(lastActivity!);
-        return !isNaN(lastActivityDate.getTime()) &&
-          lastActivityDate >= selectedDateRange.startDate &&
-          lastActivityDate <= selectedDateRange.endDate;
+      const startDate = selectedDateRange.startDate;
+      const endDate = selectedDateRange.endDate;
+
+      console.log('Filtering performances by date range:', {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        totalPerformances: performances.length
       });
+
+      performances = performances.filter(p => {
+        // Check if user has any activity within the date range
+        const lastActivity = p.lastActivity;
+
+        // If lastActivity is valid and within range, include the user
+        if (lastActivity && typeof lastActivity === 'string' && lastActivity !== 'No activity') {
+          const lastActivityDate = new Date(lastActivity);
+          if (!isNaN(lastActivityDate.getTime()) &&
+            lastActivityDate >= startDate &&
+            lastActivityDate <= endDate) {
+            console.log(`User ${p.name} included due to lastActivity:`, lastActivity);
+            return true;
+          }
+        }
+
+        // Also check if user has any leads or meetings within the date range
+        const userLeads = leads.filter(lead => lead.owner?.id === p.id);
+        const userMeetings = meetings.filter(meeting => meeting.assignedToId === p.id);
+
+        // Check leads created or updated within date range
+        const hasLeadsInRange = userLeads.some(lead => {
+          const leadDate = new Date(lead.createdAt || lead.lastCallDate || lead.lastVisitDate || '');
+          return !isNaN(leadDate.getTime()) &&
+            leadDate >= startDate &&
+            leadDate <= endDate;
+        });
+
+        // Check meetings within date range
+        const hasMeetingsInRange = userMeetings.some(meeting => {
+          const meetingDate = new Date(meeting.date || '');
+          return !isNaN(meetingDate.getTime()) &&
+            meetingDate >= startDate &&
+            meetingDate <= endDate;
+        });
+
+        if (hasLeadsInRange || hasMeetingsInRange) {
+          console.log(`User ${p.name} included due to leads/meetings in range`);
+        }
+
+        return hasLeadsInRange || hasMeetingsInRange;
+      });
+
+      console.log('Filtered performances count:', performances.length);
     }
 
     // Sort
@@ -308,30 +361,40 @@ const Reports: React.FC = () => {
   const getDateRange = () => {
     const today = new Date();
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
     switch (selectedTimeframe) {
       case 'today':
         return {
           startDate: startOfDay,
-          endDate: new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000)
+          endDate: endOfDay
         };
       case 'week':
+        // Get the start of the current week (Sunday)
         const startOfWeek = new Date(startOfDay);
-        startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+        const dayOfWeek = startOfWeek.getDay();
+        startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+
+        // Get the end of the current week (Saturday)
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+
         return {
           startDate: startOfWeek,
-          endDate: new Date(startOfWeek.getTime() + 7 * 24 * 60 * 60 * 1000)
+          endDate: endOfWeek
         };
       case 'month':
         const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
         return {
           startDate: startOfMonth,
-          endDate: new Date(today.getFullYear(), today.getMonth() + 1, 0)
+          endDate: endOfMonth
         };
       case 'custom':
         return {
           startDate: customDateRange.startDate ? new Date(customDateRange.startDate) : null,
-          endDate: customDateRange.endDate ? new Date(customDateRange.endDate) : null
+          endDate: customDateRange.endDate ? new Date(customDateRange.endDate + 'T23:59:59.999') : null
         };
       default:
         return { startDate: null, endDate: null };
@@ -349,16 +412,21 @@ const Reports: React.FC = () => {
     return roleMap[role] || role;
   };
 
-  // Helper function to translate user statuses
-  const translateUserStatus = (status: string) => {
-    const statusMap: { [key: string]: string } = {
-      'Active': t('statuses.active'),
-      'Inactive': t('statuses.inactive'),
-    };
-    return statusMap[status] || status;
-  };
+
 
   const selectedDateRange = getDateRange();
+
+  // Debug logging for date ranges
+  if (selectedDateRange.startDate && selectedDateRange.endDate) {
+    console.log('Date Range:', {
+      timeframe: selectedTimeframe,
+      startDate: selectedDateRange.startDate.toISOString(),
+      endDate: selectedDateRange.endDate.toISOString(),
+      startDateLocal: selectedDateRange.startDate.toLocaleDateString(),
+      endDateLocal: selectedDateRange.endDate.toLocaleDateString()
+    });
+  }
+
   const performances = getFilteredPerformances();
   const metrics = calculateOverallMetrics();
 
@@ -394,10 +462,6 @@ const Reports: React.FC = () => {
     );
   }
 
-  if (leadsLoading || meetingsLoading || usersLoading) {
-    return <div>{t('loading') || 'Loading...'}</div>;
-  }
-
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
       <div className="mb-6 sm:mb-8">
@@ -430,16 +494,7 @@ const Reports: React.FC = () => {
                 <option key={user.id} value={user.id}>{user.name}</option>
               ))}
             </select>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="showInactive"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="showInactive" className="text-sm text-gray-700">{t('controls.showInactive')}</label>
-            </div>
+
           </div>
 
           {/* View Mode Buttons */}
@@ -471,85 +526,7 @@ const Reports: React.FC = () => {
       </div>
 
       {/* Filters and Controls */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-col gap-4">
-          {/* Date Range Display */}
-          {selectedDateRange.startDate && selectedDateRange.endDate && (
-            <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-              <Calendar className="h-4 w-4" />
-              <span className="text-xs sm:text-sm">
-                {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
-              </span>
-            </div>
-          )}
 
-          {/* Filters and Controls */}
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <div className="flex flex-col sm:flex-row gap-2 flex-1">
-              <select
-                value={selectedTimeframe}
-                onChange={(e) => setSelectedTimeframe(e.target.value as any)}
-                className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="today">{t('timeframes.today')}</option>
-                <option value="week">{t('timeframes.thisWeek')}</option>
-                <option value="month">{t('timeframes.thisMonth')}</option>
-                <option value="custom">{t('timeframes.customRange')}</option>
-              </select>
-
-              {/* Custom Date Range Picker */}
-              {selectedTimeframe === 'custom' && (
-                <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-1">
-                  <input
-                    type="date"
-                    value={customDateRange.startDate}
-                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                    className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
-                    placeholder="Start Date"
-                  />
-                  <span className="text-gray-400 text-sm hidden sm:inline">{t('timeframes.to')}</span>
-                  <input
-                    type="date"
-                    value={customDateRange.endDate}
-                    onChange={(e) => setCustomDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
-                    placeholder="End Date"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setShowActivityFeed(!showActivityFeed)}
-                className={`px-3 py-1 rounded text-sm transition-colors ${showActivityFeed
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-              >
-                <Activity className="h-4 w-4 inline mr-1" />
-                <span className="hidden xs:inline">{t('filters.activityFeed')}</span>
-                <span className="xs:hidden">{t('filters.feed')}</span>
-              </button>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="performance">{t('filters.sortByPerformance')}</option>
-                <option value="name">{t('filters.sortByName')}</option>
-                <option value="activity">{t('filters.sortByActivity')}</option>
-              </select>
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="p-1 rounded hover:bg-gray-100"
-              >
-                {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingUp className="h-4 w-4 rotate-180" />}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Activity Feed */}
       {showActivityFeed && (
@@ -609,7 +586,6 @@ const Reports: React.FC = () => {
                 <div>
                   <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.totalUsers')}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalUsers}</p>
-                  <p className="text-xs text-gray-500">{metrics.activeUsers} {t('metrics.active')}</p>
                 </div>
                 <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
               </div>
@@ -645,7 +621,85 @@ const Reports: React.FC = () => {
               </div>
             </div>
           </div>
+          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+            <div className="flex flex-col gap-4">
+              {/* Date Range Display */}
+              {selectedDateRange.startDate && selectedDateRange.endDate && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
+                  <Calendar className="h-4 w-4" />
+                  <span className="text-xs sm:text-sm">
+                    {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
+                  </span>
+                </div>
+              )}
 
+              {/* Filters and Controls */}
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                  <select
+                    value={selectedTimeframe}
+                    onChange={(e) => setSelectedTimeframe(e.target.value as any)}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="today">{t('timeframes.today')}</option>
+                    <option value="week">{t('timeframes.thisWeek')}</option>
+                    <option value="month">{t('timeframes.thisMonth')}</option>
+                    <option value="custom">{t('timeframes.customRange')}</option>
+                  </select>
+
+                  {/* Custom Date Range Picker */}
+                  {selectedTimeframe === 'custom' && (
+                    <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-1">
+                      <input
+                        type="date"
+                        value={customDateRange.startDate}
+                        onChange={(e) => setCustomDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                        className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
+                        placeholder="Start Date"
+                      />
+                      <span className="text-gray-400 text-sm hidden sm:inline">{t('timeframes.to')}</span>
+                      <input
+                        type="date"
+                        value={customDateRange.endDate}
+                        onChange={(e) => setCustomDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                        className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
+                        placeholder="End Date"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setShowActivityFeed(!showActivityFeed)}
+                    className={`px-3 py-1 rounded text-sm transition-colors ${showActivityFeed
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                  >
+                    <Activity className="h-4 w-4 inline mr-1" />
+                    <span className="hidden xs:inline">{t('filters.activityFeed')}</span>
+                    <span className="xs:hidden">{t('filters.feed')}</span>
+                  </button>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as any)}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="performance">{t('filters.sortByPerformance')}</option>
+                    <option value="name">{t('filters.sortByName')}</option>
+                    <option value="activity">{t('filters.sortByActivity')}</option>
+                  </select>
+                  <button
+                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                    className="p-1 rounded hover:bg-gray-100"
+                  >
+                    {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingUp className="h-4 w-4 rotate-180" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8">
             {/* Performance Chart */}
@@ -739,7 +793,6 @@ const Reports: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.deals')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.conversion')}</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.lastActivity')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.status')}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -790,12 +843,6 @@ const Reports: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {performance.lastActivity}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                        {translateUserStatus(performance.isActive ? 'Active' : 'Inactive')}
-                      </span>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -825,10 +872,6 @@ const Reports: React.FC = () => {
                             'bg-green-100 text-green-800'
                         }`}>
                         {translateUserRole(performance.role)}
-                      </span>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full mt-1 ${performance.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                        {translateUserStatus(performance.isActive ? 'Active' : 'Inactive')}
                       </span>
                     </div>
                   </div>

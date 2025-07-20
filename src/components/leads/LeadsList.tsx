@@ -85,6 +85,7 @@ function getCardLabel(key: string, t: (k: string) => string) {
 // (This is already implemented for all cards in the previous edit, but this comment clarifies the logic for maintainers.)
 
 const LeadsList: React.FC = () => {
+  const { user } = useAuth();
   // const { leads, deleteLead } = useData();
   const { data: leads = [], isLoading: isLoadingLeads } = useQuery<Lead[]>({
     queryKey: ['leads'],
@@ -123,10 +124,10 @@ const LeadsList: React.FC = () => {
   const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
     queryKey: ['users'],
     staleTime: 1000 * 60 * 5, // 5 minutes
-    queryFn: () => getUsers()
+    queryFn: getUsers,
+    enabled: user?.role === 'admin' || user?.role === 'sales_admin'
   });
 
-  const { user } = useAuth();
   // const { projects, users } = useData(); // Add users from DataContext
   const { t, i18n } = useTranslation('leads');
   const [searchTerm, setSearchTerm] = useState('');
@@ -142,8 +143,8 @@ const LeadsList: React.FC = () => {
   const [activeStatusCard, setActiveStatusCard] = useState<string>('');
   const [activeCallOutcomeCard, setActiveCallOutcomeCard] = useState<string>('');
   const [activeVisitStatusCard, setActiveVisitStatusCard] = useState<string>('');
-  const [selectedManager, setSelectedManager] = useState('');
-  const [selectedSalesRep, setSelectedSalesRep] = useState('');
+  const [selectedManager, setSelectedManager] = useState<User | null>(null);
+  const [selectedSalesRep, setSelectedSalesRep] = useState<User | null>(null);
 
   const location = useLocation();
 
@@ -240,23 +241,41 @@ const LeadsList: React.FC = () => {
   const getFilteredLeads = () => {
     let userLeads = leads;
 
+    // Debug logging for filtering
+    console.log('Filtering leads:', {
+      userRole: user?.role,
+      userId: user?.id,
+      selectedManager: selectedManager?.id,
+      selectedSalesRep: selectedSalesRep?.id,
+      totalLeads: leads?.length
+    });
+
     // Role-based filtering
     if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own leads
-      userLeads = leads?.filter(lead => lead.assignedToId === user.id);
+      userLeads = leads?.filter(lead => lead.owner?.id === user.id);
+      console.log('Sales rep filtering - showing only own leads:', userLeads?.length);
     } else if (user?.role === 'team_leader') {
       // Team leaders see their own leads and their sales reps' leads
-      const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.id);
-      userLeads = leads?.filter(lead => lead.assignedToId === user.id || (salesReps?.includes(lead.assignedToId)));
+      const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.id).map(u => u.id);
+      userLeads = leads?.filter(lead => lead.owner?.id === user.id || (salesReps?.includes(lead.assignedToId)));
+      console.log('Team leader filtering - showing own and team leads:', userLeads?.length);
     } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Filter by manager if selected
       if (selectedManager) {
-        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager).map(u => u.id);
-        userLeads = leads.filter(lead => lead.assignedToId === selectedManager || salesReps.includes(lead.assignedToId));
+        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager.id).map(u => u.id);
+        userLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.assignedToId));
+        console.log('Manager filtering - showing manager and their team leads:', userLeads?.length, {
+          managerId: selectedManager.id,
+          salesReps: salesReps
+        });
       }
       // Filter by sales rep if selected
       if (selectedSalesRep) {
-        userLeads = userLeads.filter(lead => lead.assignedToId === selectedSalesRep);
+        userLeads = userLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
+        console.log('Sales rep filtering - showing only selected sales rep leads:', userLeads?.length, {
+          selectedSalesRepId: selectedSalesRep.id
+        });
       }
     }
 
@@ -376,7 +395,7 @@ const LeadsList: React.FC = () => {
       }
       // setFilteredLeads(getFilteredLeads() || []); // This line was removed as per edit hint
     }
-  }, [leads, users, projects, searchTerm, filters, user?.role, user?.id]);
+  }, [leads, users, projects, searchTerm, filters, user?.role, user?.id, selectedManager, selectedSalesRep]);
   // KPI calculations (moved here)
   const filteredLeads = getFilteredLeads() || [];
   const allLeadsCount = filteredLeads.length;
@@ -385,9 +404,6 @@ const LeadsList: React.FC = () => {
   ).length;
   const freshLeadsCount = filteredLeads.filter(lead => lead.status === 'fresh_lead').length;
   const coldCallsCount = filteredLeads.filter(lead => lead.source === 'Cold Call').length;
-  const followUpCount = filteredLeads.filter(lead => lead.status === 'follow_up').length;
-  const reservationCount = filteredLeads.filter(lead => lead.status === 'reservation').length;
-
 
   // Performance tracking for reports
   const userPerformance = React.useMemo(() => {
@@ -545,6 +561,12 @@ const LeadsList: React.FC = () => {
     setActiveCallOutcomeCard('');
   };
 
+  useEffect(() => {
+    if (selectedSalesRep) {
+      console.log("selectedSalesRep", selectedSalesRep);
+
+    }
+  }, [selectedSalesRep]);
 
   return (
     <div
@@ -558,12 +580,12 @@ const LeadsList: React.FC = () => {
       {/* User Filter Select for Manager/Sales Rep */}
       {user && (
         <UserFilterSelect
-          currentUser={user}
-          users={users as import('../../contexts/AuthContext').User[]}
+          currentUser={user as User}
+          users={users}
           selectedManager={selectedManager}
-          setSelectedManager={setSelectedManager}
-          selectedSalesRep={selectedSalesRep}
-          setSelectedSalesRep={setSelectedSalesRep}
+          setSelectedManager={setSelectedManager as any}
+          selectedSalesRep={selectedSalesRep as any}
+          setSelectedSalesRep={setSelectedSalesRep as any}
         />
       )}
       {/* Lead Status Cards Section */}

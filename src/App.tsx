@@ -69,7 +69,7 @@ const AppContent: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const { settings } = useSettings();
   const { rtlMargin } = useLanguage();
-
+  const { user } = useAuth();
 
   const queryClient = useQueryClient();
 
@@ -90,11 +90,13 @@ const AppContent: React.FC = () => {
         queryFn: () => getLeads(),
         staleTime: 1000 * 60 * 5 // 5 minutes
       });
-      queryClient.prefetchQuery({
-        queryKey: ['users'],
-        queryFn: () => getUsers(),
-        staleTime: 1000 * 60 * 5 // 5 minutes
-      });
+      if (user?.role === 'admin' || user?.role === 'sales_admin') {
+        queryClient.prefetchQuery({
+          queryKey: ['users'],
+          queryFn: () => getUsers(),
+          staleTime: 1000 * 60 * 5 // 5 minutes
+        });
+      }
       queryClient.prefetchQuery({
         queryKey: ['properties'],
         queryFn: () => getProperties(),

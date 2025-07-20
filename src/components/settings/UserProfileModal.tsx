@@ -9,6 +9,7 @@ import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import imageCompression from 'browser-image-compression';
 import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { toast } from 'react-toastify';
 
 interface UserProfileModalProps {
   user: UserType | null;
@@ -32,6 +33,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     mutationFn: (data: { id: string; formData: any }) => updateUser(data.id, data.formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success("User updated successfully");
     }
   })
 
@@ -70,7 +72,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    
+
     // Clear email error when user types
     if (name === 'email') {
       setEmailError('');
@@ -120,8 +122,6 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     if (authUser && authUser.id === user.id) {
       const updatedUser = { ...authUser, ...formData };
       localStorage.setItem('propai_user', JSON.stringify(updatedUser));
-      // Force a page reload to update the AuthContext
-      window.location.reload();
     }
 
     onClose();
@@ -278,9 +278,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                  emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                }`}
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                  }`}
                 required
                 placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
               />

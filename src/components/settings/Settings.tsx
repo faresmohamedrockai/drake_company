@@ -53,41 +53,50 @@ const defaultSettings = {
 };
 
 const Settings: React.FC = () => {
+  const { user } = useAuth();
 
-  const {data: leads} = useQuery({
+  const { data: leads } = useQuery({
     queryKey: ['leads'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getLeads(),
   })
-  const {data: properties} = useQuery({
+  const { data: properties } = useQuery({
     queryKey: ['properties'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProperties(),
   })
-  const {data: contracts} = useQuery({
+  const { data: contracts } = useQuery({
     queryKey: ['contracts'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getContracts(),
   })
-  const {data: users} = useQuery({  
+  const { data: users } = useQuery({
     queryKey: ['users'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getUsers(),
+    enabled: user?.role === 'admin' || user?.role === 'sales_admin'
   })
-  const {data: projects} = useQuery({
+  const { data: projects } = useQuery({
     queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProjects(),
   })
-  const {data: developers} = useQuery({
+  const { data: developers } = useQuery({
     queryKey: ['developers'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getDevelopers(),
   })
-  const {data: meetings} = useQuery({
+  const { data: meetings } = useQuery({
     queryKey: ['meetings'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getMeetings(),
   })
-  const {data: zones} = useQuery({
+  const { data: zones } = useQuery({
     queryKey: ['zones'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getZones(),
   })
 
-  const { user } = useAuth();
   const { t } = useTranslation('settings');
   const { language } = useLanguage();
   const isRTL = language === 'ar';
@@ -120,7 +129,7 @@ const Settings: React.FC = () => {
   const [importError, setImportError] = useState('');
   const [importSuccess, setImportSuccess] = useState('');
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem(BACKUP_DATE_KEY));
-  const [emailErrors, setEmailErrors] = useState<{[key: string]: string}>({});
+  const [emailErrors, setEmailErrors] = useState<{ [key: string]: string }>({});
 
   // Check user access permissions
   const hasAdminAccess = user?.role === 'admin';
@@ -172,7 +181,7 @@ const Settings: React.FC = () => {
       setSettingsChanged(true);
       return updated;
     });
-    
+
     // Clear email error when user types
     if (field === 'companyEmail') {
       setEmailErrors(prev => ({ ...prev, companyEmail: '' }));
@@ -195,7 +204,7 @@ const Settings: React.FC = () => {
       setSettingsChanged(true);
       return updated;
     });
-    
+
     // Clear email errors when user types
     if (path === 'email.fromEmail') {
       setEmailErrors(prev => ({ ...prev, fromEmail: '' }));
@@ -214,25 +223,25 @@ const Settings: React.FC = () => {
   };
   const handleSaveSettings = () => {
     // Email validation
-    const newEmailErrors: {[key: string]: string} = {};
-    
+    const newEmailErrors: { [key: string]: string } = {};
+
     if (settings.companyEmail && !validateEmail(settings.companyEmail)) {
       newEmailErrors.companyEmail = getEmailErrorMessage(settings.companyEmail, language);
     }
-    
+
     if (settings.notifications.email.fromEmail && !validateEmail(settings.notifications.email.fromEmail)) {
       newEmailErrors.fromEmail = getEmailErrorMessage(settings.notifications.email.fromEmail, language);
     }
-    
+
     if (settings.notifications.email.mirrorEmail && !validateEmail(settings.notifications.email.mirrorEmail)) {
       newEmailErrors.mirrorEmail = getEmailErrorMessage(settings.notifications.email.mirrorEmail, language);
     }
-    
+
     if (Object.keys(newEmailErrors).length > 0) {
       setEmailErrors(newEmailErrors);
       return;
     }
-    
+
     localStorage.setItem(SYSTEM_SETTINGS_KEY, JSON.stringify(settings));
 
     // Sync notification settings with notification service
@@ -488,9 +497,8 @@ const Settings: React.FC = () => {
                       value={settings.companyEmail}
                       onChange={e => handleSettingsChange('companyEmail', e.target.value)}
                       placeholder={t('companyEmailPlaceholder')}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${
-                        emailErrors.companyEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                      }`}
+                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${emailErrors.companyEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                        }`}
                     />
                     {emailErrors.companyEmail && (
                       <p className="text-red-600 text-sm mt-1">{emailErrors.companyEmail}</p>
@@ -604,9 +612,8 @@ const Settings: React.FC = () => {
                             type="email"
                             value={settings.notifications.email.fromEmail}
                             onChange={e => handleNotificationChange('email.fromEmail', e.target.value)}
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${
-                              emailErrors.fromEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                            }`}
+                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${emailErrors.fromEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                              }`}
                             placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
                           />
                           {emailErrors.fromEmail && (
@@ -648,9 +655,8 @@ const Settings: React.FC = () => {
                               type="email"
                               value={settings.notifications.email.mirrorEmail}
                               onChange={e => handleNotificationChange('email.mirrorEmail', e.target.value)}
-                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${
-                                emailErrors.mirrorEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                              }`}
+                              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 text-sm ${emailErrors.mirrorEmail ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                                }`}
                               placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
                             />
                             {emailErrors.mirrorEmail && (

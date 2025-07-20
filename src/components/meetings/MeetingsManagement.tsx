@@ -392,10 +392,15 @@ const MeetingsManagement: React.FC = () => {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
-            <Plus className="h-5 w-5 mr-2" />
-            {t('scheduleMeeting')}
-          </button>
+          {
+            (user?.role === 'admin' || user?.role === 'sales_admin') && (
+
+              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
+                <Plus className="h-5 w-5 mr-2" />
+                {t('scheduleMeeting')}
+              </button>
+            )
+          }
         </div>
       </div>
 

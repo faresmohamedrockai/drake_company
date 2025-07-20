@@ -14,7 +14,7 @@ import { Id, toast } from 'react-toastify';
 const ContractsManagement: React.FC = () => {
   // const { contracts, addContract, updateContract, deleteContract, leads, properties } = useData();
   const [toastId, setToastId] = useState<Id | null>(null);
-  const { data: contracts } = useQuery<Contract[]>({
+  const { data: contracts, isLoading: isLoadingContracts } = useQuery<Contract[]>({
     queryKey: ['contracts'],
     staleTime: 1000 * 60 * 5,
     queryFn: getContracts,
@@ -259,10 +259,21 @@ const ContractsManagement: React.FC = () => {
         </div>
       </div>
 
+      {/* Loading Indicator */}
+      {isLoadingContracts && (
+        <div className="bg-white rounded-lg shadow-md p-8 mb-6">
+          <div className="flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mr-3"></div>
+            <span className="text-gray-600 font-medium">{t('loadingContracts', 'Loading contracts...')}</span>
+          </div>
+        </div>
+      )}
+
       {/* Contracts Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      {!isLoadingContracts && (
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.contractId')}</th>
@@ -327,6 +338,7 @@ const ContractsManagement: React.FC = () => {
           </table>
         </div>
       </div>
+      )}
 
       {/* Add/Edit Contract Modal */}
       {showForm && (
@@ -382,8 +394,9 @@ const ContractsManagement: React.FC = () => {
       )}
 
       {/* Contract Details Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-8">
-        {filteredContracts?.map((contract) => (
+      {!isLoadingContracts && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-8">
+          {filteredContracts?.map((contract) => (
           <div key={contract.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">{contract.id}</h3>
@@ -418,6 +431,7 @@ const ContractsManagement: React.FC = () => {
           </div>
         ))}
       </div>
+      )}
     </div>
   );
 };

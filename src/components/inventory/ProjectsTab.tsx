@@ -451,10 +451,15 @@ const ProjectsTab: React.FC = () => {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
-        <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={() => setShowAddForm(true)}>
-          <Plus className="h-5 w-5 mr-2" />
-          {t('addProject')}
-        </button>
+        {
+          (user?.role === 'admin' || user?.role === 'sales_admin') && (
+
+            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={() => setShowAddForm(true)}>
+              <Plus className="h-5 w-5 mr-2" />
+              {t('addProject')}
+            </button>
+          )
+        }
       </div>
 
       {/* Projects Grid */}
@@ -466,12 +471,20 @@ const ProjectsTab: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">{getProjectName(project)}</h3>
                   <div className="flex space-x-2">
-                    <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(project)}>
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(project.id || '')}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {
+                      (user?.role === 'admin' || user?.role === 'sales_admin') && (
+                        <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(project)}>
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      )
+                    }
+                    {
+                      (user?.role === 'admin' || user?.role === 'sales_admin') && (
+                        <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(project.id || '')}>
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )
+                    }
                   </div>
                 </div>
                 {Array.isArray((project as any).images) && (project as any).images.length > 0 && (
@@ -633,10 +646,7 @@ const ProjectsTab: React.FC = () => {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectType')}</label>
-                      <input type="text" value={newProject.type} onChange={e => setNewProject({ ...newProject, type: e.target.value })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required />
-                    </div>
+
                   </div>
                 )}
                 {/* Step 2: Properties */}
@@ -775,7 +785,7 @@ const ProjectsTab: React.FC = () => {
                       if (!zone) return '';
                       return language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name);
                     })()}</div>
-                    <div><span className="font-semibold">{t('projectType')}:</span> {newProject.type}</div>
+
                     <div><span className="font-semibold">{t('properties')}:</span> {newProject.propertyIds.map(pid => {
                       const property = properties?.find(p => p.id === pid);
                       if (!property) return '';

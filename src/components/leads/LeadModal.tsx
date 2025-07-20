@@ -167,24 +167,31 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     (user?.role === 'sales_rep' && currentLead.assignedToId === user.id);
 
   const [isUpdate, setIsUpdate] = useState(false);
-  // Dynamic stages based on status order (remove Cancellation)
-  const statusStages = [
+
+  // Main progress stages (excluding special statuses and cancellation)
+  const mainStatusStages = [
     { id: 'fresh', label: t('freshLead'), value: 'fresh_lead' },
     { id: 'follow', label: t('followUp'), value: 'follow_up' },
     { id: 'visit', label: t('scheduledVisit'), value: 'scheduled_visit' },
     { id: 'open', label: t('openDeal'), value: 'open_deal' },
     { id: 'closed', label: t('closedDeal'), value: 'closed_deal' },
-    { id: 'cancellation', label: t('cancellation'), value: 'cancellation' },
-    { id: 'not Answered', label: t('notAnswered'), value: 'no_answer' },
-    { id: 'not Interested', label: t('notInterested'), value: 'not_intersted_now' },
   ];
+
+  // Special statuses that show as single step
+  const specialStatuses = [
+    { id: 'notAnswered', label: t('notAnswered'), value: 'no_answer' },
+    { id: 'notInterested', label: t('notInterested'), value: 'not_intersted_now' },
+  ];
+
   const [toastId, setToastId] = useState<Id | null>(null);
   const isCancelled = currentLead.status === 'cancellation';
-  const currentStatusIndex = isCancelled ? -1 : statusStages.findIndex(s => s.value === currentLead.status);
+  const isSpecialStatus = ['no_answer', 'not_intersted_now'].includes(currentLead.status);
 
-  // Only show main stages in the progress bar
-  const progressBarSpecialStatuses = ['no_answer', 'not_interested_now', 'reservation'];
-  const isSpecialStatus = progressBarSpecialStatuses.includes(currentLead.status);
+  // Get current status index for main stages (cancellation is not in main stages)
+  const currentStatusIndex = mainStatusStages.findIndex(s => s.value === currentLead.status);
+
+  // Get current special status
+  const currentSpecialStatus = specialStatuses.find(s => s.value === currentLead.status);
 
   const handleStatusUpdate = (newStatus: Lead['status']) => {
     if (canEdit) {
@@ -194,10 +201,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     }
   };
   useEffect(() => {
-    if (isUpdate) {
+    if (isUpdatingLead) {
+      console.log('isUpdate', isUpdate);
       setToastId(toast.loading("Updating lead..."));
     }
-  }, [isUpdate]);
+  }, [isUpdatingLead]);
 
   // useEffect(() => {
   //   setIsUpdate(true);
@@ -286,58 +294,76 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
             <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">{t('dealProgress')}</label>
 
             <div className="relative w-full">
-              <div className="flex items-center justify-start space-x-1 md:space-x-2 overflow-x-auto py-2 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                <div className="flex items-center min-w-max">
-                  {statusStages.map((stage, index) => {
-                    const isCompleted = !isCancelled && index < currentStatusIndex;
-                    const isActive = !isCancelled && index === currentStatusIndex;
-                    return (
-                      <React.Fragment key={stage.id}>
-                        <motion.div
-                          initial={{ scale: 0.8, opacity: 0.5 }}
-                          animate={{ scale: isActive ? 1.1 : 1, opacity: 1 }}
-                          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                          className={`flex flex-col items-center relative flex-shrink-0`}
-                        >
-                          <div
-                            className={`w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
-                              ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
-                                isCompleted ? 'bg-green-500 border-green-500 text-white' :
-                                  isActive ? 'bg-blue-600 border-blue-600 text-white' :
-                                    'bg-gray-200 border-gray-300 text-gray-600'}
-                            `}
-                          >
-                            {index + 1}
-                          </div>
-                          <span className={`mt-1 md:mt-2 text-xs font-medium text-center w-16 md:w-20
-                            ${isCancelled ? 'text-red-500' :
-                              isCompleted ? 'text-green-600' :
-                                isActive ? 'text-blue-600' :
-                                  'text-gray-500'}
-                          `}>{stage.label}</span>
-                        </motion.div>
-                        {index < statusStages.length - 1 && (
+              <div className="flex items-center justify-center space-x-1 md:space-x-2 overflow-x-auto py-2 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                {isSpecialStatus && currentSpecialStatus ? (
+                  // Show single step for special statuses
+                  <div className="flex items-center min-w-max">
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0.5 }}
+                      animate={{ scale: 1.1, opacity: 1 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      className="flex flex-col items-center relative flex-shrink-0"
+                    >
+                      <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300 bg-orange-500 border-orange-500 text-white">
+                        !
+                      </div>
+                      <span className="mt-1 md:mt-2 text-xs font-medium text-center w-16 md:w-20 text-orange-600">
+                        {currentSpecialStatus.label}
+                      </span>
+                    </motion.div>
+                  </div>
+                ) : (
+                  // Show main progress stages
+                  <div className="flex items-center min-w-max">
+                    {mainStatusStages.map((stage, index) => {
+                      const isCompleted = index < currentStatusIndex;
+                      const isActive = index === currentStatusIndex;
+                      return (
+                        <React.Fragment key={stage.id}>
                           <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: 20 }}
-                            transition={{ duration: 0.5, delay: 0.1 * index }}
-                            className={`h-1 mx-1 rounded-full transition-colors duration-300 flex-shrink-0
-                              ${isCancelled ? 'bg-red-500' :
-                                index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
-                            `}
-                            style={{ minWidth: 16, maxWidth: 32 }}
-                          />
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
+                            initial={{ scale: 0.8, opacity: 0.5 }}
+                            animate={{ scale: isActive ? 1.1 : 1, opacity: 1 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                            className={`flex flex-col items-center relative flex-shrink-0`}
+                          >
+                            <div
+                              className={`w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
+                                ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
+                                  isCompleted ? 'bg-green-500 border-green-500 text-white' :
+                                    isActive ? 'bg-blue-600 border-blue-600 text-white' :
+                                      'bg-gray-200 border-gray-300 text-gray-600'}
+                              `}
+                            >
+                              {index + 1}
+                            </div>
+                            <span className={`mt-1 md:mt-2 text-xs font-medium text-center w-16 md:w-20
+                              ${isCancelled ? 'text-red-600' :
+                                isCompleted ? 'text-green-600' :
+                                  isActive ? 'text-blue-600' :
+                                    'text-gray-500'}
+                            `}>{stage.label}</span>
+                          </motion.div>
+                          {index < mainStatusStages.length - 1 && (
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: 20 }}
+                              transition={{ duration: 0.5, delay: 0.1 * index }}
+                              className={`h-1 mx-1 rounded-full transition-colors duration-300 flex-shrink-0
+                                ${isCancelled ? 'bg-red-500' :
+                                  index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
+                              `}
+                              style={{ minWidth: 16, maxWidth: 32 }}
+                            />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
 
-            {isCancelled && (
-              <div className="mt-1 text-xs text-red-600 font-semibold text-center">{t('dealCancelled')}</div>
-            )}
+
           </div>
 
           {/* Quick Actions */}
@@ -364,10 +390,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   ${currentLead.status === 'reservation'
                     ? 'text-blue-600'
                     : currentLead.status === 'not_interested_now'
-                    ? 'text-gray-600'
-                    : currentLead.status === 'no_answer'
-                    ? 'text-orange-500'
-                    : ''}`}
+                      ? 'text-gray-600'
+                      : currentLead.status === 'no_answer'
+                        ? 'text-orange-500'
+                        : ''}`}
               >
                 <option value="fresh_lead">{t('freshLead')}</option>
                 <option value="follow_up">{t('followUp')}</option>

@@ -72,7 +72,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     onError: (error: any) => {
       console.log("asdasdasdasda");
       console.log(error);
-      toast.error(error.response.data.message[0] || "Error adding lead");
+      toast.error(error.response.data.message || "Error adding lead");
       setError("Error adding lead: " + error.message);
       setFormData({
         nameEn: '',
@@ -251,9 +251,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                       setFormData({ ...formData, contact: e.target.value });
                       setPhoneError(''); // Clear error when user types
                     }}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 ${
-                      phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'
-                    }`}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'
+                      }`}
                     required
                     placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
                   />
@@ -274,9 +273,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                       setFormData({ ...formData, email: e.target.value });
                       setEmailError(''); // Clear error when user types
                     }}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent bg-white text-sm transition-all duration-200 ${
-                      emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'
-                    }`}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent bg-white text-sm transition-all duration-200 ${emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'
+                      }`}
                     placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
                   />
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
