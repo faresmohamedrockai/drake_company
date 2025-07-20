@@ -131,21 +131,7 @@ const Login: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
-                    {t('rememberMe')}
-                  </label>
-                </div>
-                <a href="#" className="text-sm text-blue-600 hover:text-blue-800">
-                  {t('forgotPassword')}
-                </a>
-              </div>
+
 
               <button
                 type="submit"
@@ -156,9 +142,7 @@ const Login: React.FC = () => {
               </button>
             </form>
 
-            <div className="mt-6 text-center text-xs lg:text-sm text-gray-600">
-              {t('demoCredentials')}
-            </div>
+
           </div>
         </div>
       </div>
