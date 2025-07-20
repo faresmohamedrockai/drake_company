@@ -464,7 +464,7 @@ const PropertiesTab: React.FC = () => {
 
     // Access control: Team Leader can only for their team, Sales Rep only for their own
     let found = leads?.find(l => l.contact === reportPhone);
-    console.log("found", found);
+
     if (!found) {
       setReportError('No client found with this number. Please check and try again.');
       return;

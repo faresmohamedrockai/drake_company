@@ -107,21 +107,18 @@ const Reports: React.FC = () => {
     const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
 
     // Debug: Log all lead statuses for this user
-    const allLeadStatuses = userLeads.map(lead => lead.status).filter(Boolean);
-    if (allLeadStatuses.length > 0) {
-      console.log(`Lead statuses for user ${user.name}:`, allLeadStatuses);
-    }
+
 
     const completedCalls = userLeads.reduce((sum, lead) => {
       // If lead status is "not answered", don't count any calls as completed
       if (lead.status && lead.status.toLowerCase() === 'not answered') {
         return sum;
       }
-      console.log(`Lead status for user ${user.name}:`, lead.status);
+      
       // Otherwise, count all calls for this lead as completed
       return sum + (lead.calls?.length || 0);
     }, 0);
-    console.log(`Completed calls for user ${user.name}:`, completedCalls);
+    
 
     const totalVisits = userLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
     const completedVisits = userLeads.reduce((sum, lead) =>
@@ -139,7 +136,7 @@ const Reports: React.FC = () => {
 
     // Debug: Log call completion summary
     if (totalCalls > 0) {
-      console.log(`Call completion for ${user.name}: ${completedCalls}/${totalCalls} = ${callCompletionRate.toFixed(1)}%`);
+
     }
 
     const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0;
@@ -240,17 +237,6 @@ const Reports: React.FC = () => {
     };
   };
 
-  // Filter data by date range
-  const filterDataByDateRange = (data: any[]) => {
-    if (!selectedDateRange.startDate || !selectedDateRange.endDate) {
-      return data;
-    }
-
-    return data.filter(item => {
-      const itemDate = new Date(item.createdAt || item.date || item.lastActivity);
-      return itemDate >= selectedDateRange.startDate! && itemDate <= selectedDateRange.endDate!;
-    });
-  };
 
   // Get filtered and sorted performances
   const getFilteredPerformances = () => {
@@ -274,12 +260,6 @@ const Reports: React.FC = () => {
       const startDate = selectedDateRange.startDate;
       const endDate = selectedDateRange.endDate;
 
-      console.log('Filtering performances by date range:', {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        totalPerformances: performances.length
-      });
-
       performances = performances.filter(p => {
         // Check if user has any activity within the date range
         const lastActivity = p.lastActivity;
@@ -290,7 +270,7 @@ const Reports: React.FC = () => {
           if (!isNaN(lastActivityDate.getTime()) &&
             lastActivityDate >= startDate &&
             lastActivityDate <= endDate) {
-            console.log(`User ${p.name} included due to lastActivity:`, lastActivity);
+
             return true;
           }
         }
@@ -315,14 +295,12 @@ const Reports: React.FC = () => {
             meetingDate <= endDate;
         });
 
-        if (hasLeadsInRange || hasMeetingsInRange) {
-          console.log(`User ${p.name} included due to leads/meetings in range`);
-        }
+
 
         return hasLeadsInRange || hasMeetingsInRange;
       });
 
-      console.log('Filtered performances count:', performances.length);
+
     }
 
     // Sort
@@ -416,16 +394,7 @@ const Reports: React.FC = () => {
 
   const selectedDateRange = getDateRange();
 
-  // Debug logging for date ranges
-  if (selectedDateRange.startDate && selectedDateRange.endDate) {
-    console.log('Date Range:', {
-      timeframe: selectedTimeframe,
-      startDate: selectedDateRange.startDate.toISOString(),
-      endDate: selectedDateRange.endDate.toISOString(),
-      startDateLocal: selectedDateRange.startDate.toLocaleDateString(),
-      endDateLocal: selectedDateRange.endDate.toLocaleDateString()
-    });
-  }
+
 
   const performances = getFilteredPerformances();
   const metrics = calculateOverallMetrics();

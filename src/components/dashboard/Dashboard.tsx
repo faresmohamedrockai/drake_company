@@ -16,7 +16,7 @@ import { motion } from 'framer-motion';
 
 import { useQuery } from '@tanstack/react-query';
 import { getLeads, getLogs, getMeetings, getUsers } from '../../queries/queries';
-import { Lead, Log, Meeting, User } from '../../types';
+import { Lead, Log, Meeting, User, LeadStatus } from '../../types';
 import { Activity } from '../../types';
 import { useNavigate } from 'react-router-dom';
 import UserFilterSelect from '../leads/UserFilterSelect';
@@ -92,9 +92,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   const today = new Date().toISOString().split('T')[0];
   const totalProspects = leads.length;
-  const activeLeads = leads.filter(l => ['fresh_lead', 'follow_up', 'scheduled_visit', 'open_deal'].includes(l.status)).length;
+  const activeLeads = leads.filter(l => [LeadStatus.FRESH_LEAD, LeadStatus.FOLLOW_UP, LeadStatus.SCHEDULED_VISIT, LeadStatus.OPEN_DEAL].includes(l.status)).length;
   const todayMeetings = meetings.filter(m => m.date === today).length;
-  const followUpLeads = leads.filter(l => l.status === 'follow_up').length;
+  const followUpLeads = leads.filter(l => l.status === LeadStatus.FOLLOW_UP).length;
 
   // Conversion rates (customize as needed)
   const conversionRates = {
@@ -224,16 +224,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const dashboardCards = [
     { key: 'all', count: filteredLeads.length },
     // { key: 'duplicate', count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contact && l.contact.email === lead.contact.email)) !== idx).length },
-    { key: 'fresh_lead', count: filteredLeads.filter(lead => lead.status === 'fresh_lead').length },
+    { key: 'fresh_lead', count: filteredLeads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
     { key: 'cold_call', count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
-    { key: 'follow_up', count: filteredLeads.filter(lead => lead.status === 'follow_up').length },
-    { key: 'scheduled_visit', count: filteredLeads.filter(lead => lead.status === 'scheduled_visit').length },
-    { key: 'open_deal', count: filteredLeads.filter(lead => lead.status === 'open_deal').length },
-    { key: 'closed_deal', count: filteredLeads.filter(lead => lead.status === 'closed_deal').length },
-    { key: 'cancellation', count: filteredLeads.filter(lead => lead.status === 'cancellation').length },
-    { key: 'no_answer', count: filteredLeads.filter(lead => lead.status === 'no_answer').length },
-    { key: 'not_interested_now', count: filteredLeads.filter(lead => lead.status === 'not_interested_now').length },
-    { key: 'reservation', count: filteredLeads.filter(lead => lead.status === 'reservation').length },
+    { key: 'follow_up', count: filteredLeads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length },
+    { key: 'scheduled_visit', count: filteredLeads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
+    { key: 'open_deal', count: filteredLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length },
+    { key: 'closed_deal', count: filteredLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length },
+    { key: 'cancellation', count: filteredLeads.filter(lead => lead.status === LeadStatus.CANCELLATION).length },
+    { key: 'no_answer', count: filteredLeads.filter(lead => lead.status === LeadStatus.NO_ANSWER).length },
+    { key: 'not_intersted_now', count: filteredLeads.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW).length },
+    { key: 'reservation', count: filteredLeads.filter(lead => lead.status === LeadStatus.RESERVATION).length },
   ];
   const compactCards = dashboardCards.slice(0, 4);
   const fullCards = dashboardCards;

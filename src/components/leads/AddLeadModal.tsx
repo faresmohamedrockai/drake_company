@@ -70,8 +70,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       onClose();
     },
     onError: (error: any) => {
-      console.log("asdasdasdasda");
-      console.log(error);
+      
       toast.error(error.response.data.message || "Error adding lead");
       setError("Error adding lead: " + error.message);
       setFormData({
@@ -112,6 +111,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     setError('');
     setPhoneError('');
     setEmailError('');
+
+    // Name validation - Arabic name is required
+    if (!formData.nameAr || formData.nameAr.trim() === '') {
+      setError(language === 'ar' ? 'الاسم العربي مطلوب' : 'Arabic name is required');
+      return;
+    }
 
     // Phone validation
     if (!validatePhoneNumber(formData.contact)) {
@@ -212,15 +217,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('nameEnRequired')}</label>
+                <label className="block text-sm font-medium text-gray-700">{t('nameEn')}</label>
                 <div className="relative">
                   <input
                     type="text"
                     value={formData.nameEn}
                     onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
-                    placeholder="Enter name in English"
-                    required
+                    placeholder="Enter name in English (optional)"
                   />
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
@@ -406,7 +410,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
                   <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
                   <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
-                  <option value={LeadStatus.NOT_INTERESTED_NOW}>{t('notInterestedNow')}</option>
+                  <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
                   <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
                 </select>
                 <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />

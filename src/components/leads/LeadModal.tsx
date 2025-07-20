@@ -3,7 +3,7 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X, Phone, Calendar, MessageSquare, Plus, Loader2 } from 'lucide-react';
-import { Lead, CallLog, VisitLog, Property } from '../../types';
+import { Lead, CallLog, VisitLog, Property, LeadStatus } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCw } from 'lucide-react';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
@@ -170,22 +170,22 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   // Main progress stages (excluding special statuses and cancellation)
   const mainStatusStages = [
-    { id: 'fresh', label: t('freshLead'), value: 'fresh_lead' },
-    { id: 'follow', label: t('followUp'), value: 'follow_up' },
-    { id: 'visit', label: t('scheduledVisit'), value: 'scheduled_visit' },
-    { id: 'open', label: t('openDeal'), value: 'open_deal' },
-    { id: 'closed', label: t('closedDeal'), value: 'closed_deal' },
+    { id: 'fresh', label: t('freshLead'), value: LeadStatus.FRESH_LEAD },
+    { id: 'follow', label: t('followUp'), value: LeadStatus.FOLLOW_UP },
+    { id: 'visit', label: t('scheduledVisit'), value: LeadStatus.SCHEDULED_VISIT },
+    { id: 'open', label: t('openDeal'), value: LeadStatus.OPEN_DEAL },
+    { id: 'closed', label: t('closedDeal'), value: LeadStatus.CLOSED_DEAL },
   ];
 
   // Special statuses that show as single step
   const specialStatuses = [
-    { id: 'notAnswered', label: t('notAnswered'), value: 'no_answer' },
-    { id: 'notInterested', label: t('notInterested'), value: 'not_intersted_now' },
+    { id: 'notAnswered', label: t('noAnswer'), value: LeadStatus.NO_ANSWER },
+    { id: 'notInterested', label: t('notInterestedNow'), value: LeadStatus.NOT_INTERSTED_NOW },
   ];
 
   const [toastId, setToastId] = useState<Id | null>(null);
-  const isCancelled = currentLead.status === 'cancellation';
-  const isSpecialStatus = ['no_answer', 'not_intersted_now'].includes(currentLead.status);
+  const isCancelled = currentLead.status === LeadStatus.CANCELLATION;
+  const isSpecialStatus = [LeadStatus.NO_ANSWER, LeadStatus.NOT_INTERSTED_NOW].includes(currentLead.status);
 
   // Get current status index for main stages (cancellation is not in main stages)
   const currentStatusIndex = mainStatusStages.findIndex(s => s.value === currentLead.status);
@@ -202,7 +202,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   };
   useEffect(() => {
     if (isUpdatingLead) {
-      console.log('isUpdate', isUpdate);
+
       setToastId(toast.loading("Updating lead..."));
     }
   }, [isUpdatingLead]);
@@ -386,24 +386,26 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <select
                 value={currentLead.status}
                 onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
+                disabled={isUpdatingLead}
                 className={`px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
+                  ${isUpdatingLead ? 'bg-gray-100 cursor-not-allowed opacity-50' : ''}
                   ${currentLead.status === 'reservation'
                     ? 'text-blue-600'
-                    : currentLead.status === 'not_interested_now'
+                    : currentLead.status === 'not_intersted_now'
                       ? 'text-gray-600'
                       : currentLead.status === 'no_answer'
                         ? 'text-orange-500'
                         : ''}`}
               >
-                <option value="fresh_lead">{t('freshLead')}</option>
-                <option value="follow_up">{t('followUp')}</option>
-                <option value="scheduled_visit">{t('scheduledVisit')}</option>
-                <option value="open_deal">{t('openDeal')}</option>
-                <option value="closed_deal">{t('closedDeal')}</option>
-                <option value="cancellation">{t('cancellation')}</option>
+                <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
+                <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
+                <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
+                <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+                <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
+                <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
 
-                <option value="no_answer">{"Not Answered"}</option>
-                <option value="not_intersted_now">{"Not Interested Now"}</option>
+                <option value={LeadStatus.NO_ANSWER}>{"Not Answered"}</option>
+                <option value={LeadStatus.NOT_INTERSTED_NOW}>{"Not Interested Now"}</option>
               </select>
             )}
           </div>

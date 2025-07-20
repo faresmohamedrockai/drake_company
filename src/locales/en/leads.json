@@ -109,7 +109,7 @@
   "objectionsPlaceholder": "e.g., Price too high",
   "logVisitButton": "Log Visit",
   "nameRequired": "Name *",
-  "nameEnRequired": "Name (English) *",
+  "nameEnRequired": "Name (English)",
   "nameArRequired": "Name (Arabic) *",
   "phoneRequired": "Phone *",
   "email": "Email",

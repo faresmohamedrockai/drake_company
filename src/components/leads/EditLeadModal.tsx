@@ -46,9 +46,6 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
 
     },
     onError: (error: any) => {
-      console.log("asdasdasdasda");
-      
-      console.log(error);
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.error(error.response.data.message[0] || "Error updating lead");
     }
@@ -96,6 +93,12 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     setEmailError('');
 
     if (!lead) return;
+
+    // Name validation - Arabic name is required
+    if (!formData.nameAr || formData.nameAr.trim() === '') {
+      setError(language === 'ar' ? 'الاسم العربي مطلوب' : 'Arabic name is required');
+      return;
+    }
 
     // Phone validation
     if (!validatePhoneNumber(formData.contact)) {
@@ -165,14 +168,13 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
 
         <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('nameEnRequired')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('nameEn')}</label>
             <input
               type="text"
               value={formData.nameEn}
               onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-              placeholder="Enter name in English"
-              required
+              placeholder="Enter name in English (optional)"
             />
           </div>
 
@@ -317,15 +319,15 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
               required
             >
-              <option value="fresh_lead">{t('freshLead')}</option>
-              <option value="follow_up">{t('followUp')}</option>
-              <option value="scheduled_visit">{t('scheduledVisit')}</option>
-              <option value="open_deal">{t('openDeal')}</option>
-              <option value="closed_deal">{t('closedDeal')}</option>
-              <option value="cancellation">{t('cancellation')}</option>
-              <option value="no_answer">{t('noAnswer')}</option>
-              <option value="not_interested_now">{t('notInterestedNow')}</option>
-              <option value="reservation">{t('reservation')}</option>
+              <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
+              <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
+              <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
+              <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+              <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
+              <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
+              <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
+              <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
+              <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
             </select>
           </div>
 

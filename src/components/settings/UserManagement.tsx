@@ -198,7 +198,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    
+
     // Clear email error when user types
     if (name === 'email') {
       setEmailError('');
@@ -260,13 +260,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                   {t('user.email')}
                 </th>
                 <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
-                  {t('user.username')}
-                </th>
-                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
                   {t('user.role')}
-                </th>
-                <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
-                  {t('user.status')}
                 </th>
                 <th className={`px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} ${isRTL ? 'font-arabic' : ''}`}>
                   {t('user.created')}
@@ -295,16 +289,9 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                     </div>
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{user.email}</td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{user.username}</td>
                   <td className={`px-6 py-4 whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.role)} ${isRTL ? 'font-arabic' : ''}`}>
                       {getRoleText(user.role)}
-                    </span>
-                  </td>
-                  <td className={`px-6 py-4 whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      } ${isRTL ? 'font-arabic' : ''}`}>
-                      {user.isActive ? t('user.active') : t('user.inactive')}
                     </span>
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -398,9 +385,8 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                   value={formData.email}
                   name='email'
                   onChange={handleInputChange}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${isRTL ? 'font-arabic' : ''} ${
-                    emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                  }`}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 ${isRTL ? 'font-arabic' : ''} ${emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
                   // required
                   dir={isRTL ? 'rtl' : 'ltr'}
                   placeholder={isRTL ? 'أدخل البريد الإلكتروني' : 'Enter email address'}

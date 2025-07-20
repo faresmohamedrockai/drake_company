@@ -10,7 +10,7 @@ import EditLeadModal from './EditLeadModal';
 import { useLocation } from 'react-router-dom';
 import UserFilterSelect from './UserFilterSelect';
 
-import { Lead, Property } from '../../types';
+import { Lead, LeadStatus, Property } from '../../types';
 import { useQuery } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { User } from '../../types'
@@ -241,41 +241,29 @@ const LeadsList: React.FC = () => {
   const getFilteredLeads = () => {
     let userLeads = leads;
 
-    // Debug logging for filtering
-    console.log('Filtering leads:', {
-      userRole: user?.role,
-      userId: user?.id,
-      selectedManager: selectedManager?.id,
-      selectedSalesRep: selectedSalesRep?.id,
-      totalLeads: leads?.length
-    });
+
 
     // Role-based filtering
     if (user?.role === 'sales_rep') {
       // Sales Reps can only see their own leads
       userLeads = leads?.filter(lead => lead.owner?.id === user.id);
-      console.log('Sales rep filtering - showing only own leads:', userLeads?.length);
+
     } else if (user?.role === 'team_leader') {
       // Team leaders see their own leads and their sales reps' leads
       const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.id).map(u => u.id);
       userLeads = leads?.filter(lead => lead.owner?.id === user.id || (salesReps?.includes(lead.assignedToId)));
-      console.log('Team leader filtering - showing own and team leads:', userLeads?.length);
+
     } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
       // Filter by manager if selected
       if (selectedManager) {
         const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager.id).map(u => u.id);
         userLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.assignedToId));
-        console.log('Manager filtering - showing manager and their team leads:', userLeads?.length, {
-          managerId: selectedManager.id,
-          salesReps: salesReps
-        });
+
       }
       // Filter by sales rep if selected
       if (selectedSalesRep) {
         userLeads = userLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
-        console.log('Sales rep filtering - showing only selected sales rep leads:', userLeads?.length, {
-          selectedSalesRepId: selectedSalesRep.id
-        });
+
       }
     }
 
@@ -334,16 +322,7 @@ const LeadsList: React.FC = () => {
         const isAssignedToUser = lead.assignedToId === filters.assignedTo ||
           lead.owner?.id === filters.assignedTo;
 
-        // Debug: Log filter comparison
-        if (filters.assignedTo && (lead.assignedToId || lead.owner?.id)) {
-          console.log('User filter debug:', {
-            filterValue: filters.assignedTo,
-            leadAssignedToId: lead.assignedToId,
-            leadOwnerId: lead.owner?.id,
-            leadOwnerName: lead.owner?.name,
-            isMatch: isAssignedToUser
-          });
-        }
+
 
         if (!isAssignedToUser) {
           return false;
@@ -369,7 +348,7 @@ const LeadsList: React.FC = () => {
         'closed_deal',
         'cancellation',
         'no_answer',
-        'not_interested_now',
+        'not_intersted_now',
         'reservation',
       ].includes(activeStatusCard)) {
         filtered = filtered.filter(lead => lead.status === activeStatusCard);
@@ -384,15 +363,7 @@ const LeadsList: React.FC = () => {
   };
   useEffect(() => {
     if (leads) {
-      // Debug: Log some lead data to understand the structure
-      if (leads.length > 0) {
-        console.log('Sample lead data:', {
-          firstLead: leads[0],
-          assignedToId: leads[0].assignedToId,
-          owner: leads[0].owner,
-          users: users?.slice(0, 3) // First 3 users for comparison
-        });
-      }
+
       // setFilteredLeads(getFilteredLeads() || []); // This line was removed as per edit hint
     }
   }, [leads, users, projects, searchTerm, filters, user?.role, user?.id, selectedManager, selectedSalesRep]);
@@ -466,14 +437,14 @@ const LeadsList: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'fresh_lead': return 'bg-blue-100 text-blue-800';
-      case 'follow_up': return 'bg-yellow-100 text-yellow-800';
-      case 'scheduled_visit': return 'bg-purple-100 text-purple-800';
-      case 'open_deal': return 'bg-green-100 text-green-800';
-      case 'cancellation': return 'bg-red-100 text-red-800';
-      case 'no_answer': return 'bg-orange-100 text-orange-800';
-      case 'not_interested_now': return 'bg-gray-200 text-gray-800';
-      case 'reservation': return 'bg-pink-100 text-pink-800';
+      case LeadStatus.FRESH_LEAD: return 'bg-blue-100 text-blue-800';
+      case LeadStatus.FOLLOW_UP: return 'bg-yellow-100 text-yellow-800';
+      case LeadStatus.SCHEDULED_VISIT: return 'bg-purple-100 text-purple-800';
+      case LeadStatus.OPEN_DEAL: return 'bg-green-100 text-green-800';
+      case LeadStatus.CANCELLATION: return 'bg-red-100 text-red-800';
+      case LeadStatus.NO_ANSWER: return 'bg-orange-100 text-orange-800';
+      case LeadStatus.NOT_INTERSTED_NOW: return 'bg-gray-200 text-gray-800';
+      case LeadStatus.RESERVATION: return 'bg-pink-100 text-pink-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -505,16 +476,16 @@ const LeadsList: React.FC = () => {
   const dashboardCards = [
     { key: 'all', count: leads.length },
     { key: 'duplicate', count: leads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx).length },
-    { key: 'fresh_lead', count: leads.filter(lead => lead.status === 'fresh_lead').length },
+    { key: 'fresh_lead', count: leads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
     { key: 'cold_call', count: leads.filter(lead => lead.source === 'Cold Call').length },
-    { key: 'follow_up', count: leads.filter(lead => lead.status === 'follow_up').length },
-    { key: 'scheduled_visit', count: leads.filter(lead => lead.status === 'scheduled_visit').length },
-    { key: 'open_deal', count: leads.filter(lead => lead.status === 'open_deal').length },
-    { key: 'closed_deal', count: leads.filter(lead => lead.status === 'closed_deal').length },
-    { key: 'cancellation', count: leads.filter(lead => lead.status === 'cancellation').length },
-    { key: 'no_answer', count: leads.filter(lead => lead.status === 'no_answer').length },
-    { key: 'not_interested_now', count: leads.filter(lead => lead.status === 'not_interested_now').length },
-    { key: 'reservation', count: leads.filter(lead => lead.status === 'reservation').length },
+    { key: 'follow_up', count: leads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length },
+    { key: 'scheduled_visit', count: leads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
+    { key: 'open_deal', count: leads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length },
+    { key: 'closed_deal', count: leads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length },
+    { key: 'cancellation', count: leads.filter(lead => lead.status === LeadStatus.CANCELLATION).length },
+    { key: 'no_answer', count: leads.filter(lead => lead.status === LeadStatus.NO_ANSWER).length },
+    { key: 'not_intersted_now', count: leads.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW).length },
+    { key: 'reservation', count: leads.filter(lead => lead.status === LeadStatus.RESERVATION).length },
   ];
   const compactCards = dashboardCards.slice(0, 4);
   const fullCards = dashboardCards;
@@ -563,7 +534,7 @@ const LeadsList: React.FC = () => {
 
   useEffect(() => {
     if (selectedSalesRep) {
-      console.log("selectedSalesRep", selectedSalesRep);
+
 
     }
   }, [selectedSalesRep]);
@@ -796,7 +767,7 @@ const LeadsList: React.FC = () => {
                 <option value="Website">{t('website')}</option>
                 <option value="Referral">{t('referral')}</option>
                 <option value="Cold Call">{t('coldCall')}</option>
-                <option value="Walk-in">{t('walkIn')}</option>
+                <option value="walk_in">{t('walkIn')}</option>
                 <option value="Advertisement">{t('advertisement')}</option>
               </select>
               <select
@@ -805,15 +776,15 @@ const LeadsList: React.FC = () => {
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
               >
                 <option value="">{t('allStatuses')}</option>
-                <option value="fresh_lead">{t('freshLead')}</option>
-                <option value="follow_up">{t('followUp')}</option>
-                <option value="scheduled_visit">{t('scheduledVisit')}</option>
-                <option value="open_deal">{t('openDeal')}</option>
-                <option value="closed_deal">{t('closedDeal')}</option>
-                <option value="cancellation">{t('cancellation')}</option>
-                <option value="no_answer">{t('noAnswer')}</option>
-                <option value="not_interested_now">{t('notInterestedNow')}</option>
-                <option value="reservation">{t('reservation')}</option>
+                <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
+                <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
+                <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
+                <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+                <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
+                <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
+                <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
+                <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
+                <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
               </select>
               <select
                 value={filters.assignedTo}

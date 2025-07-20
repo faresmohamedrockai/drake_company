@@ -34,7 +34,7 @@ export enum LeadStatus {
   CANCELLATION = 'cancellation',
   CLOSED_DEAL = "closed_deal",
   NO_ANSWER = 'no_answer',
-  NOT_INTERESTED_NOW = 'not_interested_now',
+  NOT_INTERSTED_NOW = 'not_intersted_now',
   RESERVATION = 'reservation',
 
 }

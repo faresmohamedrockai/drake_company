@@ -14,7 +14,7 @@ axiosInstance.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(config.headers);
+
     // No need to manually attach tokens; server will read from cookies
     return config;
   },

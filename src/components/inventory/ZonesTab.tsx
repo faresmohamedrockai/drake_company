@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import MapComponent from './MapComponent';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
-import { toast } from 'react-toastify';
+import { Id, toast } from 'react-toastify';
 
 export interface Zone {
   id?: string;
@@ -27,6 +27,7 @@ const ZonesTab: React.FC = () => {
   const [editZone, setEditZone] = useState<any | null>(null);
   const [editZoneData, setEditZoneData] = useState<any>({ name: '', nameEn: '', nameAr: '', description: '', latitude: '', longitude: '', properties: 0 });
   const queryClient = useQueryClient();
+  const [toastId, setToastId] = useState<Id | null>(null);
   const { data: zones, isLoading, error } = useQuery<Zone[]>({
     queryKey: ['zones'],
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -42,10 +43,12 @@ const ZonesTab: React.FC = () => {
     mutationFn: (zone: Zone) => updateZone(zone),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['zones'] });
-      toast.success(t('zoneUpdated'));
+      toast.dismiss(toastId!);
+      toast.success("Zone Updated");
       setEditZone(null);
     },
     onError: (error: any) => {
+      toast.dismiss(toastId!);
       toast.error(error.response.data.message);
       setEditZone(null);
     }
@@ -55,9 +58,11 @@ const ZonesTab: React.FC = () => {
     mutationFn: (id: string) => deleteZone(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['zones'] });
-      toast.success(t('zoneDeleted'));
+      toast.dismiss(toastId!);
+      toast.success("Zone Deleted");
     },
     onError: (error: any) => {
+      toast.dismiss(toastId!);
       toast.error(error.response.data.message);
     }
   });
@@ -73,10 +78,16 @@ const ZonesTab: React.FC = () => {
   }
 
   useEffect(() => {
-    if (error) {
-      toast.error((error as any).response.data.message);
+    if (isDeleting || isEditing) {
+      setToastId(toast.loading("Loading..."));
     }
-  }, [error]);
+  }, [isDeleting, isEditing]);
+
+  // useEffect(() => {
+  //   if (error) {
+  //     toast.error((error as any).response.data.message);
+  //   }
+  // }, [error]);
 
   // Helper function to get language-appropriate zone name
   const getZoneName = (zone: Zone) => {
@@ -103,18 +114,19 @@ const ZonesTab: React.FC = () => {
     }
   };
 
-  const handleEditZone = (zone: any) => {
+  const handleEditZone = (zone: Zone) => {
     setEditZone(zone);
     setEditZoneData({
       ...zone,
       nameEn: zone.nameEn || '',
-      nameAr: zone.nameAr || ''
+      nameAr: zone.nameAr || '',
+
     });
   };
 
   const handleEditZoneChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setEditZoneData((prev: any) => ({ ...prev, [name]: value }));
+    setEditZoneData((prev: any) => ({ ...prev, [name]: name === 'latitude' || name === 'longitude' ? parseFloat(value) : value }));
   };
 
   const handleEditZoneSubmit = (e: React.FormEvent) => {
@@ -163,7 +175,7 @@ const ZonesTab: React.FC = () => {
                   {language === 'ar' ? 'إضافة منطقة جديدة' : 'Add New Zone'}
                 </p>
                 <p className="text-sm text-blue-700">
-                  {language === 'ar' 
+                  {language === 'ar'
                     ? 'انقر على الخريطة لإنشاء منطقة جديدة. يمكنك تحديد الموقع بدقة وإضافة تفاصيل المنطقة.'
                     : 'Click on the map to create a new zone. You can precisely select the location and add zone details.'
                   }

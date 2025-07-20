@@ -109,7 +109,7 @@
   "objectionsPlaceholder": "مثال: السعر مرتفع جداً",
   "logVisitButton": "تسجيل زيارة",
   "nameRequired": "الاسم *",
-  "nameEnRequired": "الاسم (إنجليزي) *",
+  "nameEnRequired": "الاسم (إنجليزي)",
   "nameArRequired": "الاسم (عربي) *",
   "phoneRequired": "الهاتف *",
   "email": "البريد الإلكتروني",

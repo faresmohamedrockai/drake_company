@@ -1,12 +1,12 @@
 // Phone number validation utility
-export const PHONE_REGEX = /^[+]?[\d\s\-\(\)]{11,}$/;
+export const PHONE_REGEX = /^[+]?[\d\s\-\(\)]{10,}$/;
 
 export const validatePhoneNumber = (phone: string): boolean => {
   // Remove all non-digit characters for length check
   const digitsOnly = phone.replace(/\D/g, '');
   
-  // Check if it's at least 11 digits
-  if (digitsOnly.length < 11) {
+  // Check if it's at least 10 digits
+  if (digitsOnly.length < 10) {
     return false;
   }
   
@@ -40,10 +40,10 @@ export const formatPhoneNumber = (phone: string): string => {
 export const getPhoneErrorMessage = (phone: string, language: string = 'en'): string => {
   const digitsOnly = phone.replace(/\D/g, '');
   
-  if (digitsOnly.length < 11) {
+  if (digitsOnly.length < 10) {
     return language === 'ar' 
-      ? 'يجب أن يحتوي رقم الهاتف على 11 رقم على الأقل'
-      : 'Phone number must be at least 11 digits';
+      ? 'يجب أن يحتوي رقم الهاتف على 10 أرقام على الأقل'
+      : 'Phone number must be at least 10 digits';
   }
   
   if (!PHONE_REGEX.test(phone)) {

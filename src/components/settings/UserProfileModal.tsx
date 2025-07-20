@@ -34,6 +34,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success("User updated successfully");
+      localStorage.setItem('propai_user', JSON.stringify(formData));
     }
   })
 

@@ -177,13 +177,7 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
     salesRepOptions = getSalesRepsForManager(selectedManager?.name || '');
   }
 
-  // Debug logging for selections
-  console.log('UserFilterSelect debug:', {
-    selectedManager: selectedManager?.id,
-    selectedSalesRep: selectedSalesRep?.id,
-    managerOptions: managerOptions.map(u => ({ id: u.id, name: u.name })),
-    salesRepOptions: salesRepOptions.map(u => ({ id: u.id, name: u.name }))
-  });
+
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
@@ -194,7 +188,7 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
           value={managerValue?.id || ''}
           onChange={(value) => {
             const selectedUser = users.find(u => u.id === value) || null;
-            console.log('Manager selection changed:', { value, selectedUser });
+
             setSelectedManager(selectedUser);
           }}
           options={managerOptions}
@@ -209,7 +203,7 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
           value={salesRepValue?.id || ''}
           onChange={(value) => {
             const selectedUser = users.find(u => u.id === value) || null;
-            console.log('Sales rep selection changed:', { value, selectedUser });
+
             setSelectedSalesRep(selectedUser);
           }}
           options={salesRepOptions}
