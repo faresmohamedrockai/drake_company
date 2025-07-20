@@ -32,6 +32,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const { mutateAsync: updateUserMutation, isPending } = useMutation({
     mutationFn: (data: { id: string; formData: any }) => updateUser(data.id, data.formData),
     onSuccess: () => {
+      setEditingUser(null);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.dismiss(toastId!);
       toast.success("User updated successfully");
@@ -105,6 +106,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setEmailError('');
+    setShowAddModal(false);
 
     // Email validation
     if (!validateEmail(formData.email)) {
@@ -121,8 +123,8 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
         submitData.teamLeaderId = 'auto-assign'; // Will be set to user ID after creation
       }
     }
-
     if (editingUser) {
+
       const response = await updateUserMutation({ id: editingUser.id, formData: submitData });
       setUpdateUserResponse(response);
     } else {
@@ -504,7 +506,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                   type="submit"
                   className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 ${isRTL ? 'font-arabic' : ''}`}
                 >
-                  {isPending ? t('actions.saving') : editingUser ? t('actions.updateUser') : t('actions.addUser')}
+                  {editingUser ? t('actions.updateUser') : t('actions.addUser')}
                 </button>
               </div>
             </form>
