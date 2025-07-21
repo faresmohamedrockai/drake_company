@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const defaultSettings = {
   companyName: import.meta.env.VITE_SIDE_BAR_NAME||"company name",
-  companyImage: 'https://www.dpreview.com/files/p/articles/7952219469/google-imagen-lead-image.jpeg',
+  companyImage: import.meta.env.VITE_COMPANY_IMAGE||'https://www.dpreview.com/files/p/articles/7952219469/google-imagen-lead-image.jpeg',
   companyWebsite: import.meta.env.VITE_COMPANY_WEBSITE || 'www.example.com',
   companyEmail:import.meta.env.VITE_COMPANY_EMAIL || 'info@gmail.com' ,
   companyAddress: import.meta.env.VITE_COMPANY_ADDRESS || 'Addrees For Comapny',
