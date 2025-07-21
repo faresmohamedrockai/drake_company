@@ -66,14 +66,14 @@ const Sidebar: React.FC = () => {
               <img
                 src={settings.companyImage}
                 alt="Company Logo"
-                className="h-10 w-10 rounded-lg mr-4 object-cover"
+                className={`h-10 w-10 rounded-lg ${rtlPosition('mr-4', 'ml-4')} object-cover`}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
                 }}
               />
             ) : null}
-            <Building className={`h-10 w-10 text-blue-600 mr-4 ${settings?.companyImage ? 'hidden' : ''}`} />
+            <Building className={`h-10 w-10 text-blue-600 ${rtlPosition('mr-4', 'ml-4')} ${settings?.companyImage ? 'hidden' : ''}`} />
             {(() => {
               const companyName = settings?.companyName || 'James Map';
               const words = companyName.split(' ');
@@ -149,7 +149,7 @@ const Sidebar: React.FC = () => {
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                 >
-                  <item.icon className="h-6 w-6 mr-4" />
+                  <item.icon className={`h-6 w-6 ${rtlPosition('mr-4', 'ml-4')}`} />
                   <span className="text-base font-medium">{item.label}</span>
                 </button>
               </li>
@@ -175,7 +175,7 @@ const Sidebar: React.FC = () => {
                 user?.name ? user.name.charAt(0) : '?'
               )}
             </button>
-            <div className="ml-4">
+            <div className={rtlPosition('ml-4', 'mr-4')}>
               <div className="text-lg font-semibold text-gray-900">{user?.name}</div>
               <div className="text-sm text-gray-500">{user?.role}</div>
             </div>

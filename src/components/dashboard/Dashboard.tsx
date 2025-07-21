@@ -29,7 +29,7 @@ interface DashboardProps {
 // Custom hook for counting animation
 const useCountAnimation = (endValue: number, duration: number = 2000, delay: number = 0) => {
   const [count, setCount] = useState(0);
-
+  const navigate = useNavigate();
   useEffect(() => {
     const startTime = Date.now();
     const startValue = 0;
@@ -314,9 +314,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
                     className="text-xs text-blue-600 underline hover:text-blue-800 cursor-pointer"
                     onClick={e => {
                       e.preventDefault();
-                      if (setCurrentView) {
-                        setCurrentView('meetings');
-                      }
+                      navigate('/meetings');
                     }}
                   >
                     {t('goToViewAllMeetings')}
