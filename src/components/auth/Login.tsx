@@ -4,19 +4,17 @@ import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { Building2, User, Lock, Eye, EyeOff, Calendar, Briefcase } from 'lucide-react';
 
-// import { a } from 'framer-motion/client';
-
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  // const { login } = useAuth();
   const { settings } = useSettings();
-  const { t } = useTranslation('auth');
-  const { login } = useAuth(); // ✅ استدعاء الـ context
+  const { t, i18n } = useTranslation('auth');
+  const { login } = useAuth();
 
+  const isRTL = i18n.dir() === 'rtl';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,31 +27,27 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left side - Branding with Background Image */}
+    <div dir="ltr" className="min-h-screen flex flex-col lg:flex-row">
+      {/* Left side - Branding */}
       <div
         className="flex-1 relative p-6 lg:p-12 flex flex-col justify-center items-center text-white min-h-[50vh] lg:min-h-screen"
         style={{
           backgroundImage: 'url(/src/aspects/loginphoto.jpg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
+          backgroundRepeat: 'no-repeat',
         }}
       >
-        {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-purple-700/80"></div>
 
-        {/* Content with relative positioning to appear above overlay */}
-        <div className="relative z-10 max-w-md w-full flex flex-col items-center text-center">
-          <div className="flex items-center mb-6 lg:mb-8">
+        <div className="relative z-10 max-w-md w-full flex flex-col text-center">
+          <div className="flex justify-center items-center mb-6 lg:mb-8">
             <Building2 className="h-6 w-6 lg:h-8 lg:w-8 mr-2 lg:mr-3" />
             <h1 className="text-xl lg:text-2xl font-bold">{settings?.companyName || 'Propai'}</h1>
           </div>
 
           <h2 className="text-2xl lg:text-4xl font-bold mb-4 lg:mb-6">{t('completeSolution')}</h2>
-          <p className="text-base lg:text-xl mb-6 lg:mb-8 text-blue-100 px-4">
-            {t('description')}
-          </p>
+          <p className="text-base lg:text-xl mb-6 lg:mb-8 text-blue-100 px-4">{t('description')}</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 w-full max-w-lg">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 lg:p-6">

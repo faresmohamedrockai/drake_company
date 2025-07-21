@@ -107,12 +107,22 @@ const PropertiesTab: React.FC = () => {
     mutationFn: (property: any) => addProperty(property),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
-      toast.success(t('propertyAdded'));
+      toast.update(toastIsLoading!, {
+        render: "Property added successfully",
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000,
+      });
       setShowForm(false);
       setFormStep(0);
     },
-    onError: () => {
-      toast.error(t('propertyAddFailed'));
+    onError: (error: any) => {
+      toast.update(toastIsLoading!, {
+        render: error.response.data.message,
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000,
+      });
       setFormStep(0);
       setShowForm(false);
     }
@@ -121,13 +131,21 @@ const PropertiesTab: React.FC = () => {
     mutationFn: (property: Property) => updateProperty(property),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
-      toast.success(t('propertyUpdated'));
-      setShowForm(false);
+      toast.update(toastIsLoading!, {
+        render: "Property updated successfully",
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000,
+      }); setShowForm(false);
       setFormStep(0);
     },
-    onError: () => {
-      toast.error(t('propertyUpdateFailed'));
-      setFormStep(0);
+    onError: (error: any) => {
+      toast.update(toastIsLoading!, {
+        render: error.response.data.message,
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000,
+      }); setFormStep(0);
       setShowForm(false);
     }
   });
@@ -135,8 +153,20 @@ const PropertiesTab: React.FC = () => {
     mutationFn: (id: string) => deleteProperty(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['properties'] });
-      toast.dismiss(toastIsLoading!);
-      toast.success(t('propertyDeleted'));
+      toast.update(toastIsLoading!, {
+        render: t('propertyDeleted'),
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000,
+      });
+    },
+    onError: (error: any) => {
+      toast.update(toastIsLoading!, {
+        render: error.response.data.message,
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000,
+      });
     }
   });
   const { data: leads } = useQuery<Lead[]>({
@@ -205,12 +235,14 @@ const PropertiesTab: React.FC = () => {
   const [showPlanPopup, setShowPlanPopup] = useState(false);
   const [showImageModal, setShowImageModal] = useState<{ images: string[], title: string } | null>(null);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
+  const [priceError, setPriceError] = useState<string>('');
 
   useEffect(() => {
-    if (isDeleting) {
-      setToastIsLoading(toast.loading(t('deletingProperty')));
+    if (isAdding || isUpdating || isDeleting) {
+      setToastIsLoading(toast.loading("Loading..."))
     }
-  }, [isDeleting]);
+
+  }, [isDeleting, isAdding, isUpdating]);
   // Helper functions to get language-appropriate data
   const getPropertyName = (property: any) => {
     if (!property) return '';
@@ -325,6 +357,16 @@ const PropertiesTab: React.FC = () => {
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    if (name === 'price') {
+      const numValue = Number(value);
+      if (numValue < 0) {
+        setPriceError(language === 'ar' ? 'لا يمكن أن يكون السعر سالبًا' : 'Price cannot be negative');
+        setForm(prev => ({ ...prev, price: 0 }));
+        return;
+      } else {
+        setPriceError('');
+      }
+    }
     if (name === 'projectId') {
       // Find the selected project and set developerId accordingly
       const selectedProject = projects?.find(p => p.id === value);
@@ -384,6 +426,12 @@ const PropertiesTab: React.FC = () => {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (form.price < 0) {
+      setPriceError(language === 'ar' ? 'لا يمكن أن يكون السعر سالبًا' : 'Price cannot be negative');
+      return;
+    } else {
+      setPriceError('');
+    }
     // Destructure numeric fields to avoid spreading as strings
     const propertyData = {
       ...form,
@@ -513,32 +561,32 @@ const PropertiesTab: React.FC = () => {
     if (developerFromArray) {
       return language === 'ar' && developerFromArray.nameAr ? developerFromArray.nameAr : developerFromArray.nameEn || developerFromArray.name;
     }
-    
+
     // Then try to get from nested developer object
     if (project?.developer && typeof project.developer === 'object') {
       return language === 'ar' && project.developer.nameAr ? project.developer.nameAr : project.developer.nameEn || project.developer.name;
     }
-    
+
     // Finally, try to get from developer string field
     if (project?.developer && typeof project.developer === 'string') {
       return project.developer;
     }
-    
+
     return '-';
   };
 
   // Helper function to get project name from project object
   const getProjectDisplayName = (project: any, language: string) => {
     if (!project) return '-';
-    
+
     if (typeof project === 'object') {
       return language === 'ar' && project.nameAr ? project.nameAr : project.nameEn || project.name || '-';
     }
-    
+
     if (typeof project === 'string') {
       return project;
     }
-    
+
     return '-';
   };
 
@@ -791,7 +839,8 @@ const PropertiesTab: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyPrice')}</label>
-                    <input type="number" name="price" value={form.price} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'أدخل السعر' : 'Enter price'} />
+                    <input type="number" name="price" value={form.price} onChange={handleFormChange} min="0" className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'أدخل السعر' : 'Enter price'} />
+                    {priceError && <div className="text-red-600 text-xs mt-1">{priceError}</div>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('propertyLocation')}</label>
@@ -1040,7 +1089,12 @@ const PropertiesTab: React.FC = () => {
                                               : 'bg-white'
                                       }>
                                         <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.label}</td>
-                                        <td className="border px-2 py-1">{item.dueDate}</td>
+                                        <td className="border px-2 py-1">
+                                          {item.label && item.label.toLowerCase().includes('down payment') && item.dueDate ?
+                                            new Date(item.dueDate).toISOString().slice(0, 10) :
+                                            item.dueDate
+                                          }
+                                        </td>
                                         <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.amount.toLocaleString()} EGP</td>
                                       </tr>
                                     ))}
@@ -1136,17 +1190,16 @@ const PropertiesTab: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {language === 'ar' ? 'أدخل رقم هاتف العميل' : 'Enter Client Phone Number'}
                 </label>
-                <input 
-                  type="tel" 
-                  value={reportPhone} 
+                <input
+                  type="tel"
+                  value={reportPhone}
                   onChange={e => {
                     setReportPhone(e.target.value);
                     setReportPhoneError(''); // Clear error when user types
-                  }} 
-                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${
-                    reportPhoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                  }`} 
-                  required 
+                  }}
+                  className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 ${reportPhoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                    }`}
+                  required
                   placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
                 />
                 {reportPhoneError && <div className="text-red-600 text-sm">{reportPhoneError}</div>}
@@ -1232,8 +1285,8 @@ const PropertiesTab: React.FC = () => {
                 {(() => {
                   // Find the linked project and its selected payment plan
                   // First try to use nested project object from property, then fallback to projects array
-                  const project = reportProperty?.project && typeof reportProperty.project === 'object' 
-                    ? reportProperty.project 
+                  const project = reportProperty?.project && typeof reportProperty.project === 'object'
+                    ? reportProperty.project
                     : projects?.find(p => p.id === reportProperty?.projectId);
                   let plan = null;
                   if (project && Array.isArray(project.paymentPlans)) {
@@ -1310,7 +1363,12 @@ const PropertiesTab: React.FC = () => {
                                       : 'bg-white'
                               }>
                                 <td className={`border px-3 py-2 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.label}</td>
-                                <td className="border px-3 py-2">{item.dueDate}</td>
+                                <td className="border px-3 py-2">
+                                  {item.label && item.label.toLowerCase().includes('down payment') && item.dueDate ?
+                                    new Date(item.dueDate).toISOString().slice(0, 10) :
+                                    item.dueDate
+                                  }
+                                </td>
                                 <td className={`border px-3 py-2 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.amount.toLocaleString()} EGP</td>
                               </tr>
                             ))}
@@ -1333,8 +1391,8 @@ const PropertiesTab: React.FC = () => {
                   const propertyImages = reportProperty && Array.isArray(reportProperty.images) ? reportProperty.images : [];
 
                   // Get project images - first try nested project object, then fallback to projects array
-                  const project = reportProperty?.project && typeof reportProperty.project === 'object' 
-                    ? reportProperty.project 
+                  const project = reportProperty?.project && typeof reportProperty.project === 'object'
+                    ? reportProperty.project
                     : projects?.find(p => p.id === reportProperty?.projectId);
                   const projectImages = project && Array.isArray(project.images) ? project.images : [];
 

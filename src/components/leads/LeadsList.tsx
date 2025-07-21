@@ -11,10 +11,11 @@ import { useLocation } from 'react-router-dom';
 import UserFilterSelect from './UserFilterSelect';
 
 import { Lead, LeadStatus, Property } from '../../types';
-import { useQuery } from '@tanstack/react-query';
-import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { User } from '../../types'
 import type { PaymentPlan, Project } from '../inventory/ProjectsTab';
+import { deleteLead, getLeads, getProjects, getProperties, getUsers } from '../../queries/queries';
+import { Id, toast } from 'react-toastify';
 
 // Icon and color mappings for status cards
 const statusCardIcons: Record<string, JSX.Element> = {
@@ -75,47 +76,21 @@ function addSpacesToCamelCase(text: string) {
 }
 // Helper to get translated label for cards, fallback to humanized label
 function getCardLabel(key: string, t: (k: string) => string) {
+  if (key === 'my_leads') return t('myLeads') !== 'myLeads' ? t('myLeads') : 'My Leads';
+  if (key === 'scheduled_visit') return t('scheduledVisit') !== 'scheduledVisit' ? t('scheduledVisit') : 'Scheduled Visit';
   const translated = t(key);
   return translated !== key ? translated : addSpacesToCamelCase(key);
 }
-// In all card sections, use translation for card labels, fallback to spaced key
-// Example for status cards:
-// const label = t(card.key) !== card.key ? t(card.key) : addSpacesToCamelCase(card.key);
-// ...
-// (This is already implemented for all cards in the previous edit, but this comment clarifies the logic for maintainers.)
 
 const LeadsList: React.FC = () => {
   const { user } = useAuth();
-  // const { leads, deleteLead } = useData();
+  const queryClient = useQueryClient();
   const { data: leads = [], isLoading: isLoadingLeads } = useQuery<Lead[]>({
     queryKey: ['leads'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getLeads()
   });
 
-  const getUsers = async () => {
-    const response = await axiosInterceptor.get('/auth/users');
-    return response.data as User[];
-  }
-
-  const getLeads = async () => {
-    const response = await axiosInterceptor.get('/leads');
-    return response.data.leads as Lead[];
-  }
-
-  const getProjects = async () => {
-    const response = await axiosInterceptor.get('/projects');
-    return response.data.data as Project[];
-  }
-  const getProperties = async () => {
-    const response = await axiosInterceptor.get('/properties');
-    return response.data.properties as Property[];
-  }
-  const { data: projects = [], isLoading: isLoadingProjects } = useQuery<Project[]>({
-    queryKey: ['projects'],
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    queryFn: () => getProjects()
-  });
   const { data: properties = [], isLoading: isLoadingProperties } = useQuery<Property[]>({
     queryKey: ['properties'],
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -126,6 +101,17 @@ const LeadsList: React.FC = () => {
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: getUsers,
     enabled: user?.role === 'admin' || user?.role === 'sales_admin'
+  });
+
+  const { mutateAsync: deleteLeadMutation, isPending: isDeletingLead } = useMutation({
+    mutationFn: (leadId: string) => deleteLead(leadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.update(toastId as Id, { render: t('leadDeleted'), type: 'success', isLoading: false, autoClose: 3000 });
+    },
+    onError: (error: any) => {
+      toast.update(toastId as Id, { render: error.response.data.message, type: 'error', isLoading: false, autoClose: 3000 });
+    }
   });
 
   // const { projects, users } = useData(); // Add users from DataContext
@@ -145,7 +131,7 @@ const LeadsList: React.FC = () => {
   const [activeVisitStatusCard, setActiveVisitStatusCard] = useState<string>('');
   const [selectedManager, setSelectedManager] = useState<User | null>(null);
   const [selectedSalesRep, setSelectedSalesRep] = useState<User | null>(null);
-
+  const [toastId, setToastId] = useState<Id | null>(null);
   const location = useLocation();
 
   // On mount, check for filterType and filterValue in query params and set active card
@@ -170,6 +156,12 @@ const LeadsList: React.FC = () => {
     }
     // eslint-disable-next-line
   }, [location.search]);
+
+  useEffect(() => {
+    if (isDeletingLead) {
+      setToastId(toast.loading("Loading..."));
+    }
+  }, [isDeletingLead]);
 
 
   // User color mapping
@@ -243,28 +235,17 @@ const LeadsList: React.FC = () => {
 
 
 
-    // Role-based filtering
-    if (user?.role === 'sales_rep') {
-      // Sales Reps can only see their own leads
-      userLeads = leads?.filter(lead => lead.owner?.id === user.id);
+    // Filter by manager if selected
+    if (selectedManager) {
+      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === selectedManager.id).map(u => u.id);
+      console.log("salesReps", salesReps);
+      userLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.owner?.id!));
 
-    } else if (user?.role === 'team_leader') {
-      // Team leaders see their own leads and their sales reps' leads
-      const salesReps = users?.filter(u => u.role === 'sales_rep' && u.teamId === user.id).map(u => u.id);
-      userLeads = leads?.filter(lead => lead.owner?.id === user.id || (salesReps?.includes(lead.assignedToId)));
+    }
+    // Filter by sales rep if selected
+    if (selectedSalesRep) {
+      userLeads = userLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
 
-    } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-      // Filter by manager if selected
-      if (selectedManager) {
-        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager.id).map(u => u.id);
-        userLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.assignedToId));
-
-      }
-      // Filter by sales rep if selected
-      if (selectedSalesRep) {
-        userLeads = userLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
-
-      }
     }
 
     // Apply search term filtering
@@ -307,12 +288,12 @@ const LeadsList: React.FC = () => {
       }
 
       // Source filter
-      if (filters.source && lead.source !== filters.source) {
+      if (filters.source && lead.source.toLowerCase() !== filters.source.toLowerCase()) {
         return false;
       }
 
       // Status filter
-      if (filters.status && lead.status !== filters.status) {
+      if (filters.status && lead.status.toLowerCase() !== filters.status.toLowerCase()) {
         return false;
       }
 
@@ -334,7 +315,11 @@ const LeadsList: React.FC = () => {
 
     // Card filter logic
     if (activeStatusCard) {
-      if (activeStatusCard === 'duplicate') {
+      if (activeStatusCard === 'my_leads') {
+        filtered = filtered.filter(lead => lead.owner?.id === user?.id);
+      } else if (activeStatusCard === 'scheduled_visit') {
+        filtered = filtered.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT);
+      } else if (activeStatusCard === 'duplicate') {
         filtered = filtered.filter((lead, idx, arr) =>
           arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx
         );
@@ -343,7 +328,6 @@ const LeadsList: React.FC = () => {
       } else if ([
         'fresh_lead',
         'follow_up',
-        'scheduled_visit',
         'open_deal',
         'closed_deal',
         'cancellation',
@@ -361,12 +345,6 @@ const LeadsList: React.FC = () => {
 
     return filtered;
   };
-  useEffect(() => {
-    if (leads) {
-
-      // setFilteredLeads(getFilteredLeads() || []); // This line was removed as per edit hint
-    }
-  }, [leads, users, projects, searchTerm, filters, user?.role, user?.id, selectedManager, selectedSalesRep]);
   // KPI calculations (moved here)
   const filteredLeads = getFilteredLeads() || [];
   const allLeadsCount = filteredLeads.length;
@@ -466,7 +444,7 @@ const LeadsList: React.FC = () => {
 
   const confirmDelete = () => {
     if (deletingLead) {
-      // deleteLead(deletingLead.id);
+      deleteLeadMutation(deletingLead.id as string);
       setShowDeleteConfirm(false);
       setDeletingLead(null);
     }
@@ -474,12 +452,13 @@ const LeadsList: React.FC = () => {
 
   // Add card definitions for all valid LeadStatus values
   const dashboardCards = [
+    { key: 'my_leads', count: leads.filter(lead => lead.owner?.id === user?.id).length },
+    { key: 'scheduled_visit', count: leads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
     { key: 'all', count: leads.length },
     { key: 'duplicate', count: leads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx).length },
     { key: 'fresh_lead', count: leads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
     { key: 'cold_call', count: leads.filter(lead => lead.source === 'Cold Call').length },
     { key: 'follow_up', count: leads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length },
-    { key: 'scheduled_visit', count: leads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
     { key: 'open_deal', count: leads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length },
     { key: 'closed_deal', count: leads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length },
     { key: 'cancellation', count: leads.filter(lead => lead.status === LeadStatus.CANCELLATION).length },
@@ -487,7 +466,18 @@ const LeadsList: React.FC = () => {
     { key: 'not_intersted_now', count: leads.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW).length },
     { key: 'reservation', count: leads.filter(lead => lead.status === LeadStatus.RESERVATION).length },
   ];
-  const compactCards = dashboardCards.slice(0, 4);
+  // Always show these cards in the first row, in this order
+  const compactCardKeys = [
+    'all',
+    'my_leads',
+    'scheduled_visit',
+    'fresh_lead',
+    'cold_call',
+    'follow_up',
+  ];
+  const compactCards = compactCardKeys
+    .map(key => dashboardCards.find(card => card.key === key))
+    .filter(Boolean);
   const fullCards = dashboardCards;
 
   // Extract unique call outcomes and visit statuses
@@ -532,13 +522,6 @@ const LeadsList: React.FC = () => {
     setActiveCallOutcomeCard('');
   };
 
-  useEffect(() => {
-    if (selectedSalesRep) {
-
-
-    }
-  }, [selectedSalesRep]);
-
   return (
     <div
       className={`p-6 bg-gray-50 min-h-screen ${i18n.language === 'ar' ? 'font-arabic' : ''}`}
@@ -560,47 +543,7 @@ const LeadsList: React.FC = () => {
         />
       )}
       {/* Lead Status Cards Section */}
-      <div className="mb-2 mt-6">
-        <h2 className="text-lg font-semibold mb-4">{t('leadStatusCards') !== 'leadStatusCards' ? t('leadStatusCards') : addSpacesToCamelCase('Lead Status')}</h2>
-        <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6`}>
-          {(showAllCards ? fullCards : compactCards).map(card => {
-            const icon = statusCardIcons[card.key] || <UserIcon className="h-6 w-6 text-white" />;
-            const iconBg = statusCardColors[card.key] || 'bg-gray-400';
-            const change = getStatusChange(card.key);
-            const isActive = activeStatusCard === card.key;
-            return (
-              <div
-                key={card.key}
-                onClick={() => handleStatusCardClick(card.key)}
-                className={`bg-white rounded-xl shadow p-5 flex items-center border-2 transition-all hover:shadow-lg cursor-pointer ${isActive ? 'border-blue-400 bg-blue-50' : 'border-transparent'}`}
-              >
-                <div className={`flex items-center justify-center rounded-full h-12 w-12 ${iconBg} mr-4`}>
-                  {icon}
-                </div>
-                <div className="flex-1">
-                  <div className="text-gray-700 font-medium">{getCardLabel(card.key, t)}</div>
-                  <div className="text-2xl font-bold">{card.count}</div>
-                  <div className={`flex items-center text-sm mt-1 ${change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-400'}`}>
-                    {change > 0 ? <TrendingUp className="h-4 w-4 mr-1" /> : change < 0 ? <TrendingDown className="h-4 w-4 mr-1" /> : <Minus className="h-4 w-4 mr-1" />}
-                    {Math.abs(change)}%
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        {fullCards.length > 4 && (
-          <div className="mb-4 flex justify-end">
-            <button
-              onClick={() => setShowAllCards(v => !v)}
-              className="flex items-center px-3 py-2 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors text-gray-700"
-            >
-              {showAllCards ? (t('showLess') !== 'showLess' ? t('showLess') : 'Show Less') : (t('showMore') !== 'showMore' ? t('showMore') : 'Show More')}
-            </button>
-          </div>
-        )}
-        {fullCards.length === 0 && <div className="text-gray-500 text-center py-4">{t('noStatusCards') || 'No status cards to display.'}</div>}
-      </div>
+
       {/* Call Outcomes Cards Section */}
       {callOutcomeCards.length > 0 && (
         <div className="mb-2 mt-6">
@@ -633,6 +576,76 @@ const LeadsList: React.FC = () => {
           {callOutcomeCards.length === 0 && <div className="text-gray-500 text-center py-4">{t('noCallOutcomeCards') || 'No call outcome cards to display.'}</div>}
         </div>
       )}
+            <div className="mb-2 mt-6">
+        <h2 className="text-lg font-semibold mb-4">{t('leadStatusCards') !== 'leadStatusCards' ? t('leadStatusCards') : addSpacesToCamelCase('Lead Status')}</h2>
+        <div className="w-full">
+          {/* First row: first 4 cards + Show More button if needed */}
+          <div className="flex flex-row gap-1 bg-white rounded-lg p-1 border">
+            {compactCards.map((card, idx) => {
+              if (!card) return null;
+              // If this is the last card in the compact row and there are more cards, show the Show More button instead
+              if (idx === compactCards.length - 1 && fullCards.length > compactCards.length) {
+                return (
+                  <button
+                    key="show-more"
+                    onClick={() => setShowAllCards(v => !v)}
+                    className={`px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap
+                      ${showAllCards
+                        ? 'border-b-4 border-blue-600 bg-blue-50 text-blue-700 font-bold'
+                        : 'border-b-4 border-transparent text-gray-700 hover:bg-gray-100'}
+                    `}
+                    style={{ minWidth: 90 }}
+                  >
+                    {showAllCards ? (t('showLess') !== 'showLess' ? t('showLess') : 'Show Less') : (t('showMore') !== 'showMore' ? t('showMore') : 'Show More')}
+                  </button>
+                );
+              }
+              // Render normal card
+              const isActive = activeStatusCard === card.key;
+              return (
+                <button
+                  key={card.key}
+                  onClick={() => handleStatusCardClick(card.key)}
+                  className={`px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap
+                    ${isActive
+                      ? 'border-b-4 border-blue-600 bg-blue-50 text-blue-700 font-bold'
+                      : 'border-b-4 border-transparent text-gray-700 hover:bg-gray-100'}
+                  `}
+                  style={{ minWidth: 90 }}
+                >
+                  <span>{getCardLabel(card.key, t)}</span>
+                  <span className={`ml-2 font-bold ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{card.count}</span>
+                </button>
+              );
+            })}
+          </div>
+          {/* Second row: rest of the cards, only if showAllCards is true */}
+          {showAllCards && fullCards.length > compactCards.length && (
+            <div className="flex flex-row gap-1 bg-white rounded-lg p-1 border mt-2">
+              {fullCards.slice(compactCards.length).map(card => {
+                if (!card) return null;
+                const isActive = activeStatusCard === card.key;
+                return (
+                  <button
+                    key={card.key}
+                    onClick={() => handleStatusCardClick(card.key)}
+                    className={`px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap
+                      ${isActive
+                        ? 'border-b-4 border-blue-600 bg-blue-50 text-blue-700 font-bold'
+                        : 'border-b-4 border-transparent text-gray-700 hover:bg-gray-100'}
+                    `}
+                    style={{ minWidth: 90 }}
+                  >
+                    <span>{getCardLabel(card.key, t)}</span>
+                    <span className={`ml-2 font-bold ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>{card.count}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        {fullCards.length === 0 && <div className="text-gray-500 text-center py-4">{t('noStatusCards') || 'No status cards to display.'}</div>}
+      </div>
       {/* Visit Status Cards Section */}
       {visitStatusCards.length > 0 && (
         <div className="mb-2 mt-6">
@@ -900,13 +913,13 @@ const LeadsList: React.FC = () => {
                         )}
                       </td>
                       <td className="px-3 sm:px-6 py-4">
-                        <span className="text-sm text-gray-900 truncate block" title={lead.lastCallDate}>
-                          {lead.lastCallDate}
+                        <span className="text-sm text-gray-900 truncate block" title={lead.calls?.[lead.calls.length - 1]?.date}>
+                          {lead.calls?.[lead.calls.length - 1]?.date}
                         </span>
                       </td>
                       <td className="px-3 sm:px-6 py-4">
                         <span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>
-                          {lead.lastVisitDate}
+                          {lead.visits?.[lead.visits.length - 1]?.date}
                         </span>
                       </td>
                       <td className="px-3 sm:px-6 py-4">

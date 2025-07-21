@@ -20,19 +20,11 @@ interface AddLeadModalProps {
 const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   // const { users, properties, addLead } = useData();
   const queryClient = useQueryClient();
-  const { data: leads, isLoading: isLoadingLeads } = useQuery<Lead[]>({
-    queryKey: ['leads'],
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    queryFn: () => getLeads()
-  });
-  const getLeads = async () => {
-    const response = await axiosInterceptor.get('/leads');
-    return response.data.leads as Lead[];
-  }
+
   const { data: users, isLoading: isLoadingUsers } = useQuery<UserType[]>({
     queryKey: ['users'],
     staleTime: 1000 * 60 * 5, // 5 minutes
-    queryFn: () => getUsers()
+    queryFn: () => getUsers(),
   });
   const getUsers = async () => {
     const response = await axiosInterceptor.get('/auth/users');
@@ -61,7 +53,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         nameAr: '',
         contact: '',
         email: '',
-        budget: '',
+        budget: 0,
         inventoryInterestId: '',
         source: '',
         status: LeadStatus.FRESH_LEAD,
@@ -70,7 +62,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       onClose();
     },
     onError: (error: any) => {
-      
+
       toast.error(error.response.data.message || "Error adding lead");
       setError("Error adding lead: " + error.message);
       setFormData({
@@ -78,7 +70,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         nameAr: '',
         contact: '',
         email: '',
-        budget: '',
+        budget: 0,
         inventoryInterestId: '',
         source: '',
         status: LeadStatus.FRESH_LEAD,
@@ -96,7 +88,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     nameAr: '',
     contact: '',
     email: '',
-    budget: '',
+    budget: 0,
     inventoryInterestId: '',
     source: '',
     status: LeadStatus.FRESH_LEAD as LeadStatus,
@@ -105,12 +97,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   const [error, setError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [budgetError, setBudgetError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setPhoneError('');
     setEmailError('');
+    setBudgetError('');
 
     // Name validation - Arabic name is required
     if (!formData.nameAr || formData.nameAr.trim() === '') {
@@ -130,9 +124,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Client-side validation
-    if (!formData.inventoryInterestId) {
-      setError('Please select an inventory interest');
+    // Budget validation (must not be negative)
+    if (formData.budget && Number(formData.budget) < 0) {
+      setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
       return;
     }
 
@@ -154,7 +148,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         status: formData.status as LeadStatus,
         lastCallDate: '------',
         lastVisitDate: '------',
-        assignedToId: formData.assignedTo,
+        assignedToId: formData.assignedTo || user?.id!,
         createdBy: user?.name || 'Unknown',
         createdAt: new Date().toISOString(),
       });
@@ -297,57 +291,69 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               <h4 className="text-lg font-semibold text-gray-900">Business Information</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('assignedToRequired')}</label>
-                <div className="relative">
-                  <select
-                    value={formData.assignedTo}
-                    onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
-                    required
-                  >
-                    <option value="">{t('selectUser')}</option>
-                    {(() => {
-                      let assignableUsers = users;
+              {
+                user?.role !== "sales_rep" && (
 
-                      if (user?.role === 'sales_rep') {
-                        assignableUsers = users!.filter(u => u.name === user.name);
-                      } else if (user?.role === 'team_leader') {
-                        assignableUsers = users!.filter(u =>
-                          u.name === user.name ||
-                          (u.role === 'sales_rep' && u.teamId === user.teamId)
-                        );
-                      } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-                        assignableUsers = users!.filter(u => u.role !== 'admin' || user?.role === 'admin');
-                      }
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">{t('assignedToRequired')}</label>
+                    <div className="relative">
+                      <select
+                        value={formData.assignedTo}
+                        onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                        required
+                      >
+                        <option value="">{t('selectUser')}</option>
+                        {(() => {
+                          let assignableUsers = users;
 
-                      return assignableUsers!.map(user => (
-                        <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
-                      ));
-                    })()}
-                  </select>
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                </div>
-              </div>
+                          if (user?.role === 'team_leader') {
+                            assignableUsers = users!.filter(u =>
+                              u.name === user.name ||
+                              (u.role === 'sales_rep' && u.teamId === user.teamId)
+                            );
+                          } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
+                            assignableUsers = users!.filter(u => u.role !== 'admin' || user?.role === 'admin');
+                          }
+
+                          return assignableUsers!.map(user => (
+                            <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
+                          ));
+                        })()}
+                      </select>
+                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    </div>
+                  </div>
+                )
+              }
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">{t('budget')}</label>
                 <div className="relative">
-                  <select
+                  <input
+                    type="number"
+                    min="0"
                     value={formData.budget}
-                    onChange={e => setFormData({ ...formData, budget: e.target.value })}
-                    className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
-                  >
-                    <option value="">{t('allBudgets')}</option>
-                    {leads?.map((lead: Lead) => (
-                      <option key={lead.id} value={lead.budget}>{lead.budget}</option>
-                    ))}
-                  </select>
+                    onChange={e => {
+                      const value = e.target.value;
+                      if (value === '' || Number(value) >= 0) {
+                        setFormData({ ...formData, budget: Number(value) });
+                        setBudgetError('');
+                      } else {
+                        setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
+                      }
+                    }}
+                    className={`px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full ${budgetError ? 'border-red-300 focus:ring-red-500' : ''}`}
+                  />
                 </div>
+                {budgetError && (
+                  <p className="text-red-600 text-sm mt-1">{budgetError}</p>
+                )}
               </div>
 
+
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('inventoryInterestRequired')}</label>
+                <label className="block text-sm font-medium text-gray-700">{t('inventoryInterest')}</label>
                 <div className="relative">
                   <select
                     value={formData.inventoryInterestId}
@@ -355,7 +361,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                       return setFormData({ ...formData, inventoryInterestId: e.target.value });
                     }}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
-                    required
+                    // removed required
                   >
                     <option value="">{t('selectPropertyType')}</option>
                     {properties?.map((item: Property) => (

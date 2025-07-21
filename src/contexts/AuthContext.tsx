@@ -6,7 +6,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep';
+  role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep' | 'sales_manager';
   teamId?: string;
   image?: string | null;
 

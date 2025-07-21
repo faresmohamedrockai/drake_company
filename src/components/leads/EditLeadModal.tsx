@@ -199,9 +199,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                 setFormData({ ...formData, contact: e.target.value });
                 setPhoneError(''); // Clear error when user types
               }}
-              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${
-                phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-              }`}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                }`}
               required
               placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
             />
@@ -219,9 +218,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                 setFormData({ ...formData, email: e.target.value });
                 setEmailError(''); // Clear error when user types
               }}
-              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${
-                emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-              }`}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                }`}
               placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
             />
             {emailError && (
@@ -232,7 +230,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('assignedToRequired')}</label>
             <select
-              value={lead?.owner?.id || ''}
+              value={formData.assignedToId || lead?.owner?.id || ''}
               onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
               required

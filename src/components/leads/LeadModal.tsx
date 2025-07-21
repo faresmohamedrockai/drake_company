@@ -49,7 +49,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentLead, setCurrentLead] = useState(lead);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [notes, setNotes] = useState<string[]>(currentLead.notes || []);
+  const [notes, setNotes] = useState<string[]>(lead.notes || []);
+  useEffect(() => {
+    setNotes(lead.notes || []);
+  }, [lead.notes]);
   const queryClient = useQueryClient();
   const getProperties = async () => {
     const response = await axiosInterceptor.get('/properties');
@@ -167,6 +170,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     (user?.role === 'sales_rep' && currentLead.assignedToId === user.id);
 
   const [isUpdate, setIsUpdate] = useState(false);
+  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
+  const [editingNoteValue, setEditingNoteValue] = useState('');
 
   // Main progress stages (excluding special statuses and cancellation)
   const mainStatusStages = [
@@ -174,6 +179,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     { id: 'follow', label: t('followUp'), value: LeadStatus.FOLLOW_UP },
     { id: 'visit', label: t('scheduledVisit'), value: LeadStatus.SCHEDULED_VISIT },
     { id: 'open', label: t('openDeal'), value: LeadStatus.OPEN_DEAL },
+    { id: 'reservation', label: t('reservation'), value: LeadStatus.RESERVATION },
     { id: 'closed', label: t('closedDeal'), value: LeadStatus.CLOSED_DEAL },
   ];
 
@@ -216,7 +222,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     const newCall = {
       ...callForm,
       createdBy: user?.name || '',
-      leadId: currentLead.id // add required leadId
+      leadId: lead.id // add required leadId
     };
     addCallLog(newCall as unknown as CallLog);
   };
@@ -226,7 +232,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     const newVisit = {
       ...visitForm,
       createdBy: user?.name || '',
-      leadId: currentLead.id! // add required leadId
+      leadId: lead.id! // add required leadId
     };
     addVisitLog(newVisit);
   };
@@ -241,12 +247,44 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       setNewNote('');
     }
   };
+  useEffect(() => {
+    if (isUpdate) {
+      setIsUpdate(false);
+    }
+  }, [isUpdate]);
 
   useEffect(() => {
     if (isUpdate) {
       updateLead({ ...currentLead, notes: notes });
     }
   }, [notes]);
+
+  const handleEditNote = (index: number) => {
+    setEditingNoteIndex(index);
+    setEditingNoteValue(notes[index]);
+  };
+
+  const handleSaveEditNote = () => {
+    if (editingNoteIndex !== null && editingNoteValue.trim()) {
+      const updatedNotes = [...notes];
+      updatedNotes[editingNoteIndex] = editingNoteValue;
+      setNotes(updatedNotes);
+      setEditingNoteIndex(null);
+      setEditingNoteValue('');
+      setIsUpdate(true);
+    }
+  };
+
+  const handleCancelEditNote = () => {
+    setEditingNoteIndex(null);
+    setEditingNoteValue('');
+  };
+
+  const handleDeleteNote = (index: number) => {
+    const updatedNotes = notes.filter((_, i) => i !== index);
+    setNotes(updatedNotes);
+    setIsUpdate(true);
+  };
 
   // Add update button handler
   const handleRefresh = () => {
@@ -362,8 +400,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 )}
               </div>
             </div>
-
-
+            {isCancelled && (
+              <div className="mt-4 text-center">
+                <span className="inline-block bg-red-100 text-red-700 px-4 py-2 rounded font-semibold text-lg">
+                  {t('dealCancelled', 'Deal Cancelled')}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Quick Actions */}
@@ -401,6 +444,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
                 <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
                 <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+                <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
                 <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
                 <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
 
@@ -577,8 +621,53 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <div className="space-y-4">
                 {notes && notes.length > 0 &&
                   notes.map((note, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-900 mb-2">{note}</p>
+                    <div key={index} className="bg-gray-50 p-4 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                      {editingNoteIndex === index ? (
+                        <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
+                          <textarea
+                            value={editingNoteValue}
+                            onChange={(e) => setEditingNoteValue(e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            rows={2}
+                          />
+                          <div className="flex gap-2 mt-2 md:mt-0">
+                            <button
+                              onClick={handleSaveEditNote}
+                              className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                              disabled={isUpdatingLead}
+                            >
+                              {t('save')}
+                            </button>
+                            <button
+                              onClick={handleCancelEditNote}
+                              className="bg-gray-300 text-gray-800 px-3 py-1 rounded hover:bg-gray-400"
+                              disabled={isUpdatingLead}
+                            >
+                              {t('cancel')}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-sm text-gray-900 mb-2 flex-1">{note}</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditNote(index)}
+                              className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                              disabled={isUpdatingLead}
+                            >
+                              {t('edit')}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNote(index)}
+                              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                              disabled={isUpdatingLead}
+                            >
+                              {t('delete')}
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 {notes && notes.length === 0 && (
@@ -703,20 +792,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('status')}</label>
-                  <select
-                    value={visitForm.status}
-                    onChange={(e) => setVisitForm({ ...visitForm, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">{t('selectStatus')}</option>
-                    <option value="Completed">{t('completed')}</option>
-                    <option value="Cancelled">{t('cancelled')}</option>
-                    <option value="Scheduled">{t('scheduled')}</option>
-                  </select>
-                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('objections')}</label>
                   <input

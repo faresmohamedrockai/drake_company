@@ -307,23 +307,23 @@ const MeetingsManagement: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
+ 
   // Role-based meeting filtering
   const getFilteredMeetings = () => {
     let userMeetings = meetings;
 
-    // Role-based filtering
-    if (user?.role === 'sales_rep') {
-      // Sales Reps can only see their own meetings
-      userMeetings = meetings?.filter((meeting: Meeting) => meeting.assignedToId === user.id);
-    } else if (user?.role === 'team_leader') {
-      // Team leaders see their own meetings and their sales reps' meetings
-      const salesReps = users?.filter((u: UserType) => u.role === 'sales_rep' && u.teamId === user.name).map((u: UserType) => u.name);
-      userMeetings = meetings?.filter((meeting: Meeting) => meeting.assignedToId === user.id || salesReps?.includes(meeting.assignedToId));
-    } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-      // Sales Admin and Admin can see all meetings
-      userMeetings = meetings;
-    }
+    // // Role-based filtering
+    // if (user?.role === 'sales_rep') {
+    //   // Sales Reps can only see their own meetings
+    //   userMeetings = meetings?.filter((meeting: Meeting) => meeting.assignedToId === user.id);
+    // } else if (user?.role === 'team_leader') {
+    //   // Team leaders see their own meetings and their sales reps' meetings
+    //   const salesReps = users?.filter((u: UserType) => u.role === 'sales_rep' && u.teamId === user.name).map((u: UserType) => u.name);
+    //   userMeetings = meetings?.filter((meeting: Meeting) => meeting.assignedToId === user.id || salesReps?.includes(meeting.assignedToId));
+    // } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
+    //   // Sales Admin and Admin can see all meetings
+    //   userMeetings = meetings;
+    // }
 
     // Search filtering
     return userMeetings?.filter((meeting: Meeting) =>

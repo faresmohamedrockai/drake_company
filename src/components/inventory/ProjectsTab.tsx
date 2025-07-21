@@ -6,7 +6,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
-import { Developer, Property, Zone } from '../../types';
+import { Developer, Lead, Property, Zone } from '../../types';
 import { Id, toast } from 'react-toastify';
 import { getDevelopers, getProjects, getProperties, getZones } from '../../queries/queries';
 
@@ -31,6 +31,7 @@ export interface Project {
   zoneId: string;
   type: string;
   paymentPlans: PaymentPlan[];
+  leads?: Lead[];
   propertyIds: string[];
   // Add images property
   images?: string[];
@@ -168,12 +169,12 @@ const ProjectsTab: React.FC = () => {
     mutationFn: (project: any) => updateProject(project),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success(t('projectUpdated'));
+      toast.update(loadingToastId, { render: t('projectUpdated'), type: 'success', isLoading: false, autoClose: 3000 });
       setShowEditForm(false);
       setEditId(null);
     },
     onError: (error: any) => {
-      toast.error(error.response.data.message);
+      toast.update(loadingToastId, { render: error.response.data.message[0], type: 'error', isLoading: false, autoClose: 3000 });
       setShowEditForm(false);
       setEditId(null);
     }
@@ -187,25 +188,19 @@ const ProjectsTab: React.FC = () => {
     mutationFn: (id: string) => deleteProject(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success(t('projectDeleted'));
-      toast.dismiss(loadingToastId);
+      toast.update(loadingToastId, { render: t('projectDeleted'), type: 'success', isLoading: false, autoClose: 3000 });
     },
     onError: (error: any) => {
-      toast.error(error.response.data.message);
-      toast.dismiss(loadingToastId);
+      toast.update(loadingToastId, { render: error.response.data.message[0], type: 'error', isLoading: false, autoClose: 3000 });
     }
   });
-  useEffect(() => {
-    if (isDeleting) {
-      setLoadingToastId(toast.loading('Deleting project...'));
-    }
-  }, [isDeleting]);
+
 
   const { mutateAsync: addProjectMutation, isPending: isAdding } = useMutation({
     mutationFn: (project: any) => addProject(project),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success(t('projectAdded'));
+      toast.update(loadingToastId, { render: t('projectAdded'), type: 'success', isLoading: false, autoClose: 3000 });
       setShowAddForm(false);
       setNewProject({
         nameEn: '',
@@ -224,11 +219,16 @@ const ProjectsTab: React.FC = () => {
       setAddStep(0);
     },
     onError: (error: any) => {
-      toast.error(error.response.data.message);
+      toast.update(loadingToastId, { render: error.response.data.message[0], type: 'error', isLoading: false, autoClose: 3000 });
       setShowAddForm(false);
       setAddStep(0);
     }
   });
+  useEffect(() => {
+    if (isDeleting || isAdding || isUpdating) {
+      setLoadingToastId(toast.loading('Loading...'));
+    }
+  }, [isDeleting, isAdding, isUpdating]);
   const [loadingToastId, setLoadingToastId] = useState<Id>(0);
   const { user } = useAuth();
   const { language } = useLanguage(); // Add language context
@@ -277,7 +277,6 @@ const ProjectsTab: React.FC = () => {
   const [addStep, setAddStep] = useState(0); // Stepper for add form
   const addSteps = [
     t('stepBasicInfo'),
-    t('stepProperties'),
     t('stepPaymentPlans'),
     t('stepReview')
   ];
@@ -522,10 +521,6 @@ const ProjectsTab: React.FC = () => {
                       })()}
                     </span>
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-700">{t('projectType')}: </span>
-                    <span className="text-sm text-gray-900">{project.type}</span>
-                  </div>
                 </div>
 
                 <div className="border-t pt-4">
@@ -650,26 +645,9 @@ const ProjectsTab: React.FC = () => {
                   </div>
                 )}
                 {/* Step 2: Properties */}
-                {addStep === 1 && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('selectProperties')}</label>
-                    <select multiple value={newProject.propertyIds} onChange={e => setNewProject({ ...newProject, propertyIds: Array.from(e.target.selectedOptions, option => option.value) })} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 h-32 text-base">
-                      {properties?.map(property => (
-                        <option key={property.id} value={property.id}>
-                          {(() => {
-                            if (language === 'ar' && property.titleAr) {
-                              return property.titleAr;
-                            }
-                            return property.titleEn || property.title;
-                          })()}
-                        </option>
-                      ))}
-                    </select>
-                    <p className="text-xs text-gray-500 mt-1">{t('multipleSelectionHint')}</p>
-                  </div>
-                )}
+                {/* Removed the Select Properties step */}
                 {/* Step 3: Payment Plans */}
-                {addStep === 2 && (
+                {addStep === 1 && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('paymentPlans')}</label>
                     {newProject.paymentPlans.map((plan, idx) => (
@@ -772,7 +750,7 @@ const ProjectsTab: React.FC = () => {
                   </div>
                 )}
                 {/* Step 4: Review */}
-                {addStep === 3 && (
+                {addStep === 2 && (
                   <div className="space-y-2 text-sm">
                     <div><span className="font-semibold">{t('projectName')}:</span> {newProject.nameEn + (newProject.nameAr ? ' / ' + newProject.nameAr : '')}</div>
                     <div><span className="font-semibold">{t('developer')}:</span> {(() => {
@@ -785,15 +763,6 @@ const ProjectsTab: React.FC = () => {
                       if (!zone) return '';
                       return language === 'ar' && zone.nameAr ? zone.nameAr : (zone.nameEn || zone.name);
                     })()}</div>
-
-                    <div><span className="font-semibold">{t('properties')}:</span> {newProject.propertyIds.map(pid => {
-                      const property = properties?.find(p => p.id === pid);
-                      if (!property) return '';
-                      if (language === 'ar' && property.titleAr) {
-                        return property.titleAr;
-                      }
-                      return property.titleEn || property.title;
-                    }).join(', ')}</div>
                     <div><span className="font-semibold">{t('paymentPlans')}:</span> {newProject.paymentPlans.length}</div>
                     {newProject.paymentPlans.map((plan, idx) => (
                       <div key={idx} className="border rounded-lg p-2 mb-2 bg-gray-50">
@@ -899,10 +868,6 @@ const ProjectsTab: React.FC = () => {
                       </option>
                     ))}
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('projectType')}</label>
-                  <input type="text" value={editProject.type} onChange={e => setEditProject({ ...editProject, type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('paymentPlans')}</label>

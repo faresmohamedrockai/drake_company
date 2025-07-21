@@ -18,6 +18,11 @@ export const getLeads = async () => {
     return response.data.leads as Lead[];
 }
 
+export const deleteLead = async (leadId: string) => {
+    const response = await axiosInterceptor.delete(`/leads/${leadId}`);
+    return response.data;
+}
+
 export const getUsers = async () => {
     const response = await axiosInterceptor.get('/auth/users');
     return response.data as User[];

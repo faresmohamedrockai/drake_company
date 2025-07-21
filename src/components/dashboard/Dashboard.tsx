@@ -213,8 +213,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     }
   } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
     if (selectedManager) {
-      const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === selectedManager.id).map(u => u.id);
-      filteredLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.owner?.id || ''));
+      if (selectedManager) {
+        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === selectedManager.id).map(u => u.id);
+        console.log("salesReps", salesReps);
+        filteredLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.owner?.id!));
+      }
     }
     if (selectedSalesRep) {
       filteredLeads = filteredLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);

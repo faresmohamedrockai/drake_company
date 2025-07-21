@@ -60,7 +60,7 @@ export interface Lead {
   nameAr?: string; // Arabic name
   contact: string;
   email?: string;
-  budget: string;
+  budget: number;
   inventoryInterestId: string;
   source: string;
   status: LeadStatus;

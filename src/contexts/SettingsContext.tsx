@@ -6,11 +6,6 @@ const defaultSettings = {
   companyWebsite: import.meta.env.VITE_COMPANY_WEBSITE || 'www.example.com',
   companyEmail:import.meta.env.VITE_COMPANY_EMAIL || 'info@gmail.com' ,
   companyAddress: import.meta.env.VITE_COMPANY_ADDRESS || 'Addrees For Comapny',
-  notifications: {
-    email: true,
-    meeting: true,
-    contract: true,
-  },
 };
 
 const SettingsContext = createContext({

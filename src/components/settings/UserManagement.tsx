@@ -632,6 +632,6 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       )}
     </div>
   );
-};
+}; 
 
 export default UserManagement;

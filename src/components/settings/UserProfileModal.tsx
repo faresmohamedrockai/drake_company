@@ -91,8 +91,8 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
 
   const compressImageToBase64 = async (file: File): Promise<string> => {
     const options = {
-      maxSizeMB: 0.2,            
-      maxWidthOrHeight: 300,     
+      maxSizeMB: 0.2,            // try 200KB instead of 1MB
+      maxWidthOrHeight: 300,     // smaller dimensions
       useWebWorker: true,
     };
 
