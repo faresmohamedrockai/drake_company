@@ -18,11 +18,11 @@ const SYSTEM_SETTINGS_KEY = 'propai_system_settings';
 const BACKUP_DATE_KEY = 'propai_last_backup_date';
 
 const defaultSettings = {
-  companyName: 'Propai Real Estate',
-  companyImage: '', // Add company image field
-  companyWebsite: 'www.propai.com',
-  companyEmail: 'info@propai.com',
-  companyAddress: '123 Main St, Alexandria, Egypt',
+  companyName: import.meta.env.VITE_SIDE_BAR_NAME,
+  companyImage: import.meta.env.VITE_COMPANY_IMAGE||'', // Add company image field
+  companyWebsite:import.meta.env.VITE_COMPANY_WEBSITE ||'www.example.com',
+  companyEmail: import.meta.env.VITE_COMPANY_EMAIL ||'info@propai.com',
+  companyAddress: import.meta.env.VITE_COMPANY_ADDRESS ||'123 Main St, Alexandria, Egypt',
   notifications: {
     // Email notifications with mirror functionality
     email: {

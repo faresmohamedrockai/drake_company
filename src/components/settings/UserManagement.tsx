@@ -14,6 +14,11 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const { isRTL, rtlClass, rtlMargin } = useLanguage();
   const { t } = useTranslation('settings');
   const [searchTerm, setSearchTerm] = useState('');
+  const [assignToId, setAssignToId] = useState('');
+  const [availableUsers, setAvailableUsers] = useState<UserType[]>([]); // عدل النوع حسب مشروعك
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
+  const [assignToMap, setAssignToMap] = useState<{ [key: string]: string }>({});
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +32,25 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     teamLeaderId: '',
     image: '',
   });
+
+
+  const translateRole = (role: string) => {
+    switch (role) {
+      case 'ADMIN':
+        return 'مشرف';
+      case 'SALES_ADMIN':
+        return 'مدير مبيعات';
+      case 'TEAM_LEADER':
+        return 'قائد فريق';
+      case 'SALES_REP':
+        return 'مندوب مبيعات';
+      case 'VIEWER':
+        return 'مشاهد';
+      default:
+        return role;
+    }
+  };
+
   const [emailError, setEmailError] = useState('');
   const queryClient = useQueryClient();
   const { mutateAsync: updateUserMutation, isPending } = useMutation({
@@ -43,6 +67,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       toast.error("Error updating user");
     }
   })
+
   const { mutateAsync: addUserMutation, isPending: isAdding } = useMutation({
     mutationFn: (data: { formData: any }) => addUser(data.formData),
     onSuccess: () => {
@@ -66,7 +91,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     }
   })
   const { mutateAsync: deleteUserMutation, isPending: isDeleting } = useMutation({
-    mutationFn: (userId: string) => deleteUser(userId),
+    mutationFn: (userId: string) => deleteUser(userId, assignToId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.dismiss(toastId!);
@@ -79,16 +104,41 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     return response.data;
   }
 
+
   const updateUser = async (userId: string, formData: any) => {
     const response = await axiosInterceptor.patch(`/auth/update-user/${userId}`, formData);
     return response.data;
   }
+
 
   useEffect(() => {
     if (isAdding || isDeleting || isPending) {
       setToastId(toast.loading("Loading..."));
     }
   }, [isAdding, isDeleting, isPending]);
+
+
+
+
+  const fetchAssignableUsers = async () => {
+    try {
+      const res = await axiosInterceptor.get('/auth/users');
+      setAvailableUsers(res.data);
+    } catch (err) {
+      console.error("Failed to load users", err);
+    }
+  };
+  useEffect(() => {
+
+    fetchAssignableUsers();
+  }, []);
+
+  const deleteUser = async (userId: string, assignToId: string) => {
+    const response = await axiosInterceptor.delete(`/auth/delete-user/${userId}/leadsTo/${assignToId}`);
+    await fetchAssignableUsers()
+    return response.data;
+
+  };
 
   const canManageUsers = currentUser?.role === 'admin';
   const canDeleteUsers = currentUser?.role === 'admin';
@@ -135,6 +185,9 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
 
   };
 
+
+
+
   const handleEdit = (user: UserType) => {
     setEditingUser(user);
     setFormData({
@@ -148,10 +201,8 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     setShowAddModal(true);
   };
 
-  const deleteUser = async (userId: string) => {
-    const response = await axiosInterceptor.delete(`/auth/delete-user/${userId}`);
-    return response.data;
-  }
+
+
 
   // useEffect(() => {
   //   if (isDeleting) {
@@ -159,11 +210,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   //   }
   // }, [isDeleting]);
 
-  const handleDelete = (userId: string) => {
-    if (window.confirm(isRTL ? 'هل أنت متأكد من حذف هذا المستخدم؟' : 'Are you sure you want to delete this user?')) {
-      deleteUserMutation(userId);
-    }
-  };
+
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -309,14 +356,84 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                         <Edit className="h-4 w-4" />
                       </button>
                       {canDeleteUsers && user.id !== currentUser?.id && (
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          className="text-red-600 hover:text-red-800 transition-colors duration-200"
-                          title={t('user.delete')}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        <div className="flex flex-col gap-1 items-start">
+                          {deletingUserId === user.id ? (
+                            <div className="flex flex-col md:flex-row items-center gap-3 p-4 bg-white rounded-xl shadow-md border text-right">
+                              <label className="text-sm font-semibold text-gray-700 w-full md:w-auto">
+                                نقل المهام إلى مستخدم آخر:
+                              </label>
+
+                              <select
+                                value={assignToMap[user.id] || ""}
+                                onChange={(e) =>
+                                  setAssignToMap((prev) => ({
+                                    ...prev,
+                                    [user.id]: e.target.value,
+                                  }))
+                                }
+                                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500 min-w-[200px]"
+                              >
+                                <option value="">Chose User </option>
+                                {users
+                                  .filter((u) => u.id !== user.id)
+                                  .map((u) => (
+                                    <option key={u.id} value={u.id}>
+                                      {u.name} ({translateRole(u.role)})
+                                    </option>
+                                  ))}
+                              </select>
+
+                              <div className="flex gap-2">
+                                <button
+                                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition"
+                                  onClick={async () => {
+                                    if (!assignToMap[user.id]) {
+                                      toast.error('Please Chose Assgin To User First❌' );
+                                      return;
+                                    }
+
+                                    try {
+                                      await deleteUser(user.id, assignToMap[user.id]);
+                                      toast.success('User Deleted successfly');
+                                      setDeletingUserId(null);
+                                      fetchAssignableUsers();
+                                    } catch (error: any) {
+                                      const errorMessage = error?.response?.data?.message || 'حدث خطأ أثناء حذف المستخدم';
+                                      toast.error(`❌ ${errorMessage}`);
+                                    }
+                                  }}
+                                >
+                                  تأكيد الحذف
+                                </button>
+
+                                <button
+                                  className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm transition"
+                                  onClick={() => {
+                                    setDeletingUserId(null);
+                                    setAssignToMap((prev) => {
+                                      const copy = { ...prev };
+                                      delete copy[user.id];
+                                      return copy;
+                                    });
+                                  }}
+                                >
+                                  إلغاء
+                                </button>
+                              </div>
+                            </div>
+
+                          ) : (
+                            <button
+                              onClick={() => setDeletingUserId(user.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       )}
+
                     </div>
                   </td>
                 </tr>
