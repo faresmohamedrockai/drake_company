@@ -111,7 +111,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   };
 
-
   const defaultCenter: [number, number] = [31.221169, 29.938073]; // sidi gaber - Alexandria
 
   return (
