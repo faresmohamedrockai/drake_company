@@ -10,7 +10,7 @@
   "admin": "مدير",
   "salesAdmin": "مدير مبيعات",
   "teamLeader": "قائد الفريق",
-  "salesRep": "مندوب مبيعات",
+  "salesRep": "وكيل عقاري",
   "role": {
     "admin": "مدير",
     "admin.fullAccess": "وصول كامل إلى جميع الوحدات والميزات",
@@ -18,7 +18,7 @@
     "admin.accessSystemSettings": "الوصول إلى إعدادات النظام والتكوينات",
     "admin.viewAllLeadsPropertiesContracts": "يمكنه عرض جميع العملاء والعقارات والعقود",
     "admin.fullReportingAnalytics": "وصول كامل للتقارير والتحليلات",
-    "salesAdmin": "مدير مبيعات",
+    "salesAdmin": "مدير المبيعات",
     "salesAdmin.sameAsAdmin": "مثل المدير باستثناء عدم إمكانية حذف المستخدمين",
     "salesAdmin.editUserRolesPermissions": "يمكنه تعديل أدوار وصلاحيات المستخدمين",
     "salesAdmin.fullAccessLeadsInventory": "وصول كامل لإدارة العملاء والمتاحات",
@@ -28,7 +28,7 @@
     "teamLeader.cannotRegisterDeleteUsers": "لا يمكنه تسجيل أو حذف المستخدمين",
     "teamLeader.assignLeadsToTeamMembers": "يمكنه تعيين العملاء لأعضاء الفريق",
     "teamLeader.accessTeamPerformanceReports": "الوصول لتقارير أداء الفريق",
-    "salesRep": "مندوب مبيعات",
+    "salesRep": "وكيل عقاري",
     "salesRep.viewCreateManageOwnLeads": "يمكنه إدارة عملائه فقط",
     "salesRep.updateLeadStatusAddNotes": "يمكنه تحديث حالة العميل وإضافة ملاحظات",
     "salesRep.cannotEditSavedLeadFields": "لا يمكنه تعديل بيانات العميل المحفوظة (باستثناء الحالة والملاحظات)",
@@ -153,7 +153,7 @@
     "autoSetToUserName": "تعيين تلقائي لاسم المستخدم",
     "teamIdAutoSet": "يتم تعيين معرف الفريق تلقائيًا لاسم المستخدم",
     "canManuallyOverrideTeamId": "يمكنك تعديل معرف الفريق يدويًا إذا لزم الأمر",
-    "selectTeamLeaderForSalesRep": "اختر قائد الفريق الذي سيعمل معه مندوب المبيعات"
+    "selectTeamLeaderForSalesRep": "اختر قائد الفريق الذي سيعمل معه وكيل العقارات"
   },
   "profile": {
     "myProfile": "ملفي الشخصي",

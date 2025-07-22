@@ -40,14 +40,14 @@ const Login: React.FC = () => {
       >
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/80 to-purple-700/80"></div>
 
-        <div className="relative z-10 max-w-md w-full flex flex-col text-center">
+        <div className="relative z-10 max-w-lg w-full flex flex-col text-center">
           <div className="flex justify-center items-center mb-6 lg:mb-8">
-            <Building2 className="h-6 w-6 lg:h-8 lg:w-8 mr-2 lg:mr-3" />
+            <img src={settings?.companyImage} alt="Company Logo" className="h-20 w-20 rounded-lg mr-2 lg:mr-3" />
             <h1 className="text-xl lg:text-2xl font-bold">{settings?.companyName || 'Propai'}</h1>
           </div>
 
-          <h2 className="text-2xl lg:text-4xl font-bold mb-4 lg:mb-6">{t('completeSolution')}</h2>
-          <p className="text-base lg:text-xl mb-6 lg:mb-8 text-blue-100 px-4">{t('description')}</p>
+          <h2 className="text-xl lg:text-3xl font-bold mb-4 lg:mb-6">{t('completeSolution')}</h2>
+          <p className="text-base lg:text-lg mb-6 lg:mb-8 text-blue-100 px-4">{t('description')}</p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-6 w-full max-w-lg">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4 lg:p-6">
