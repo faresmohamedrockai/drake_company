@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useTranslation } from 'react-i18next';
 import { Building2, User, Lock, Eye, EyeOff, Calendar, Briefcase } from 'lucide-react';
+import loginPhoto from '../../aspects/loginphoto.jpg';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ const Login: React.FC = () => {
       <div
         className="flex-1 relative p-6 lg:p-12 flex flex-col justify-center items-center text-white min-h-[50vh] lg:min-h-screen"
         style={{
-          backgroundImage: 'url(/src/aspects/loginphoto.jpg)',
+          backgroundImage: `url(${loginPhoto})`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
