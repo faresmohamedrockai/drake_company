@@ -113,9 +113,9 @@
     "inactive": "غير نشط"
   },
   "roles": {
-    "salesRep": "وكيل عقاري",
+    "salesRep": "مندوب مبيعات",
     "teamLeader": "قائد الفريق",
-    "salesAdmin": "مدير المبيعات",
+    "salesAdmin": "مدير مبيعات",
     "admin": "مدير"
   }
 } 
