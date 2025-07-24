@@ -61,7 +61,7 @@ export interface Lead {
   contact: string;
   email?: string;
   budget: number;
-  inventoryInterestId: string;
+  inventoryInterestId?: string;
   source: string;
   status: LeadStatus;
   lastCallDate?: string;

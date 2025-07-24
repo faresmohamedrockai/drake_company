@@ -14,7 +14,7 @@ import { Lead, LeadStatus, Property } from '../../types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { User } from '../../types'
 import type { PaymentPlan, Project } from '../inventory/ProjectsTab';
-import { deleteLead, getLeads, getProjects, getProperties, getUsers } from '../../queries/queries';
+import { deleteLead, getLeads, getProperties, getUsers, bulkUpdateLeads } from '../../queries/queries';
 import { Id, toast } from 'react-toastify';
 
 // Icon and color mappings for status cards
@@ -114,6 +114,22 @@ const LeadsList: React.FC = () => {
     }
   });
 
+  const { mutateAsync: bulkUpdateLeadsMutation, isPending: isBulkUpdating } = useMutation({
+    mutationFn: ({ leadIds, updateData }: { leadIds: string[], updateData: Partial<Lead> }) => 
+      bulkUpdateLeads(leadIds, updateData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      toast.success(t('leadsUpdated') || 'Leads updated successfully');
+      setSelectedLeads(new Set());
+      setShowBulkActions(false);
+      setBulkAssignToUserId('');
+      setIsSelectAllChecked(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error updating leads');
+    }
+  });
+
   // const { projects, users } = useData(); // Add users from DataContext
   const { t, i18n } = useTranslation('leads');
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,6 +149,12 @@ const LeadsList: React.FC = () => {
   const [selectedSalesRep, setSelectedSalesRep] = useState<User | null>(null);
   const [toastId, setToastId] = useState<Id | null>(null);
   const location = useLocation();
+
+  // Bulk selection state
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [isSelectAllChecked, setIsSelectAllChecked] = useState(false);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkAssignToUserId, setBulkAssignToUserId] = useState('');
 
   // On mount, check for filterType and filterValue in query params and set active card
   React.useEffect(() => {
@@ -162,6 +184,53 @@ const LeadsList: React.FC = () => {
       setToastId(toast.loading("Loading..."));
     }
   }, [isDeletingLead]);
+
+  // Clear selection when filters change
+  useEffect(() => {
+    clearSelection();
+  }, [searchTerm, activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, selectedManager, selectedSalesRep]);
+
+  // Bulk selection handlers
+  const handleSelectLead = (leadId: string) => {
+    const newSelectedLeads = new Set(selectedLeads);
+    if (newSelectedLeads.has(leadId)) {
+      newSelectedLeads.delete(leadId);
+    } else {
+      newSelectedLeads.add(leadId);
+    }
+    setSelectedLeads(newSelectedLeads);
+    setShowBulkActions(newSelectedLeads.size > 0);
+    setIsSelectAllChecked(newSelectedLeads.size === filteredLeads.length && filteredLeads.length > 0);
+  };
+
+  const handleSelectAll = () => {
+    if (isSelectAllChecked) {
+      setSelectedLeads(new Set());
+      setShowBulkActions(false);
+      setIsSelectAllChecked(false);
+    } else {
+      const allLeadIds = new Set(filteredLeads.map(lead => lead.id!));
+      setSelectedLeads(allLeadIds);
+      setShowBulkActions(true);
+      setIsSelectAllChecked(true);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (bulkAssignToUserId && selectedLeads.size > 0) {
+      await bulkUpdateLeadsMutation({
+        leadIds: Array.from(selectedLeads),
+        updateData: { assignedToId: bulkAssignToUserId }
+      });
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedLeads(new Set());
+    setShowBulkActions(false);
+    setIsSelectAllChecked(false);
+    setBulkAssignToUserId('');
+  };
 
 
   // User color mapping
@@ -275,7 +344,7 @@ const LeadsList: React.FC = () => {
       }
 
       // Budget filter
-      if (filters.budget && lead.budget !== filters.budget) {
+      if (filters.budget && lead.budget.toString() !== filters.budget) {
         return false;
       }
 
@@ -830,12 +899,86 @@ const LeadsList: React.FC = () => {
         </div>
       )}
 
+      {/* Bulk Actions Bar */}
+      {showBulkActions && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <span className="text-blue-700 font-medium">
+              {selectedLeads.size} {t('leadsSelected') || 'leads selected'}
+            </span>
+            <button
+              onClick={clearSelection}
+              className="text-blue-600 hover:text-blue-800 text-sm underline"
+            >
+              {t('clearSelection') || 'Clear selection'}
+            </button>
+          </div>
+          <div className="flex items-center space-x-2">
+            <select
+              value={bulkAssignToUserId}
+              onChange={(e) => setBulkAssignToUserId(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            >
+              <option value="">{t('selectUser') || 'Select user to assign'}</option>
+              {(() => {
+                // Role-based user filtering for assignment
+                let assignableUsers = users;
+
+                if (user?.role === 'sales_rep') {
+                  // Sales Reps can only assign to themselves
+                  assignableUsers = users?.filter(u => u.name === user.name);
+                } else if (user?.role === 'team_leader') {
+                  // Team Leaders can assign to their team members and themselves
+                  assignableUsers = users?.filter(u =>
+                    u.name === user.name ||
+                    (u.role === 'sales_rep' && u.teamId === user.teamId)
+                  );
+                } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
+                  // Sales Admin and Admin can assign to anyone
+                  assignableUsers = users?.filter(u => u.role !== 'admin' || user?.role === 'admin' || user?.role === 'sales_admin');
+                }
+
+                return assignableUsers?.map(assignUser => (
+                  <option key={assignUser.id} value={assignUser.id}>{assignUser.name} ({assignUser.role})</option>
+                ));
+              })()}
+            </select>
+            <button
+              onClick={handleBulkAssign}
+              disabled={!bulkAssignToUserId || isBulkUpdating}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                bulkAssignToUserId && !isBulkUpdating
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isBulkUpdating ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {t('assigning') || 'Assigning...'}
+                </div>
+              ) : (
+                t('bulkAssign') || 'Assign Selected'
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Leads Table */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-full">
             <thead className="bg-gray-50">
               <tr>
+                <th className="px-3 py-3 text-left w-8">
+                  <input
+                    type="checkbox"
+                    checked={isSelectAllChecked}
+                    onChange={handleSelectAll}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">{t('name')}</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">{t('phone')}</th>
                 <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">{t('budget')}</th>
@@ -852,7 +995,7 @@ const LeadsList: React.FC = () => {
               {
                 isLoadingLeads ? (
                   <tr>
-                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mr-2"></div>
                         Loading leads...
@@ -862,6 +1005,14 @@ const LeadsList: React.FC = () => {
                 ) : (
                   filteredLeads?.map((lead) => (
                     <tr key={lead.id} className="hover:bg-gray-50">
+                      <td className="px-3 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.has(lead.id!)}
+                          onChange={() => handleSelectLead(lead.id!)}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                      </td>
                       <td className="px-3 sm:px-6 py-4">
                         <button
                           onClick={() => handleLeadClick(lead)}
@@ -877,7 +1028,7 @@ const LeadsList: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-3 sm:px-6 py-4">
-                        <span className="text-sm text-gray-900 truncate block" title={lead.budget}>
+                        <span className="text-sm text-gray-900 truncate block" title={lead.budget.toString()}>
                           {lead.budget}
                         </span>
                       </td>
@@ -952,7 +1103,7 @@ const LeadsList: React.FC = () => {
                 )}
               {filteredLeads?.length === 0 && !isLoadingLeads && (
                 <tr>
-                  <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
                     {searchTerm ? t('noLeadsFound') : t('noLeadsAvailable')}
                   </td>
                 </tr>

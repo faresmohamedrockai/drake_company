@@ -58,7 +58,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     nameAr: '',
     contact: '',
     email: '',
-    budget: '',
+    budget: 0,
     inventoryInterestId: '',
     source: '',
     status: 'fresh_lead' as LeadStatus,
@@ -67,6 +67,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   const [error, setError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [budgetError, setBudgetError] = useState('');
 
   // Initialize form data when lead changes
   useEffect(() => {
@@ -76,7 +77,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
         nameAr: lead.nameAr || '',
         contact: lead.contact || '',
         email: lead.email || '',
-        budget: lead.budget || '',
+        budget: lead.budget || 0,
         inventoryInterestId: lead.inventoryInterestId || '',
         source: lead.source || '',
         status: lead.status || 'fresh_lead',
@@ -91,6 +92,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     setError('');
     setPhoneError('');
     setEmailError('');
+    setBudgetError('');
 
     if (!lead) return;
 
@@ -112,10 +114,16 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       return;
     }
 
-    // Client-side validation
-    if (!formData.inventoryInterestId) {
-      setError('Please select an inventory interest');
-      return;
+    // Budget validation and conversion
+    let budgetValue = 0;
+    
+    // Always convert budget to number for validation and submission
+    if (formData.budget !== null && formData.budget !== undefined) {
+      budgetValue = Number(formData.budget);
+      if (isNaN(budgetValue) || budgetValue < 0) {
+        setBudgetError(language === 'ar' ? 'الميزانية يجب أن تكون رقم صحيح وغير سالب' : 'Budget must be a valid non-negative number');
+        return;
+      }
     }
 
     // Check for duplicate phone number (excluding current lead)
@@ -130,18 +138,20 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       ? (formData.nameAr || formData.nameEn)
       : (formData.nameEn || formData.nameAr);
 
-    updateLead({
+    const leadData = {
       id: lead.id,
       nameEn: formData.nameEn,
       nameAr: formData.nameAr,
       contact: formData.contact,
       email: formData.email,
-      budget: formData.budget,
+      budget: Number(budgetValue), // Force conversion to number
       inventoryInterestId: formData.inventoryInterestId,
       source: formData.source,
       status: formData.status as LeadStatus,
       assignedToId: formData.assignedToId,
-    });
+    };
+
+    updateLead(leadData);
 
   };
 
@@ -262,26 +272,41 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
           </div>
 
           <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('budgetRequired')}</label>
-            <select
-              value={formData.budget}
-              onChange={e => setFormData({ ...formData, budget: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
-            >
-              <option value="">{t('allBudgets')}</option>
-              {leads?.map((lead: Lead) => (
-                <option key={lead.id} value={lead.budget}>{lead.budget}</option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('budget')}</label>
+            <input
+              type="number"
+              value={formData.budget || ''}
+              onChange={e => {
+                const value = e.target.value;
+                
+                if (value === '') {
+                  setFormData({ ...formData, budget: 0 });
+                  setBudgetError('');
+                } else {
+                  const numValue = Number(value);
+                  if (!isNaN(numValue) && numValue >= 0) {
+                    setFormData({ ...formData, budget: numValue });
+                    setBudgetError('');
+                  } else if (numValue < 0) {
+                    setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
+                  }
+                }
+              }}
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${budgetError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+              placeholder={language === 'ar' ? 'أدخل الميزانية (اختياري)' : 'Enter budget (optional)'}
+              min="0"
+            />
+            {budgetError && (
+              <p className="text-red-600 text-sm mt-1">{budgetError}</p>
+            )}
           </div>
 
           <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterestRequired')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterest')}</label>
             <select
               value={formData.inventoryInterestId}
               onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-              required
             >
               <option value="">{t('selectPropertyType')}</option>
               {properties?.map(property => (

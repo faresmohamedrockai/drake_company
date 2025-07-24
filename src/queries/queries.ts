@@ -23,6 +23,16 @@ export const deleteLead = async (leadId: string) => {
     return response.data;
 }
 
+export const bulkUpdateLeads = async (leadIds: string[], updateData: Partial<Lead>) => {
+    // Since there's no bulk endpoint, we'll update each lead individually
+    const promises = leadIds.map(leadId => 
+        axiosInterceptor.patch(`/leads/${leadId}`, updateData)
+    );
+    
+    const responses = await Promise.all(promises);
+    return { success: true, updated: responses.length };
+}
+
 export const getUsers = async () => {
     const response = await axiosInterceptor.get('/auth/users');
     return response.data as User[];

@@ -124,10 +124,16 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Budget validation (must not be negative)
-    if (formData.budget && Number(formData.budget) < 0) {
-      setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
-      return;
+    // Budget validation and conversion
+    let budgetValue = 0;
+    
+    // Always convert budget to number for validation and submission
+    if (formData.budget !== null && formData.budget !== undefined) {
+      budgetValue = Number(formData.budget);
+      if (isNaN(budgetValue) || budgetValue < 0) {
+        setBudgetError(language === 'ar' ? 'الميزانية يجب أن تكون رقم صحيح وغير سالب' : 'Budget must be a valid non-negative number');
+        return;
+      }
     }
 
     try {
@@ -136,13 +142,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         ? (formData.nameAr || formData.nameEn)
         : (formData.nameEn || formData.nameAr);
 
-
-      addLeadMutation({
+      const leadData = {
         nameEn: formData.nameEn,
         nameAr: formData.nameAr,
         contact: formData.contact,
         email: formData.email,
-        budget: formData.budget,
+        budget: Number(budgetValue), // Ensure this is always a number
         inventoryInterestId: formData.inventoryInterestId,
         source: formData.source,
         status: formData.status as LeadStatus,
@@ -151,7 +156,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         assignedToId: formData.assignedTo || user?.id!,
         createdBy: user?.name || 'Unknown',
         createdAt: new Date().toISOString(),
-      });
+      };
+
+      addLeadMutation(leadData);
 
       // Reset form and close modal
 
@@ -333,14 +340,21 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <input
                     type="number"
                     min="0"
-                    value={formData.budget}
+                    value={formData.budget || ''}
                     onChange={e => {
                       const value = e.target.value;
-                      if (value === '' || Number(value) >= 0) {
-                        setFormData({ ...formData, budget: Number(value) });
+                      
+                      if (value === '') {
+                        setFormData({ ...formData, budget: 0 });
                         setBudgetError('');
                       } else {
-                        setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
+                        const numValue = Number(value);
+                        if (!isNaN(numValue) && numValue >= 0) {
+                          setFormData({ ...formData, budget: numValue });
+                          setBudgetError('');
+                        } else if (numValue < 0) {
+                          setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
+                        }
                       }
                     }}
                     className={`px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full ${budgetError ? 'border-red-300 focus:ring-red-500' : ''}`}
