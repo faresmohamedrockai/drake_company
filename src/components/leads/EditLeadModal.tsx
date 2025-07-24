@@ -312,7 +312,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
           </div>
 
           <div className="col-span-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterest')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterest')} ({language === 'ar' ? 'اختياري' : 'optional'})</label>
             <select
               value={formData.inventoryInterestId}
               onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
