@@ -167,7 +167,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   const canEdit = user?.role === 'admin' || user?.role === 'sales_admin' ||
     user?.role === 'team_leader' ||
-    (user?.role === 'sales_rep' && currentLead.assignedToId === user.id);
+    (user?.role === 'sales_rep' && (currentLead.assignedToId === user.id || currentLead.ownerId === user.id || currentLead.owner?.id === user.id));
 
   const [isUpdate, setIsUpdate] = useState(false);
   const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
