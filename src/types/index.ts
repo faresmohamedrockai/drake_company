@@ -67,6 +67,7 @@ export interface Lead {
   lastCallDate?: string;
   lastVisitDate?: string;
   assignedToId: string;
+  ownerId?: string; // Backend uses this field name
   createdAt?: string;
   createdBy?: string;
   notes?: string[] | null;

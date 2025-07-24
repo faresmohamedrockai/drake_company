@@ -72,6 +72,9 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   // Initialize form data when lead changes
   useEffect(() => {
     if (lead) {
+      // Try to get the owner ID from different possible sources
+      const ownerIdValue = lead.assignedToId || lead.ownerId || lead.owner?.id || '';
+      
       setFormData({
         nameEn: lead.nameEn || '',
         nameAr: lead.nameAr || '',
@@ -81,7 +84,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
         inventoryInterestId: lead.inventoryInterestId || '',
         source: lead.source || '',
         status: lead.status || 'fresh_lead',
-        assignedToId: lead.assignedToId || ''
+        assignedToId: ownerIdValue
       });
       setError('');
     }
@@ -126,6 +129,12 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       }
     }
 
+    // Check for required fields
+    if (!formData.assignedToId || formData.assignedToId.trim() === '') {
+      setError(language === 'ar' ? 'يجب تحديد المستخدم المُكلف' : 'Assigned user is required');
+      return;
+    }
+
     // Check for duplicate phone number (excluding current lead)
     const existingLead = leads?.find(l => l.contact === formData.contact && l.id !== lead.id);
     if (existingLead) {
@@ -148,7 +157,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       inventoryInterestId: formData.inventoryInterestId,
       source: formData.source,
       status: formData.status as LeadStatus,
-      assignedToId: formData.assignedToId,
+      assignedToId: formData.assignedToId, // Required by TypeScript interface
+      ownerId: formData.assignedToId, // Backend expects ownerId
     };
 
     updateLead(leadData);
@@ -240,7 +250,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
           <div className="col-span-1">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t('assignedToRequired')}</label>
             <select
-              value={formData.assignedToId || lead?.owner?.id || ''}
+              value={formData.assignedToId || ''}
               onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
               className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
               required

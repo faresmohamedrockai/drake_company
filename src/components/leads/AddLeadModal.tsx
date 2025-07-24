@@ -136,6 +136,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       }
     }
 
+    // Check for required assignedTo field
+    if (!formData.assignedTo || formData.assignedTo.trim() === '') {
+      setError(language === 'ar' ? 'يجب تحديد المستخدم المُكلف' : 'Assigned user is required');
+      return;
+    }
+
     try {
       // Create combined name based on current language
       const combinedName = i18n.language === 'ar'
@@ -153,7 +159,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         status: formData.status as LeadStatus,
         lastCallDate: '------',
         lastVisitDate: '------',
-        assignedToId: formData.assignedTo || user?.id!,
+        assignedToId: formData.assignedTo || user?.id!, // Required by TypeScript interface
+        ownerId: formData.assignedTo || user?.id!, // Backend expects ownerId
         createdBy: user?.name || 'Unknown',
         createdAt: new Date().toISOString(),
       };
