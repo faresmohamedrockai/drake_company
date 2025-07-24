@@ -22,7 +22,9 @@ import {
   AlertCircle,
   FileText,
   Eye,
-  EyeOff
+  EyeOff,
+  CalendarDays,
+  RefreshCw
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { LeadStatus } from '../../types';
@@ -60,6 +62,11 @@ interface PerformanceMetrics {
   averageMeetingCompletionRate: number;
 }
 
+interface DateRange {
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
 const Reports: React.FC = () => {
   const { data: leads = [], isLoading: leadsLoading } = useQuery({ queryKey: ['leads'], queryFn: getLeads });
   const { data: meetings = [], isLoading: meetingsLoading } = useQuery({ queryKey: ['meetings'], queryFn: getMeetings });
@@ -69,17 +76,18 @@ const Reports: React.FC = () => {
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<string>('');
-  const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [viewMode, setViewMode] = useState<'dashboard' | 'detailed'>('dashboard');
 
   const [sortBy, setSortBy] = useState<'name' | 'performance' | 'activity'>('performance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showActivityFeed, setShowActivityFeed] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month' | 'custom'>('week');
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month' | 'last7days' | 'last30days' | 'last3months' | 'last6months' | 'yearToDate' | 'custom'>('month');
   const [customDateRange, setCustomDateRange] = useState({
     startDate: '',
     endDate: ''
   });
+  const [activityFilter, setActivityFilter] = useState<'all' | 'calls' | 'visits' | 'meetings' | 'deals'>('all');
+  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
   // Check if user has access to reports
   const canAccessReports = currentUser?.role === 'admin' ||
@@ -99,88 +107,174 @@ const Reports: React.FC = () => {
     return [];
   };
 
-  // Calculate user performance
-  const calculateUserPerformance = (user: any): UserPerformance => {
-    const userLeads = leads.filter(lead => lead.owner?.id === user.id);
-    const userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
+  // Get date range based on selected timeframe
+  const getDateRange = (): DateRange => {
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
 
-    const totalCalls = userLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
+    switch (selectedTimeframe) {
+      case 'today':
+        return {
+          startDate: startOfDay,
+          endDate: endOfDay
+        };
+      case 'week':
+        const startOfWeek = new Date(startOfDay);
+        const dayOfWeek = startOfWeek.getDay();
+        startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
+        const endOfWeek = new Date(startOfWeek);
+        endOfWeek.setDate(endOfWeek.getDate() + 6);
+        endOfWeek.setHours(23, 59, 59, 999);
+        return {
+          startDate: startOfWeek,
+          endDate: endOfWeek
+        };
+      case 'month':
+        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
+        return {
+          startDate: startOfMonth,
+          endDate: endOfMonth
+        };
+      case 'last7days':
+        const last7Start = new Date(today);
+        last7Start.setDate(last7Start.getDate() - 7);
+        last7Start.setHours(0, 0, 0, 0);
+        return {
+          startDate: last7Start,
+          endDate: endOfDay
+        };
+      case 'last30days':
+        const last30Start = new Date(today);
+        last30Start.setDate(last30Start.getDate() - 30);
+        last30Start.setHours(0, 0, 0, 0);
+        return {
+          startDate: last30Start,
+          endDate: endOfDay
+        };
+      case 'last3months':
+        const last3MonthsStart = new Date(today);
+        last3MonthsStart.setMonth(last3MonthsStart.getMonth() - 3);
+        last3MonthsStart.setHours(0, 0, 0, 0);
+        return {
+          startDate: last3MonthsStart,
+          endDate: endOfDay
+        };
+      case 'last6months':
+        const last6MonthsStart = new Date(today);
+        last6MonthsStart.setMonth(last6MonthsStart.getMonth() - 6);
+        last6MonthsStart.setHours(0, 0, 0, 0);
+        return {
+          startDate: last6MonthsStart,
+          endDate: endOfDay
+        };
+      case 'yearToDate':
+        const yearStart = new Date(today.getFullYear(), 0, 1);
+        return {
+          startDate: yearStart,
+          endDate: endOfDay
+        };
+      case 'custom':
+        return {
+          startDate: customDateRange.startDate ? new Date(customDateRange.startDate) : null,
+          endDate: customDateRange.endDate ? new Date(customDateRange.endDate + 'T23:59:59.999') : null
+        };
+      default:
+        return { startDate: null, endDate: null };
+    }
+  };
 
-    // Debug: Log all lead statuses for this user
-
-
-    const completedCalls = userLeads.reduce((sum, lead) => {
-      // If lead status is "not answered", don't count any calls as completed
-      if (lead.status && lead.status.toLowerCase() === 'not answered') {
-        return sum;
-      }
-      
-      // Otherwise, count all calls for this lead as completed
-      return sum + (lead.calls?.length || 0);
-    }, 0);
+  // Calculate user performance based on date range
+  const calculateUserPerformance = (user: any, dateRange: DateRange): UserPerformance => {
+    const { startDate, endDate } = dateRange;
     
+    // Filter data by date range if specified
+    let userLeads = leads.filter(lead => lead.owner?.id === user.id);
+    let userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
 
-    const totalVisits = userLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
-    const completedVisits = userLeads.reduce((sum, lead) =>
-      sum + (lead.visits?.filter((visit: any) => visit.status === 'Completed').length || 0), 0);
+    // Apply date filtering
+    if (startDate && endDate) {
+      userLeads = userLeads.filter(lead => {
+        const createdDate = lead.createdAt ? new Date(lead.createdAt) : null;
+        const lastCallDate = lead.lastCallDate ? new Date(lead.lastCallDate) : null;
+        const lastVisitDate = lead.lastVisitDate ? new Date(lead.lastVisitDate) : null;
+        
+        return (createdDate && createdDate >= startDate && createdDate <= endDate) ||
+               (lastCallDate && lastCallDate >= startDate && lastCallDate <= endDate) ||
+               (lastVisitDate && lastVisitDate >= startDate && lastVisitDate <= endDate);
+      });
+
+      userMeetings = userMeetings.filter(meeting => {
+        const meetingDate = meeting.date ? new Date(meeting.date) : null;
+        return meetingDate && meetingDate >= startDate && meetingDate <= endDate;
+      });
+    }
+
+    // Calculate calls within date range
+    let totalCalls = 0;
+    let completedCalls = 0;
+
+    userLeads.forEach(lead => {
+      if (lead.calls && Array.isArray(lead.calls)) {
+        const callsInRange = lead.calls.filter(call => {
+          if (!startDate || !endDate) return true;
+          const callDate = call.date ? new Date(call.date) : null;
+          return callDate && callDate >= startDate && callDate <= endDate;
+        });
+        
+        totalCalls += callsInRange.length;
+        
+        if (lead.status && lead.status.toLowerCase() !== 'not answered') {
+          completedCalls += callsInRange.length;
+        }
+      }
+    });
+
+    // Calculate visits within date range
+    let totalVisits = 0;
+    let completedVisits = 0;
+
+    userLeads.forEach(lead => {
+      if (lead.visits && Array.isArray(lead.visits)) {
+        const visitsInRange = lead.visits.filter(visit => {
+          if (!startDate || !endDate) return true;
+          const visitDate = visit.date ? new Date(visit.date) : null;
+          return visitDate && visitDate >= startDate && visitDate <= endDate;
+        });
+        
+        totalVisits += visitsInRange.length;
+        completedVisits += visitsInRange.filter(visit => visit.status === 'Completed').length;
+      }
+    });
 
     const totalMeetings = userMeetings.length;
     const completedMeetings = userMeetings.filter(meeting => meeting.status === 'Completed').length;
-    // Enhanced conversion rate calculation
+
     const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
     const openDeals = userLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
     const conversionRate = userLeads.length > 0 ?
       ((closedDeals + openDeals) / userLeads.length) * 100 : 0;
 
     const callCompletionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
-
-    // Debug: Log call completion summary
-    if (totalCalls > 0) {
-
-    }
-
     const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0;
     const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
 
-    // Get last activity date with enhanced logic
+    // Get last activity date within the date range
     const allActivities = [
       ...userLeads.map(lead => ({ date: lead.lastCallDate, type: 'call', leadName: lead.nameEn || lead.nameAr || '' })),
       ...userLeads.map(lead => ({ date: lead.lastVisitDate, type: 'visit', leadName: lead.nameEn || lead.nameAr || '' })),
       ...userMeetings.map(meeting => ({ date: meeting.date, type: 'meeting', leadName: meeting.client }))
-    ].filter(activity => activity.date && activity.date !== '------');
+    ].filter(activity => {
+      if (!activity.date || activity.date === '------') return false;
+      if (!startDate || !endDate) return true;
+      const activityDate = new Date(activity.date);
+      return !isNaN(activityDate.getTime()) && activityDate >= startDate && activityDate <= endDate;
+    });
 
     const lastActivity = allActivities.length > 0
       ? String(allActivities.sort((a, b) => new Date(String(b.date)).getTime() - new Date(String(a.date)).getTime())[0].date)
       : 'No activity';
-
-    // Get performance from localStorage if available
-    const performanceKey = `user_performance_${user.name}`;
-    const meetingPerformanceKey = `user_meeting_performance_${user.name}`;
-    const storedPerformance = localStorage.getItem(performanceKey);
-    const storedMeetingPerformance = localStorage.getItem(meetingPerformanceKey);
-
-    let enhancedCallCompletionRate = callCompletionRate;
-    let enhancedVisitCompletionRate = visitCompletionRate;
-    let enhancedMeetingCompletionRate = meetingCompletionRate;
-
-    if (storedPerformance) {
-      try {
-        const parsed = JSON.parse(storedPerformance);
-        enhancedCallCompletionRate = parsed.callCompletionRate || callCompletionRate;
-        enhancedVisitCompletionRate = parsed.visitCompletionRate || visitCompletionRate;
-      } catch (e) {
-        console.warn('Failed to parse stored performance data');
-      }
-    }
-
-    if (storedMeetingPerformance) {
-      try {
-        const parsed = JSON.parse(storedMeetingPerformance);
-        enhancedMeetingCompletionRate = parsed.completionRate || meetingCompletionRate;
-      } catch (e) {
-        console.warn('Failed to parse stored meeting performance data');
-      }
-    }
 
     return {
       id: user.id,
@@ -197,9 +291,9 @@ const Reports: React.FC = () => {
       totalMeetings,
       closedDeals,
       conversionRate: Math.round(conversionRate * 10) / 10,
-      callCompletionRate: Math.round(enhancedCallCompletionRate * 10) / 10,
-      visitCompletionRate: Math.round(enhancedVisitCompletionRate * 10) / 10,
-      meetingCompletionRate: Math.round(enhancedMeetingCompletionRate * 10) / 10,
+      callCompletionRate: Math.round(callCompletionRate * 10) / 10,
+      visitCompletionRate: Math.round(visitCompletionRate * 10) / 10,
+      meetingCompletionRate: Math.round(meetingCompletionRate * 10) / 10,
       lastActivity: lastActivity || 'No activity'
     };
   };
@@ -207,7 +301,8 @@ const Reports: React.FC = () => {
   // Calculate overall metrics
   const calculateOverallMetrics = (): PerformanceMetrics => {
     const accessibleUsers = getAccessibleUsers();
-    const performances = accessibleUsers.map(calculateUserPerformance);
+    const currentDateRange = getDateRange();
+    const performances = accessibleUsers.map(user => calculateUserPerformance(user, currentDateRange));
 
     const totalUsers = accessibleUsers.length;
     const totalLeads = performances.reduce((sum, p) => sum + p.totalLeads, 0);
@@ -237,10 +332,10 @@ const Reports: React.FC = () => {
     };
   };
 
-
   // Get filtered and sorted performances
   const getFilteredPerformances = () => {
-    let performances = getAccessibleUsers().map(calculateUserPerformance);
+    const currentDateRange = getDateRange();
+    let performances = getAccessibleUsers().map(user => calculateUserPerformance(user, currentDateRange));
 
     // Filter by search term
     if (searchTerm) {
@@ -255,52 +350,22 @@ const Reports: React.FC = () => {
       performances = performances.filter(p => p.id === selectedUser);
     }
 
-    // Filter by date range
-    if (selectedDateRange.startDate && selectedDateRange.endDate) {
-      const startDate = selectedDateRange.startDate;
-      const endDate = selectedDateRange.endDate;
-
+    // Filter by activity type
+    if (activityFilter !== 'all') {
       performances = performances.filter(p => {
-        // Check if user has any activity within the date range
-        const lastActivity = p.lastActivity;
-
-        // If lastActivity is valid and within range, include the user
-        if (lastActivity && typeof lastActivity === 'string' && lastActivity !== 'No activity') {
-          const lastActivityDate = new Date(lastActivity);
-          if (!isNaN(lastActivityDate.getTime()) &&
-            lastActivityDate >= startDate &&
-            lastActivityDate <= endDate) {
-
+        switch (activityFilter) {
+          case 'calls':
+            return p.totalCalls > 0;
+          case 'visits':
+            return p.totalVisits > 0;
+          case 'meetings':
+            return p.totalMeetings > 0;
+          case 'deals':
+            return p.closedDeals > 0;
+          default:
             return true;
-          }
         }
-
-        // Also check if user has any leads or meetings within the date range
-        const userLeads = leads.filter(lead => lead.owner?.id === p.id);
-        const userMeetings = meetings.filter(meeting => meeting.assignedToId === p.id);
-
-        // Check leads created or updated within date range
-        const hasLeadsInRange = userLeads.some(lead => {
-          const leadDate = new Date(lead.createdAt || lead.lastCallDate || lead.lastVisitDate || '');
-          return !isNaN(leadDate.getTime()) &&
-            leadDate >= startDate &&
-            leadDate <= endDate;
-        });
-
-        // Check meetings within date range
-        const hasMeetingsInRange = userMeetings.some(meeting => {
-          const meetingDate = new Date(meeting.date || '');
-          return !isNaN(meetingDate.getTime()) &&
-            meetingDate >= startDate &&
-            meetingDate <= endDate;
-        });
-
-
-
-        return hasLeadsInRange || hasMeetingsInRange;
       });
-
-
     }
 
     // Sort
@@ -335,50 +400,6 @@ const Reports: React.FC = () => {
     return performances;
   };
 
-  // Get date range based on selected timeframe
-  const getDateRange = () => {
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999);
-
-    switch (selectedTimeframe) {
-      case 'today':
-        return {
-          startDate: startOfDay,
-          endDate: endOfDay
-        };
-      case 'week':
-        // Get the start of the current week (Sunday)
-        const startOfWeek = new Date(startOfDay);
-        const dayOfWeek = startOfWeek.getDay();
-        startOfWeek.setDate(startOfWeek.getDate() - dayOfWeek);
-
-        // Get the end of the current week (Saturday)
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(endOfWeek.getDate() + 6);
-        endOfWeek.setHours(23, 59, 59, 999);
-
-        return {
-          startDate: startOfWeek,
-          endDate: endOfWeek
-        };
-      case 'month':
-        const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59, 999);
-        return {
-          startDate: startOfMonth,
-          endDate: endOfMonth
-        };
-      case 'custom':
-        return {
-          startDate: customDateRange.startDate ? new Date(customDateRange.startDate) : null,
-          endDate: customDateRange.endDate ? new Date(customDateRange.endDate + 'T23:59:59.999') : null
-        };
-      default:
-        return { startDate: null, endDate: null };
-    }
-  };
-
   // Helper function to translate user roles
   const translateUserRole = (role: string) => {
     const roleMap: { [key: string]: string } = {
@@ -390,12 +411,7 @@ const Reports: React.FC = () => {
     return roleMap[role] || role;
   };
 
-
-
-  const selectedDateRange = getDateRange();
-
-
-
+  const currentDateRange = getDateRange();
   const performances = getFilteredPerformances();
   const metrics = calculateOverallMetrics();
 
@@ -416,8 +432,6 @@ const Reports: React.FC = () => {
   ].filter(item => item.value > 0);
 
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
-
-
 
   if (!canAccessReports) {
     return (
@@ -463,7 +477,6 @@ const Reports: React.FC = () => {
                 <option key={user.id} value={user.id}>{user.name}</option>
               ))}
             </select>
-
           </div>
 
           {/* View Mode Buttons */}
@@ -494,22 +507,205 @@ const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters and Controls */}
+      {/* Enhanced Filters Panel */}
+      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div className="flex flex-col gap-4">
+          {/* Date Range Display */}
+          {currentDateRange.startDate && currentDateRange.endDate && (
+            <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 text-sm text-blue-800">
+                <CalendarDays className="h-4 w-4 text-blue-600" />
+                <span className="text-xs sm:text-sm font-medium">
+                  {currentDateRange.startDate.toLocaleDateString()} - {currentDateRange.endDate.toLocaleDateString()}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedTimeframe('month');
+                  setCustomDateRange({ startDate: '', endDate: '' });
+                }}
+                className="text-blue-600 hover:text-blue-800 transition-colors"
+                title="Clear date filter"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+          )}
 
+          {/* Enhanced Filters and Controls */}
+          <div className="flex flex-col gap-4">
+            {/* Main Filter Row */}
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+              <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                <select
+                  value={selectedTimeframe}
+                  onChange={(e) => setSelectedTimeframe(e.target.value as any)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[150px]"
+                >
+                  <option value="today">{t('timeframes.today') || 'Today'}</option>
+                  <option value="week">{t('timeframes.thisWeek') || 'This Week'}</option>
+                  <option value="month">{t('timeframes.thisMonth') || 'This Month'}</option>
+                  <option value="last7days">Last 7 Days</option>
+                  <option value="last30days">Last 30 Days</option>
+                  <option value="last3months">Last 3 Months</option>
+                  <option value="last6months">Last 6 Months</option>
+                  <option value="yearToDate">Year to Date</option>
+                  <option value="custom">{t('timeframes.customRange') || 'Custom Range'}</option>
+                </select>
+
+                {/* Activity Type Filter */}
+                <select
+                  value={activityFilter}
+                  onChange={(e) => setActivityFilter(e.target.value as any)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
+                >
+                  <option value="all">All Activities</option>
+                  <option value="calls">Calls Only</option>
+                  <option value="visits">Visits Only</option>
+                  <option value="meetings">Meetings Only</option>
+                  <option value="deals">Deals Only</option>
+                </select>
+
+                {/* Custom Date Range Picker */}
+                {selectedTimeframe === 'custom' && (
+                  <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
+                    <CalendarDays className="h-4 w-4 text-gray-400" />
+                    <input
+                      type="date"
+                      value={customDateRange.startDate}
+                      onChange={(e) => setCustomDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
+                      placeholder="Start Date"
+                    />
+                    <span className="text-gray-400 text-sm hidden sm:inline">{t('timeframes.to') || 'to'}</span>
+                    <input
+                      type="date"
+                      value={customDateRange.endDate}
+                      onChange={(e) => setCustomDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
+                      placeholder="End Date"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Action Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1 ${
+                    isFilterExpanded ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Advanced</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedTimeframe('month');
+                    setCustomDateRange({ startDate: '', endDate: '' });
+                    setActivityFilter('all');
+                    setSearchTerm('');
+                    setSelectedUser('');
+                  }}
+                  className="px-3 py-2 rounded-lg text-sm bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors flex items-center gap-1"
+                  title="Reset all filters"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="hidden sm:inline">Reset</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sort and Display Controls */}
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setShowActivityFeed(!showActivityFeed)}
+                className={`px-3 py-1 rounded text-sm transition-colors ${showActivityFeed
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+              >
+                <Activity className="h-4 w-4 inline mr-1" />
+                <span className="hidden xs:inline">{t('filters.activityFeed') || 'Activity Feed'}</span>
+                <span className="xs:hidden">Feed</span>
+              </button>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="performance">{t('filters.sortByPerformance') || 'Performance'}</option>
+                <option value="name">{t('filters.sortByName') || 'Name'}</option>
+                <option value="activity">{t('filters.sortByActivity') || 'Activity'}</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="p-1 rounded hover:bg-gray-100"
+              >
+                {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingUp className="h-4 w-4 rotate-180" />}
+              </button>
+            </div>
+
+            {/* Advanced Filters (Expandable) */}
+            {isFilterExpanded && (
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Advanced Filters</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {/* Performance Threshold Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Min Conversion Rate (%)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., 20"
+                    />
+                  </div>
+                  
+                  {/* Role Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
+                    <select className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">All Roles</option>
+                      <option value="sales_rep">Sales Rep</option>
+                      <option value="team_leader">Team Leader</option>
+                      <option value="sales_admin">Sales Admin</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+
+                  {/* Activity Level Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Activity Level</label>
+                    <select className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="">Any Level</option>
+                      <option value="high">High Activity</option>
+                      <option value="medium">Medium Activity</option>
+                      <option value="low">Low Activity</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Activity Feed */}
       {showActivityFeed && (
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
             <Activity className="h-5 w-5 mr-2" />
-            {t('activityFeed.recentActivityFeed')}
+            {t('activityFeed.recentActivityFeed') || 'Recent Activity Feed'}
           </h3>
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {(() => {
               const allActivities = [
                 ...leads.map(lead => ({
                   type: 'lead',
-                  action: t('activityFeed.leadUpdated'),
+                  action: t('activityFeed.leadUpdated') || 'Lead Updated',
                   user: users.find(u => u.id === lead.assignedToId)?.name || '',
                   details: `${lead.nameEn || lead.nameAr || ''} - ${lead.status}`,
                   date: String(lead.lastCallDate || lead.createdAt || ''),
@@ -517,7 +713,7 @@ const Reports: React.FC = () => {
                 })),
                 ...meetings.map(meeting => ({
                   type: 'meeting',
-                  action: t('activityFeed.meeting'),
+                  action: t('activityFeed.meeting') || 'Meeting',
                   user: users.find(u => u.id === meeting.assignedToId)?.name || '',
                   details: `${meeting.title} with ${meeting.client} - ${meeting.status}`,
                   date: String(meeting.date || ''),
@@ -537,7 +733,7 @@ const Reports: React.FC = () => {
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-900">{activity.action}</div>
                     <div className="text-xs text-gray-600">{activity.details}</div>
-                    <div className="text-xs text-gray-500">{t('activityFeed.by')} {activity.user} • {activity.date}</div>
+                    <div className="text-xs text-gray-500">{t('activityFeed.by') || 'by'} {activity.user} • {activity.date}</div>
                   </div>
                 </div>
               ));
@@ -553,7 +749,7 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.totalUsers')}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.totalUsers') || 'Total Users'}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalUsers}</p>
                 </div>
                 <Users className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
@@ -562,9 +758,9 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.totalLeads')}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.totalLeads') || 'Total Leads'}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.totalLeads}</p>
-                  <p className="text-xs text-gray-500">{t('metrics.assigned')}</p>
+                  <p className="text-xs text-gray-500">{t('metrics.assigned') || 'assigned'}</p>
                 </div>
                 <Target className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
               </div>
@@ -572,9 +768,9 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.avgConversion')}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.avgConversion') || 'Avg Conversion'}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.averageConversionRate}%</p>
-                  <p className="text-xs text-gray-500">{t('metrics.rate')}</p>
+                  <p className="text-xs text-gray-500">{t('metrics.rate') || 'rate'}</p>
                 </div>
                 <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600" />
               </div>
@@ -582,98 +778,20 @@ const Reports: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.callCompletion')}</p>
+                  <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.callCompletion') || 'Call Completion'}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.averageCallCompletionRate}%</p>
-                  <p className="text-xs text-gray-500">{t('metrics.rate')}</p>
+                  <p className="text-xs text-gray-500">{t('metrics.rate') || 'rate'}</p>
                 </div>
                 <Phone className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-            <div className="flex flex-col gap-4">
-              {/* Date Range Display */}
-              {selectedDateRange.startDate && selectedDateRange.endDate && (
-                <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-lg">
-                  <Calendar className="h-4 w-4" />
-                  <span className="text-xs sm:text-sm">
-                    {selectedDateRange.startDate.toLocaleDateString()} - {selectedDateRange.endDate.toLocaleDateString()}
-                  </span>
-                </div>
-              )}
 
-              {/* Filters and Controls */}
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                <div className="flex flex-col sm:flex-row gap-2 flex-1">
-                  <select
-                    value={selectedTimeframe}
-                    onChange={(e) => setSelectedTimeframe(e.target.value as any)}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="today">{t('timeframes.today')}</option>
-                    <option value="week">{t('timeframes.thisWeek')}</option>
-                    <option value="month">{t('timeframes.thisMonth')}</option>
-                    <option value="custom">{t('timeframes.customRange')}</option>
-                  </select>
-
-                  {/* Custom Date Range Picker */}
-                  {selectedTimeframe === 'custom' && (
-                    <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-1">
-                      <input
-                        type="date"
-                        value={customDateRange.startDate}
-                        onChange={(e) => setCustomDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                        className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
-                        placeholder="Start Date"
-                      />
-                      <span className="text-gray-400 text-sm hidden sm:inline">{t('timeframes.to')}</span>
-                      <input
-                        type="date"
-                        value={customDateRange.endDate}
-                        onChange={(e) => setCustomDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                        className="text-sm border-none focus:outline-none focus:ring-0 w-full sm:w-auto"
-                        placeholder="End Date"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setShowActivityFeed(!showActivityFeed)}
-                    className={`px-3 py-1 rounded text-sm transition-colors ${showActivityFeed
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                  >
-                    <Activity className="h-4 w-4 inline mr-1" />
-                    <span className="hidden xs:inline">{t('filters.activityFeed')}</span>
-                    <span className="xs:hidden">{t('filters.feed')}</span>
-                  </button>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="performance">{t('filters.sortByPerformance')}</option>
-                    <option value="name">{t('filters.sortByName')}</option>
-                    <option value="activity">{t('filters.sortByActivity')}</option>
-                  </select>
-                  <button
-                    onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="p-1 rounded hover:bg-gray-100"
-                  >
-                    {sortOrder === 'asc' ? <TrendingUp className="h-4 w-4" /> : <TrendingUp className="h-4 w-4 rotate-180" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
           {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 mb-8">
             {/* Performance Chart */}
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.performanceMetrics')}</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.performanceMetrics') || 'Performance Metrics'}</h3>
               <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <BarChart data={performanceChartData}>
                   <CartesianGrid strokeDasharray="3 3" />
@@ -688,7 +806,7 @@ const Reports: React.FC = () => {
 
             {/* Role Distribution */}
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.roleDistribution')}</h3>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.roleDistribution') || 'Role Distribution'}</h3>
               <ResponsiveContainer width="100%" height={250} className="sm:h-[300px]">
                 <RechartsPieChart>
                   <Pie
@@ -713,33 +831,33 @@ const Reports: React.FC = () => {
 
           {/* Performance Trends */}
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.performanceTrends')}</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('charts.performanceTrends') || 'Performance Trends'}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-blue-600">{metrics.averageConversionRate}%</div>
-                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgConversionRate')}</div>
+                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgConversionRate') || 'Avg Conversion Rate'}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageConversionRate > 50 ? t('performance.excellent') :
-                    metrics.averageConversionRate > 30 ? t('performance.good') :
-                      metrics.averageConversionRate > 15 ? t('performance.fair') : t('performance.needsImprovement')}
+                  {metrics.averageConversionRate > 50 ? (t('performance.excellent') || 'Excellent') :
+                    metrics.averageConversionRate > 30 ? (t('performance.good') || 'Good') :
+                      metrics.averageConversionRate > 15 ? (t('performance.fair') || 'Fair') : (t('performance.needsImprovement') || 'Needs Improvement')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-green-600">{metrics.averageCallCompletionRate}%</div>
-                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgCallCompletion')}</div>
+                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgCallCompletion') || 'Avg Call Completion'}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageCallCompletionRate > 80 ? t('performance.outstanding') :
-                    metrics.averageCallCompletionRate > 60 ? t('performance.good') :
-                      metrics.averageCallCompletionRate > 40 ? t('performance.fair') : t('performance.needsWork')}
+                  {metrics.averageCallCompletionRate > 80 ? (t('performance.outstanding') || 'Outstanding') :
+                    metrics.averageCallCompletionRate > 60 ? (t('performance.good') || 'Good') :
+                      metrics.averageCallCompletionRate > 40 ? (t('performance.fair') || 'Fair') : (t('performance.needsWork') || 'Needs Work')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-purple-600">{metrics.averageMeetingCompletionRate}%</div>
-                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgMeetingCompletion')}</div>
+                <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgMeetingCompletion') || 'Avg Meeting Completion'}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageMeetingCompletionRate > 90 ? t('performance.perfect') :
-                    metrics.averageMeetingCompletionRate > 70 ? t('performance.good') :
-                      metrics.averageMeetingCompletionRate > 50 ? t('performance.fair') : t('performance.needsAttention')}
+                  {metrics.averageMeetingCompletionRate > 90 ? (t('performance.perfect') || 'Perfect') :
+                    metrics.averageMeetingCompletionRate > 70 ? (t('performance.good') || 'Good') :
+                      metrics.averageMeetingCompletionRate > 50 ? (t('performance.fair') || 'Fair') : (t('performance.needsAttention') || 'Needs Attention')}
                 </div>
               </div>
             </div>
@@ -753,15 +871,15 @@ const Reports: React.FC = () => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.user')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.role')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.leads')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.calls')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.visits')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.meetings')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.deals')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.conversion')}</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.lastActivity')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.user') || 'User'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.role') || 'Role'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.leads') || 'Leads'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.calls') || 'Calls'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.visits') || 'Visits'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.meetings') || 'Meetings'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.deals') || 'Deals'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.conversion') || 'Conversion'}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.lastActivity') || 'Last Activity'}</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -779,12 +897,12 @@ const Reports: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.role === 'Admin' ? 'bg-red-100 text-red-800' :
-                        performance.role === 'Sales Admin' ? 'bg-purple-100 text-purple-800' :
-                          performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        performance.role === 'sales_admin' ? 'bg-purple-100 text-purple-800' :
+                          performance.role === 'team_leader' ? 'bg-blue-100 text-blue-800' :
                             'bg-green-100 text-green-800'
                         }`}>
-                        {performance.role}
+                        {translateUserRole(performance.role)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -835,9 +953,9 @@ const Reports: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.role === 'Admin' ? 'bg-red-100 text-red-800' :
-                        performance.role === 'Sales Admin' ? 'bg-purple-100 text-purple-800' :
-                          performance.role === 'Team Leader' ? 'bg-blue-100 text-blue-800' :
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${performance.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        performance.role === 'sales_admin' ? 'bg-purple-100 text-purple-800' :
+                          performance.role === 'team_leader' ? 'bg-blue-100 text-blue-800' :
                             'bg-green-100 text-green-800'
                         }`}>
                         {translateUserRole(performance.role)}

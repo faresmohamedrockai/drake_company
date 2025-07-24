@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const defaultSettings = {
-  companyName: import.meta.env.VITE_SIDE_BAR_NAME||"company name",
-  companyImage: import.meta.env.VITE_COMPANY_IMAGE||'https://www.dpreview.com/files/p/articles/7952219469/google-imagen-lead-image.jpeg',
-  companyWebsite: import.meta.env.VITE_COMPANY_WEBSITE || 'www.example.com',
-  companyEmail:import.meta.env.VITE_COMPANY_EMAIL || 'info@gmail.com' ,
-  companyAddress: import.meta.env.VITE_COMPANY_ADDRESS || 'Addrees For Comapny',
+  companyName: import.meta.env.VITE_SIDE_BAR_NAME||"Propai CRM Real Estate",
+  companyImage: import.meta.env.VITE_COMPANY_IMAGE||'https://res.cloudinary.com/db152mwtg/image/upload/v1753326042/images/hrglyn29vz6vdzvq0gnk.jpg',
+  companyWebsite: import.meta.env.VITE_COMPANY_WEBSITE || 'www.propaicrm.com',
+  companyEmail:import.meta.env.VITE_COMPANY_EMAIL || 'info@propaicrm.com' ,
+  companyAddress: import.meta.env.VITE_COMPANY_ADDRESS || 'Rockai Dev Software Solutions, Sidi Gaber, Alexandria, Egypt',
 };
 
 const SettingsContext = createContext({

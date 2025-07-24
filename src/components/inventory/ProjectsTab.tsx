@@ -48,8 +48,8 @@ export interface Project {
  */
 export function generatePaymentSchedule(totalPrice: number, plan: PaymentPlan): Array<{ no: number, dueDate: string, amount: number, label?: string }> {
   if (!plan || !totalPrice) return [];
-  const downPaymentAmount = (plan.downpayment / 100) * totalPrice;
-  const deliveryAmount = (plan.delivery / 100) * totalPrice;
+  const downPaymentAmount = Math.round((plan.downpayment / 100) * totalPrice);
+  const deliveryAmount = Math.round((plan.delivery / 100) * totalPrice);
   let periods = 0;
   let intervalMonths = 1;
   if (plan.installmentPeriod === 'monthly') {

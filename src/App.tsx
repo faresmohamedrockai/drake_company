@@ -132,6 +132,23 @@ const AppContent: React.FC = () => {
     document.title = `${companyName} - Real Estate CRM`;
   }, [settings?.companyName]);
 
+  // Update favicon with company image
+  useEffect(() => {
+    const companyImage = import.meta.env.VITE_COMPANY_IMAGE;
+    if (companyImage) {
+      // Remove existing favicon links
+      const existingFavicons = document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]');
+      existingFavicons.forEach(favicon => favicon.remove());
+
+      // Create and add new favicon link
+      const favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      favicon.type = 'image/x-icon';
+      favicon.href = companyImage;
+      document.head.appendChild(favicon);
+    }
+  }, []); // Run once on component mount
+
   if (!isAuthenticated) {
     return <Login />;
   }

@@ -30,7 +30,7 @@ if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
 // Add FormState type for form
 type Property = {
   id?: string;
-  title: string;
+  title?: string;
   titleEn: string;
   titleAr: string;
   type: string;
@@ -40,15 +40,15 @@ type Property = {
   bedrooms: number;
   bathrooms: number;
   amenities: string[];
-  project: string;
   status: string;
   zoneId: string;
   projectId: string;
   developerId: string;
-  typeOther: string;
-  amenitiesOther: string;
-  images: string[]; // Array of data URLs (max 1)
-  paymentPlanIndex?: number; // Index of selected payment plan for the project
+  typeOther?: string;
+  amenitiesOther?: string;
+  images: string[];
+  parking?: string;
+  paymentPlanIndex?: number; // For frontend use only
 };
 
 const PropertiesTab: React.FC = () => {
@@ -196,7 +196,6 @@ const PropertiesTab: React.FC = () => {
     bedrooms: 0,
     bathrooms: 0,
     amenities: [],
-    project: '',
     status: 'Available',
     zoneId: '',
     projectId: '',
@@ -204,6 +203,7 @@ const PropertiesTab: React.FC = () => {
     typeOther: '',
     amenitiesOther: '',
     images: [],
+    parking: '',
     paymentPlanIndex: undefined,
   });
   const [filterProject, setFilterProject] = useState('');
@@ -323,7 +323,6 @@ const PropertiesTab: React.FC = () => {
       bedrooms: 0,
       bathrooms: 0,
       amenities: [],
-      project: '',
       status: 'Available',
       zoneId: '',
       projectId: '',
@@ -331,6 +330,7 @@ const PropertiesTab: React.FC = () => {
       typeOther: '',
       amenitiesOther: '',
       images: [],
+      parking: '',
       paymentPlanIndex: undefined,
     });
     setShowForm(true);
@@ -388,7 +388,7 @@ const PropertiesTab: React.FC = () => {
         zoneId: zoneId, // Auto-set zone if project has one
         typeOther: '', // Clear other type
         amenitiesOther: '', // Clear other amenities
-        paymentPlanIndex,
+        paymentPlanIndex: paymentPlanIndex,
       }));
       setShowPaymentPlan(selectedProject?.paymentPlans || null);
     } else if (name === 'paymentPlanIndex') {
@@ -432,23 +432,37 @@ const PropertiesTab: React.FC = () => {
     } else {
       setPriceError('');
     }
-    // Destructure numeric fields to avoid spreading as strings
+    // Helper function to check if a string is a valid UUID
+    const isValidUUID = (str: string) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(str);
+    };
+
+    // Prepare data to match backend DTO
     const propertyData = {
-      ...form,
+      ...(editId && { id: editId }), // Include id when updating
+      title: form.titleEn + (form.titleAr ? ' / ' + form.titleAr : ''), // Combine names for display
+      titleEn: form.titleEn,
+      titleAr: form.titleAr,
+      type: showTypeOther ? form.typeOther : form.type,
       price: form.price ? Number(form.price) : 0,
+      location: form.location,
       area: form.area ? Number(form.area) : 0,
       bedrooms: form.bedrooms ? Number(form.bedrooms) : 0,
       bathrooms: form.bathrooms ? Number(form.bathrooms) : 0,
-      status: form.status as 'Available' | 'Rented' | 'Sold',
-      createdBy: user.name,
-      project: projects?.find(p => p.id === form.projectId)?.nameEn || '',
-      type: showTypeOther ? form.typeOther : form.type,
       amenities: showAmenitiesOther
         ? [...form.amenities.filter((a: string) => a !== 'Other'), form.amenitiesOther].filter(Boolean)
         : form.amenities,
       images: form.images && form.images.length ? form.images : [],
-      paymentPlanIndex: form.paymentPlanIndex,
-      title: form.titleEn + (form.titleAr ? ' / ' + form.titleAr : ''), // Combine names for display
+      typeOther: form.typeOther,
+      amenitiesOther: form.amenitiesOther,
+      status: form.status,
+      zoneId: form.zoneId,
+      projectId: form.projectId,
+      developerId: form.developerId,
+      parking: form.parking,
+      // Include paymentPlanIndex so we know which payment plan was selected for this property
+      ...(form.paymentPlanIndex !== undefined && { paymentPlanIndex: form.paymentPlanIndex }),
     };
     if (editId) {
       updatePropertyMutation(propertyData as unknown as Property);
@@ -709,8 +723,8 @@ const PropertiesTab: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-2 py-4">
-                          <span className="text-xs text-gray-900 truncate block" title={`${Number(property.price).toLocaleString()} EGP`}>
-                            {Number(property.price).toLocaleString()} EGP
+                          <span className="text-xs text-gray-900 truncate block" title={`${Math.round(Number(property.price)).toLocaleString()} EGP`}>
+                            {Math.round(Number(property.price)).toLocaleString()} EGP
                           </span>
                         </td>
                         <td className="px-2 py-4">
@@ -886,6 +900,10 @@ const PropertiesTab: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">{t('area')}</label>
                     <input type="text" name="area" value={form.area} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" required placeholder={language === 'ar' ? 'أدخل المساحة' : 'Enter area'} />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('parking') || 'Parking'}</label>
+                    <input type="text" name="parking" value={form.parking || ''} onChange={handleFormChange} className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-base" placeholder={language === 'ar' ? 'تفاصيل موقف السيارات' : 'Parking details'} />
+                  </div>
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-gray-700 mb-1">{t('bedrooms')}</label>
@@ -1047,6 +1065,7 @@ const PropertiesTab: React.FC = () => {
                   <div><span className="font-semibold">{t('area')}:</span> {form.area}</div>
                   <div><span className="font-semibold">{t('bedrooms')}:</span> {form.bedrooms}</div>
                   <div><span className="font-semibold">{t('bathrooms')}:</span> {form.bathrooms}</div>
+                  <div><span className="font-semibold">{t('parking') || 'Parking'}:</span> {form.parking || '-'}</div>
                   <div><span className="font-semibold">{t('amenities')}:</span> {showAmenitiesOther ? [...form.amenities.filter(a => a !== 'Other'), form.amenitiesOther].filter(Boolean).join(', ') : getAmenities(form.amenities).join(', ')}</div>
                   <div><span className="font-semibold">{t('zone')}:</span> {zones?.find(z => z.id === form.zoneId)?.nameEn || ''}</div>
                   <div><span className="font-semibold">{t('project')}:</span> {getProjectName(form.projectId)}</div>
@@ -1054,20 +1073,86 @@ const PropertiesTab: React.FC = () => {
                   <div><span className="font-semibold">{t('status')}:</span> {getStatusText(form.status)}</div>
                   {/* Payment Plan Review (always show if project selected) */}
                   {(() => {
+                    // Get the project and payment plan data
                     const selectedProject = projects?.find(p => p.id === form.projectId);
-                    if (selectedProject) {
-                      const hasPlans = Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0;
-                      if (hasPlans && form.paymentPlanIndex !== undefined) {
-                        const plan = selectedProject.paymentPlans[form.paymentPlanIndex];
+                    if (!selectedProject || !Array.isArray(selectedProject.paymentPlans) || selectedProject.paymentPlans.length === 0) {
+                      return null;
+                    }
+                    
+                    const planIndex = form.paymentPlanIndex !== undefined ? form.paymentPlanIndex : 0;
+                    const plan = selectedProject.paymentPlans[planIndex];
 
-                        if (plan) {
+                    if (!plan) {
+                      return null;
+                    }
+
                           const price = Number(form.price || 0);
-                          const schedule = generatePaymentSchedule(price, plan);
-                          // console.log("schedule", schedule);
+                    
+                    // Create a safe payment plan with extensive date validation
+                    const createSafeDate = (dateStr: string | undefined | null | object, defaultDate: string) => {
+                      if (!dateStr || typeof dateStr === 'object') return defaultDate;
+                      const parsed = Date.parse(dateStr);
+                      if (isNaN(parsed)) return defaultDate;
+                      const dateObj = new Date(dateStr);
+                      if (dateObj.toString() === 'Invalid Date') return defaultDate;
+                      return dateStr;
+                    };
+
+                    const safePlan = {
+                      ...plan,
+                      firstInstallmentDate: createSafeDate(plan.firstInstallmentDate, "2024-12-01"),
+                      deliveryDate: createSafeDate(plan.deliveryDate, "2026-12-01"),
+                      downpayment: Number(plan.downpayment) || 0,
+                      delivery: Number(plan.delivery) || 0,
+                      yearsToPay: Number(plan.yearsToPay) || 1,
+                      installmentMonthsCount: Number(plan.installmentMonthsCount) || 1
+                    };
+                    
+                    // Generate schedule with safe plan and comprehensive error handling
+                    let schedule: any[] = [];
+                    try {
+                      // Additional validation before calling generatePaymentSchedule
+                      if (safePlan.firstInstallmentDate && safePlan.deliveryDate && safePlan.yearsToPay > 0 && price > 0) {
+                        schedule = generatePaymentSchedule(price, safePlan);
+                      }
+                    } catch (error) {
+                      console.error('Error generating payment schedule for report:', error);
+                      // Return early with error message instead of continuing
+                      return (
+                        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                            {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(selectedProject, language)}
+                          </h3>
+                          <p className="text-yellow-800 text-sm">
+                            {language === 'ar' ? 'لا يمكن عرض جدول المدفوعات - بيانات غير صحيحة' : 'Cannot display payment schedule - invalid data'}
+                          </p>
+                        </div>
+                      );
+                    }
+                    
+                    if (schedule.length === 0) {
+                      return (
+                        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                            {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(selectedProject, language)}
+                          </h3>
+                          <p className="text-yellow-800 text-sm">
+                            {language === 'ar' ? 'لا توجد بيانات متاحة لجدول المدفوعات' : 'No payment schedule data available'}
+                          </p>
+                        </div>
+                      );
+                    }
+                    
                           return (
                             <div className="mt-4">
                               <div className="font-semibold mb-1">{t('selectedPaymentPlan')}:</div>
-                              <div className="mb-2 text-xs text-gray-700">{plan.schedule ? plan.schedule : `${t('plan')} ${form.paymentPlanIndex + 1}`}</div>
+                        <div className="mb-2 text-xs text-gray-700">
+                          {plan.schedule ? plan.schedule : `${t('plan')} ${planIndex + 1}`}
+                          {(!plan.firstInstallmentDate || !plan.deliveryDate) && (
+                            <span className="ml-2 text-orange-600">({language === 'ar' ? 'تواريخ افتراضية' : 'Default dates used'})</span>
+                          )}
+                        </div>
+                        {schedule.length > 0 ? (
                               <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
                                 <table className="w-full text-xs">
                                   <thead>
@@ -1095,22 +1180,19 @@ const PropertiesTab: React.FC = () => {
                                             item.dueDate
                                           }
                                         </td>
-                                        <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.amount.toLocaleString()} EGP</td>
+                                        <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{Math.round(item.amount).toLocaleString()} EGP</td>
                                       </tr>
                                     ))}
                                   </tbody>
                                 </table>
                               </div>
+                        ) : (
+                          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+                            {language === 'ar' ? 'لا يمكن عرض جدول المدفوعات - يرجى التحقق من بيانات خطة الدفع' : 'Cannot display payment schedule - please check payment plan data'}
+                          </div>
+                        )}
                             </div>
                           );
-                        }
-                      } else {
-                        return (
-                          <div className="mt-4 text-xs text-red-500">{t('noPaymentPlansFound')}</div>
-                        );
-                      }
-                    }
-                    return null;
                   })()}
                 </div>
               )}
@@ -1269,7 +1351,7 @@ const PropertiesTab: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           {reportProperty.title && <div><span className="font-medium">{t('title')}:</span> {reportProperty.title}</div>}
                           {reportProperty.type && <div><span className="font-medium">{t('type')}:</span> {reportProperty.type}</div>}
-                          {reportProperty.price && <div><span className="font-medium">{t('price')}:</span> {Number(reportProperty.price).toLocaleString()} EGP</div>}
+                          {reportProperty.price && <div><span className="font-medium">{t('price')}:</span> {Math.round(Number(reportProperty.price)).toLocaleString()} EGP</div>}
                           {reportProperty.area && <div><span className="font-medium">{t('area')}:</span> {reportProperty.area}</div>}
                           {reportProperty.location && <div><span className="font-medium">{t('location')}:</span> {reportProperty.location}</div>}
                           {reportProperty.bedrooms && <div><span className="font-medium">{t('bedrooms')}:</span> {reportProperty.bedrooms}</div>}
@@ -1288,14 +1370,72 @@ const PropertiesTab: React.FC = () => {
                   const project = reportProperty?.project && typeof reportProperty.project === 'object'
                     ? reportProperty.project
                     : projects?.find(p => p.id === reportProperty?.projectId);
-                  let plan = null;
-                  if (project && Array.isArray(project.paymentPlans)) {
-                    const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
-                    plan = project.paymentPlans[idx];
+                  
+                  if (!project || !Array.isArray(project.paymentPlans) || project.paymentPlans.length === 0) {
+                    return null;
                   }
+                  
+                  const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
+                  const plan = project.paymentPlans[idx];
                   const price = Number(reportProperty?.price || 0);
+                  
                   if (!plan || !price) return null;
-                  const schedule = generatePaymentSchedule(price, plan);
+                  
+                  // Create a safe payment plan with extensive date validation
+                  const createSafeDate = (dateStr: string | undefined | null | object, defaultDate: string) => {
+                    if (!dateStr || typeof dateStr === 'object') return defaultDate;
+                    const parsed = Date.parse(dateStr);
+                    if (isNaN(parsed)) return defaultDate;
+                    const dateObj = new Date(dateStr);
+                    if (dateObj.toString() === 'Invalid Date') return defaultDate;
+                    return dateStr;
+                  };
+
+                  const safePlan = {
+                    ...plan,
+                    firstInstallmentDate: createSafeDate(plan.firstInstallmentDate, "2024-12-01"),
+                    deliveryDate: createSafeDate(plan.deliveryDate, "2026-12-01"),
+                    downpayment: Number(plan.downpayment) || 0,
+                    delivery: Number(plan.delivery) || 0,
+                    yearsToPay: Number(plan.yearsToPay) || 1,
+                    installmentMonthsCount: Number(plan.installmentMonthsCount) || 1
+                  };
+                  
+                  // Generate schedule with safe plan and comprehensive error handling
+                  let schedule: any[] = [];
+                  try {
+                    // Additional validation before calling generatePaymentSchedule
+                    if (safePlan.firstInstallmentDate && safePlan.deliveryDate && safePlan.yearsToPay > 0 && price > 0) {
+                      schedule = generatePaymentSchedule(price, safePlan);
+                    }
+                  } catch (error) {
+                    console.error('Error generating payment schedule for report:', error);
+                    // Return early with error message instead of continuing
+                    return (
+                      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                          {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(project, language)}
+                        </h3>
+                        <p className="text-yellow-800 text-sm">
+                          {language === 'ar' ? 'لا يمكن عرض جدول المدفوعات - بيانات غير صحيحة' : 'Cannot display payment schedule - invalid data'}
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  if (schedule.length === 0) {
+                    return (
+                      <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                          {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(project, language)}
+                        </h3>
+                        <p className="text-yellow-800 text-sm">
+                          {language === 'ar' ? 'لا توجد بيانات متاحة لجدول المدفوعات' : 'No payment schedule data available'}
+                        </p>
+                      </div>
+                    );
+                  }
+                  
                   // Find down payment and delivery rows
                   const downPaymentRow = schedule.find(row => row.label && row.label.toLowerCase().includes('down payment'));
                   const deliveryRow = schedule.find(row => row.label && row.label.toLowerCase().includes('delivery'));
@@ -1315,6 +1455,11 @@ const PropertiesTab: React.FC = () => {
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-800 mb-3">
                         {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(project, language)}
+                        {(!plan.firstInstallmentDate || !plan.deliveryDate) && (
+                          <span className="ml-2 text-sm text-orange-600 font-normal">
+                            ({language === 'ar' ? 'تواريخ افتراضية مستخدمة' : 'Default dates used'})
+                          </span>
+                        )}
                       </h3>
                       {/* Summary Card */}
                       <div className="flex flex-wrap gap-4 mb-4">
@@ -1369,7 +1514,7 @@ const PropertiesTab: React.FC = () => {
                                     item.dueDate
                                   }
                                 </td>
-                                <td className={`border px-3 py-2 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.amount.toLocaleString()} EGP</td>
+                                <td className={`border px-3 py-2 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{Math.round(item.amount).toLocaleString()} EGP</td>
                               </tr>
                             ))}
                           </tbody>
@@ -1377,9 +1522,9 @@ const PropertiesTab: React.FC = () => {
                       </div>
                       {/* Totals */}
                       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-base font-bold">
-                        <div>{language === 'ar' ? 'السعر الإجمالي' : 'Total Price'}: <span className="text-blue-700">{price.toLocaleString()} EGP</span></div>
-                        <div>{language === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}: <span className="text-green-700">{downPayment.toLocaleString()} EGP</span></div>
-                        <div>{language === 'ar' ? 'الأقساط' : 'Installments'}: <span className="text-orange-700">{installmentsTotal.toLocaleString()} EGP</span></div>
+                        <div>{language === 'ar' ? 'السعر الإجمالي' : 'Total Price'}: <span className="text-blue-700">{Math.round(price).toLocaleString()} EGP</span></div>
+                        <div>{language === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}: <span className="text-green-700">{Math.round(downPayment).toLocaleString()} EGP</span></div>
+                        <div>{language === 'ar' ? 'الأقساط' : 'Installments'}: <span className="text-orange-700">{Math.round(installmentsTotal).toLocaleString()} EGP</span></div>
                         <div>{language === 'ar' ? 'المطور' : 'Developer'}: <span className="text-gray-700">{getDeveloperName(project, language)}</span></div>
                       </div>
                     </div>
