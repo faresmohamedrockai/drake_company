@@ -383,20 +383,21 @@ const MeetingsManagement: React.FC = () => {
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400`} />
             <input
               type="text"
               placeholder={t('searchMeetings')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className={`w-full ${language === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${language === 'ar' ? 'text-right' : ''}`}
+              dir={language === 'ar' ? 'rtl' : 'ltr'}
             />
           </div>
           {
             (user?.role === 'admin' || user?.role === 'sales_admin') && (
 
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center" onClick={openAddForm}>
-                <Plus className="h-5 w-5 mr-2" />
+              <button className={`bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`} onClick={openAddForm}>
+                <Plus className={`h-5 w-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
                 {t('scheduleMeeting')}
               </button>
             )
@@ -424,11 +425,11 @@ const MeetingsManagement: React.FC = () => {
               {filteredMeetings?.map((meeting: Meeting) => (
                 <tr key={meeting.id} className="hover:bg-gray-50 cursor-pointer" onClick={(e) => handleRowClick(e, meeting)}>
                   <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                    <div className={`flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                      <div className={`h-10 w-10 bg-purple-100 rounded-full flex items-center justify-center ${language === 'ar' ? 'ml-3' : 'mr-3'}`}>
                         <CalendarIcon className="h-5 w-5 text-purple-600" />
                       </div>
-                      <div>
+                      <div className={language === 'ar' ? 'text-right' : ''}>
                         <div className="text-sm font-medium text-gray-900">{meeting.title}</div>
                         <div className="text-sm text-gray-500">{t('with')} {meeting.client}</div>
                       </div>
@@ -440,8 +441,8 @@ const MeetingsManagement: React.FC = () => {
                     <div className="text-sm text-gray-500">{meeting.time}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-900">
-                      <Clock className="h-4 w-4 mr-1" />
+                    <div className={`flex items-center text-sm text-gray-900 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                      <Clock className={`h-4 w-4 ${language === 'ar' ? 'ml-1' : 'mr-1'}`} />
                       {meeting.duration}
                     </div>
                   </td>
@@ -459,12 +460,14 @@ const MeetingsManagement: React.FC = () => {
                     {(meeting as any).locationType === 'Offline' ? (meeting as any).location : translateLocationType((meeting as any).locationType || 'Online')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button className="text-blue-600 hover:text-blue-800 mr-3" onClick={() => openEditForm(meeting)}>
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(meeting.id || '')}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className={`flex items-center gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                      <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(meeting)}>
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(meeting.id || '')}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -476,9 +479,9 @@ const MeetingsManagement: React.FC = () => {
       {/* Add/Edit Meeting Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 sm:mx-8 relative flex flex-col max-h-[90vh]">
+          <div className={`bg-white rounded-2xl shadow-xl w-full max-w-2xl mx-4 sm:mx-8 relative flex flex-col max-h-[90vh] ${language === 'ar' ? 'font-arabic' : ''}`} dir={language === 'ar' ? 'rtl' : 'ltr'}>
             {/* Sticky Header */}
-            <div className="sticky top-0 z-10 bg-white rounded-t-2xl flex items-center justify-between px-6 py-4 border-b">
+            <div className={`sticky top-0 z-10 bg-white rounded-t-2xl flex items-center justify-between px-6 py-4 border-b ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
               <h3 className="text-2xl font-bold text-gray-900">{editId ? t('modal.editMeeting') : t('modal.scheduleMeeting')}</h3>
               <button
                 type="button"
@@ -603,7 +606,7 @@ const MeetingsManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.notes')}</label>
                 <textarea name="notes" value={form.notes} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />
               </div>
-              <div className="md:col-span-2 flex justify-end space-x-3 mt-4">
+              <div className={`md:col-span-2 flex mt-4 gap-3 ${language === 'ar' ? 'justify-start flex-row-reverse' : 'justify-end'}`}>
                 <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-600 hover:text-gray-800">{t('actions.cancel')}</button>
                 <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">{
                   editId ? isUpdatingMeeting ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('actions.update') : isAddingMeeting ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('actions.schedule') + ' ' + t('meetingDetails').toLowerCase()}
@@ -616,48 +619,125 @@ const MeetingsManagement: React.FC = () => {
 
       {/* Calendar Modal */}
       {calendarModalOpen && selectedMeeting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 sm:mx-8 relative flex flex-col animate-fade-in">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div 
+            className={`
+              bg-white rounded-2xl shadow-2xl w-full max-w-md relative flex flex-col
+              ${language === 'ar' ? 'font-arabic' : ''}
+              transform transition-all duration-300 ease-out
+            `} 
+            dir={language === 'ar' ? 'rtl' : 'ltr'}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="calendar-modal-title"
+          >
             {/* Close Button */}
             <button
               type="button"
               aria-label={t('modal.close')}
               onClick={() => setCalendarModalOpen(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 z-10 bg-white shadow"
+              className={`
+                absolute top-4 z-10 text-gray-400 hover:text-gray-700 
+                p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 
+                bg-white shadow-sm hover:bg-gray-50 transition-colors
+                ${language === 'ar' ? 'left-4' : 'right-4'}
+              `}
             >
               <span className="sr-only">{t('modal.close')}</span>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                strokeWidth={2} 
+                stroke="currentColor" 
+                className="w-5 h-5"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <div className="flex flex-col items-center px-8 pt-8 pb-6">
-              <CalendarPlus className="h-10 w-10 text-blue-600 mb-2" />
-              <h3 className="text-2xl font-bold text-gray-900 mb-1">{t('addToCalendar', { defaultValue: 'Add to Calendar' })}</h3>
-              <p className="text-gray-500 text-center mb-6 text-sm">{t('addToCalendarDesc', { defaultValue: 'Easily add this meeting to your calendar with a 30-minute reminder.' })}</p>
-              <div className="w-full flex flex-col gap-4">
+
+            {/* Modal Content */}
+            <div className="px-8 pt-12 pb-8">
+              {/* Header */}
+              <div className="text-center mb-8">
+                <div className="mb-4">
+                  <CalendarPlus className="h-12 w-12 text-blue-600 mx-auto" />
+                </div>
+                <h3 
+                  id="calendar-modal-title"
+                  className="text-2xl font-bold text-gray-900 mb-2"
+                >
+                  {t('addToCalendar', { defaultValue: 'Add to Calendar' })}
+                </h3>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  {t('addToCalendarDesc', { defaultValue: 'Easily add this meeting to your calendar with a 30-minute reminder.' })}
+                </p>
+              </div>
+
+              {/* Calendar Buttons */}
+              <div className="space-y-3 mb-6">
+                {/* Google Calendar Button */}
                 <button
-                  className="flex items-center justify-center gap-3 w-full bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  type="button"
                   onClick={() => window.open(getGoogleCalendarUrl(selectedMeeting), '_blank')}
+                  className="
+                    w-full flex items-center justify-center gap-3
+                    bg-blue-600 hover:bg-blue-700 text-white
+                    px-6 py-4 rounded-xl font-semibold
+                    transition-all duration-200 ease-in-out
+                    transform hover:scale-[1.02] active:scale-[0.98]
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                    shadow-md hover:shadow-lg
+                  "
                 >
-                  <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="h-6 w-6" />
-                  {t('addToGoogleCalendar', { defaultValue: 'Add to Google Calendar' })}
+                  <img 
+                    src="https://www.svgrepo.com/show/475656/google-color.svg" 
+                    alt="Google Calendar" 
+                    className="h-6 w-6 flex-shrink-0" 
+                  />
+                  <span className="text-center">
+                    {t('addToGoogleCalendar', { defaultValue: 'Add to Google Calendar' })}
+                  </span>
                 </button>
+
+                {/* Apple Calendar Button */}
                 <button
-                  className="flex items-center justify-center gap-3 w-full bg-gray-900 text-white px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors font-semibold shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  type="button"
                   onClick={() => downloadICS(selectedMeeting)}
+                  className="
+                    w-full flex items-center justify-center gap-3
+                    bg-gray-900 hover:bg-gray-800 text-white
+                    px-6 py-4 rounded-xl font-semibold
+                    transition-all duration-200 ease-in-out
+                    transform hover:scale-[1.02] active:scale-[0.98]
+                    focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2
+                    shadow-md hover:shadow-lg
+                  "
                 >
-                  <Apple className="h-6 w-6 text-white" />
-                  {t('addToAppleCalendar', { defaultValue: 'Add to Apple Calendar (.ics)' })}
+                  <Apple className="h-6 w-6 flex-shrink-0 text-white" />
+                  <span className="text-center">
+                    {t('addToAppleCalendar', { defaultValue: 'Add to Apple Calendar (.ics)' })}
+                  </span>
                 </button>
               </div>
+
+              {/* iOS Instructions */}
               {isIOS && (
-                <div className="text-xs text-gray-500 mt-2 text-center">
-                  {t('iosCalendarInstruction', { defaultValue: 'After downloading, tap the file, then tap the share icon and choose "Add to Calendar".' })}
+                <div className="mb-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <p className="text-xs text-blue-700 text-center leading-relaxed">
+                    💡 {t('iosCalendarInstruction', { defaultValue: 'After downloading, tap the file, then tap the share icon and choose "Add to Calendar".' })}
+                  </p>
                 </div>
               )}
-              <div className="mt-6 w-full bg-gray-50 rounded-lg p-4 text-xs text-gray-500 text-center">
-                <CalendarDays className="inline-block h-4 w-4 mr-1 text-blue-400 align-text-bottom" />
-                {t('calendarPrivacy', { defaultValue: 'Your calendar data is not stored or shared.' })}
+
+              {/* Privacy Notice */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                  <CalendarDays className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                  <span className="text-center">
+                    {t('calendarPrivacy', { defaultValue: 'Your calendar data is not stored or shared.' })}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

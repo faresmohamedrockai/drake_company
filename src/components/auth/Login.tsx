@@ -42,7 +42,7 @@ const Login: React.FC = () => {
 
         <div className="relative z-10 max-w-md w-full flex flex-col text-center">
           <div className="flex justify-center items-center mb-6 lg:mb-8">
-            <Building2 className="h-6 w-6 lg:h-8 lg:w-8 mr-2 lg:mr-3" />
+            <img src={settings?.companyImage || 'https://res.cloudinary.com/db152mwtg/image/upload/v1753326042/images/hrglyn29vz6vdzvq0gnk.jpg'} alt="Propai" className="h-6 w-6 lg:h-16 lg:w-16 mr-2 lg:mr-3 rounded-lg" /> 
             <h1 className="text-xl lg:text-2xl font-bold">{settings?.companyName || 'Propai'}</h1>
           </div>
 
