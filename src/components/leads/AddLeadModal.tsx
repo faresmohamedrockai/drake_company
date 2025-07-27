@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X, User, Phone, Mail, DollarSign, Building, Globe, Target } from 'lucide-react';
 import { Lead, LeadStatus, Property } from '../../types';
-import { User as UserType } from '../../types';
+import { User as UserType } from '../../contexts/AuthContext';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
@@ -57,7 +57,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         inventoryInterestId: '',
         source: '',
         status: LeadStatus.FRESH_LEAD,
-        assignedTo: ''
+        assignedTo: user?.role === 'sales_rep' ? user.id : ''
       });
       onClose();
     },
@@ -74,7 +74,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         inventoryInterestId: '',
         source: '',
         status: LeadStatus.FRESH_LEAD,
-        assignedTo: ''
+        assignedTo: user?.role === 'sales_rep' ? user.id : ''
       });
       onClose();
     }
@@ -92,7 +92,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     inventoryInterestId: '',
     source: '',
     status: LeadStatus.FRESH_LEAD as LeadStatus,
-    assignedTo: ''
+    assignedTo: user?.role === 'sales_rep' ? user.id : ''
   });
   const [error, setError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -134,6 +134,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         setBudgetError(language === 'ar' ? 'الميزانية يجب أن تكون رقم صحيح وغير سالب' : 'Budget must be a valid non-negative number');
         return;
       }
+    }
+
+    // Ensure sales rep is assigned to themselves
+    if ((user?.role as string) === 'sales_rep' && !formData.assignedTo && user?.id) {
+      setFormData(prev => ({ ...prev, assignedTo: user.id }));
     }
 
     // Check for required assignedTo field
@@ -305,41 +310,46 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               <h4 className="text-lg font-semibold text-gray-900">Business Information</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {
-                user?.role !== "sales_rep" && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">{t('assignedToRequired')}</label>
+                <div className="relative">
+                  <select
+                    value={formData.assignedTo}
+                    onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                    className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none ${
+                      (user?.role as string) === 'sales_rep' ? 'bg-gray-100 cursor-not-allowed' : ''
+                    }`}
+                    required
+                    disabled={(user?.role as string) === 'sales_rep'}
+                  >
+                    <option value="">{t('selectUser')}</option>
+                    {(() => {
+                      let assignableUsers = users;
 
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium text-gray-700">{t('assignedToRequired')}</label>
-                    <div className="relative">
-                      <select
-                        value={formData.assignedTo}
-                        onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                        className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
-                        required
-                      >
-                        <option value="">{t('selectUser')}</option>
-                        {(() => {
-                          let assignableUsers = users;
+                      if ((user?.role as string) === 'sales_rep') {
+                        assignableUsers = users!.filter(u => u.name === user?.name);
+                      } else if (user?.role === 'team_leader') {
+                        assignableUsers = users!.filter(u =>
+                          u.name === user.name ||
+                          (u.role === 'sales_rep' && u.teamId === user.teamId)
+                        );
+                      } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
+                        assignableUsers = users!.filter(u => u.role !== 'admin' || user?.role === 'admin');
+                      }
 
-                          if (user?.role === 'team_leader') {
-                            assignableUsers = users!.filter(u =>
-                              u.name === user.name ||
-                              (u.role === 'sales_rep' && u.teamId === user.teamId)
-                            );
-                          } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-                            assignableUsers = users!.filter(u => u.role !== 'admin' || user?.role === 'admin');
-                          }
-
-                          return assignableUsers!.map(user => (
-                            <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
-                          ));
-                        })()}
-                      </select>
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    </div>
-                  </div>
-                )
-              }
+                      return assignableUsers!.map(u => (
+                        <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
+                      ));
+                    })()}
+                  </select>
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+                {(user?.role as string) === 'sales_rep' && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    {language === 'ar' ? 'سيتم تعيين العميل لك تلقائياً' : 'Lead will be automatically assigned to you'}
+                  </p>
+                )}
+              </div>
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">{t('budget')}</label>

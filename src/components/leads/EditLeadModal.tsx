@@ -252,17 +252,20 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
             <select
               value={formData.assignedToId || ''}
               onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
-              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm ${
+                (user?.role as string) === 'sales_rep' ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
               required
+              disabled={(user?.role as string) === 'sales_rep'}
             >
               <option value="">{t('selectUser')}</option>
               {(() => {
                 // Role-based user filtering for assignment
                 let assignableUsers = users;
 
-                if (user?.role === 'sales_rep') {
+                if ((user?.role as string) === 'sales_rep') {
                   // Sales Reps can only assign to themselves
-                  assignableUsers = users?.filter(u => u.name === user.name);
+                  assignableUsers = users?.filter(u => u.name === user?.name);
                 } else if (user?.role === 'team_leader') {
                   // Team Leaders can assign to their team members and themselves
                   assignableUsers = users?.filter(u =>
@@ -279,6 +282,11 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                 ));
               })()}
             </select>
+            {(user?.role as string) === 'sales_rep' && (
+              <p className="text-sm text-gray-500 mt-1">
+                {language === 'ar' ? 'لا يمكنك تغيير تعيين العميل' : 'You cannot change lead assignment'}
+              </p>
+            )}
           </div>
 
           <div className="col-span-1">
