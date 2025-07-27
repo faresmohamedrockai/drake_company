@@ -124,9 +124,14 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
               }}
             >
               {getUserAvatar(option, 'small')}
-              <span className={`ml-3 ${value === option.id ? 'font-medium text-blue-600' : ''}`}>
-                {option.name}
-              </span>
+              <div className="ml-3 flex-1">
+                <span className={`${value === option.id ? 'font-medium text-blue-600' : ''}`}>
+                  {option.name}
+                </span>
+                <div className="text-xs text-gray-500">
+                  {option.role === 'team_leader' ? 'Team Leader' : 'Sales Representative'}
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -145,14 +150,11 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
 }) => {
   const { t, i18n } = useTranslation('leads');
 
-  // Get all managers (team_leader, sales_admin, admin)
-  const managers = users.filter(
-    (u) => u.role === 'team_leader' || u.role === 'sales_admin' || u.role === 'admin'
-  );
+  // Get all team leaders (users with role 'team_leader')
+  const teamLeaders = users.filter((u) => u.role === 'team_leader');
 
-  // Get all sales reps for a given manager
-  const getSalesRepsForManager = (managerName: string) =>
-    users.filter((u) => u.role === 'sales_rep');
+  // Get all sales reps
+  const allSalesReps = users.filter((u) => u.role === 'sales_rep');
 
   // Role-based logic
   if (currentUser.role === 'sales_rep') {
@@ -160,54 +162,53 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
     return null;
   }
 
-  let managerOptions = managers;
-  let salesRepOptions: User[] = [];
-  let managerValue = selectedManager;
+  let teamLeaderOptions = teamLeaders;
+  let salesRepOptions: User[] = [...allSalesReps, ...teamLeaders]; // Include team leaders in sales rep options
+  let teamLeaderValue = selectedManager;
   let salesRepValue = selectedSalesRep;
-  let managerDisabled = false;
+  let teamLeaderDisabled = false;
 
   if (currentUser.role === 'team_leader') {
     // Team leader: manager select is their own name, not changeable
-    managerOptions = managers.filter((m) => m.id === currentUser.id);
-    managerValue = currentUser;
-    managerDisabled = true;
-    salesRepOptions = getSalesRepsForManager(currentUser.name);
+    teamLeaderOptions = teamLeaders.filter((m) => m.id === currentUser.id);
+    teamLeaderValue = currentUser;
+    teamLeaderDisabled = true;
+    // Team leaders can see all sales reps and other team leaders in the dropdown
+    // The filtering logic in the parent components will handle the actual filtering
   } else if (currentUser.role === 'sales_admin' || currentUser.role === 'admin') {
-    // Admin/Sales Manager: can select any manager, and their sales reps
-    salesRepOptions = getSalesRepsForManager(selectedManager?.name || '');
+    // Admin/Sales Manager: can select any team leader and any sales rep
+    // All sales reps and team leaders are shown in the dropdown
   }
-
-
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
-      {/* Manager Select */}
+      {/* Team Leader Select */}
       <div className="flex flex-col">
         <label className="text-xs text-gray-500 mb-1">{t('manager')}</label>
         <CustomDropdown
-          value={managerValue?.id || ''}
+          value={teamLeaderValue?.id || ''}
           onChange={(value) => {
             const selectedUser = users.find(u => u.id === value) || null;
-
             setSelectedManager(selectedUser);
+            // Don't clear sales rep selection when team leader changes
+            // This allows independent selection of team leader and sales rep
           }}
-          options={managerOptions}
+          options={teamLeaderOptions}
           placeholder={t('allManagers')}
-          disabled={managerDisabled}
+          disabled={teamLeaderDisabled}
         />
       </div>
-      {/* Sales Rep Select */}
+      {/* Sales Rep/Team Leader Select */}
       <div className="flex flex-col">
-        <label className="text-xs text-gray-500 mb-1">{t('salesRep')}</label>
+        <label className="text-xs text-gray-500 mb-1">Team Member</label>
         <CustomDropdown
           value={salesRepValue?.id || ''}
           onChange={(value) => {
             const selectedUser = users.find(u => u.id === value) || null;
-
             setSelectedSalesRep(selectedUser);
           }}
           options={salesRepOptions}
-          placeholder={t('allSalesReps')}
+          placeholder="All Team Members"
         />
       </div>
     </div>

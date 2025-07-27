@@ -784,7 +784,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     value={visitForm.project}
                     onChange={(e) => setVisitForm({ ...visitForm, project: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   >
                     <option value="">{t('selectProject')}</option>
                     {projects?.map(project => (

@@ -58,7 +58,7 @@ interface DataContextType {
   addActivity: (activity: Omit<Activity, 'id'>) => void;
 
   // Statistics
-  getStatistics: (user?: { name: string; role: string; teamId?: string } | null) => {
+  getStatistics: (user?: { id: string; name: string; role: string; teamId?: string; teamLeaderId?: string | null } | null) => {
     totalProspects: number;
     activeLeads: number;
     todayMeetings: number;
@@ -1277,7 +1277,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // Statistics
-  const getStatistics = (user?: { name: string; role: string; teamId?: string } | null) => {
+  const getStatistics = (user?: { id: string; name: string; role: string; teamId?: string; teamLeaderId?: string | null } | null) => {
     let filteredLeads = leads;
     let filteredMeetings = meetings;
     let filteredContracts = contracts;
@@ -1288,10 +1288,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         filteredContracts = contracts.filter(contract => contract.createdBy === user.name);
       } else if (user.role === 'team_leader') {
         // Team leaders see their own and their sales reps' leads/meetings/contracts
-        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
-        filteredLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
-        filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
-        filteredContracts = contracts.filter(contract => contract.createdBy === user.name || salesReps.includes(contract.createdBy));
+        const teamMembers = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user.id).map(u => u.name);
+        filteredLeads = leads.filter(lead => lead.assignedTo === user.name || teamMembers.includes(lead.assignedTo));
+        filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || teamMembers.includes(meeting.assignedTo));
+        filteredContracts = contracts.filter(contract => contract.createdBy === user.name || teamMembers.includes(contract.createdBy));
       } else if (user.role === 'sales_admin' || user.role === 'admin') {
         // See all
       }

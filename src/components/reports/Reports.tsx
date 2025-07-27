@@ -100,7 +100,7 @@ const Reports: React.FC = () => {
       return users;
     } else if (currentUser?.role === 'team_leader') {
       return users.filter(u =>
-        (u.role === 'sales_rep' && u.teamId === currentUser.teamId) ||
+        (u.role === 'sales_rep' && u.teamLeaderId === currentUser.id) ||
         (u.name === currentUser.name)
       );
     }

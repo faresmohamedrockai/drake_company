@@ -324,20 +324,25 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   >
                     <option value="">{t('selectUser')}</option>
                     {(() => {
+                      if (!users) {
+                        return <option value="" disabled>{isLoadingUsers ? 'Loading users...' : 'No users available'}</option>;
+                      }
+
                       let assignableUsers = users;
 
                       if ((user?.role as string) === 'sales_rep') {
-                        assignableUsers = users!.filter(u => u.name === user?.name);
+                        assignableUsers = users.filter(u => u.name === user?.name);
                       } else if (user?.role === 'team_leader') {
-                        assignableUsers = users!.filter(u =>
+                        assignableUsers = users.filter(u =>
                           u.name === user.name ||
-                          (u.role === 'sales_rep' && u.teamId === user.teamId)
+                          (u.role === 'sales_rep' && u.teamLeaderId === user.id) ||
+                          (u.teamId === user.teamId && u.id !== user.id)
                         );
                       } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-                        assignableUsers = users!.filter(u => u.role !== 'admin' || user?.role === 'admin');
+                        assignableUsers = users.filter(u => u.role !== 'admin' || user?.role === 'admin');
                       }
 
-                      return assignableUsers!.map(u => (
+                      return assignableUsers.map(u => (
                         <option key={u.id} value={u.id}>{u.name} ({u.role})</option>
                       ));
                     })()}
@@ -395,9 +400,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                     // removed required
                   >
                     <option value="">{t('selectPropertyType')}</option>
-                    {properties?.map((item: Property) => (
-                      <option key={item.id} value={item.id}>{item.title}</option>
-                    ))}
+                    {!properties ? (
+                      <option value="" disabled>{isLoadingProperties ? 'Loading properties...' : 'No properties available'}</option>
+                    ) : (
+                      properties.map((item: Property) => (
+                        <option key={item.id} value={item.id}>{item.title}</option>
+                      ))
+                    )}
                   </select>
                   <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
