@@ -77,3 +77,8 @@ export const getLogs = async () => {
     const response = await axiosInterceptor.get('/logs');
     return response.data as Log[];
 }
+
+export const getLeadLogs = async (leadId: string) => {
+    const response = await axiosInterceptor.get(`/logs?leadId=${leadId}`);
+    return response.data as Log[];
+}

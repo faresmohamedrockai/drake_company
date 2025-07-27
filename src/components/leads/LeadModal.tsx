@@ -3,13 +3,15 @@ import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { X, Phone, Calendar, MessageSquare, Plus, Loader2 } from 'lucide-react';
-import { Lead, CallLog, VisitLog, Property, LeadStatus } from '../../types';
+import { Lead, CallLog, VisitLog, Property, LeadStatus, Log } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCw } from 'lucide-react';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project } from '../inventory/ProjectsTab';
 import { Id, toast } from 'react-toastify';
+import { formatDate, formatDateTime } from '../../utils/formatters';
+import { getLeadLogs } from '../../queries/queries';
 
 interface LeadModalProps {
   lead: Lead;
@@ -153,6 +155,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     queryKey: [`visits-${currentLead.id}`],
     staleTime: 1000 * 60 * 5,
     queryFn: () => getVisits()
+  });
+  const { data: logs, isLoading: isLoadingLogs } = useQuery<Log[]>({
+    queryKey: [`logs-${currentLead.id}`],
+    staleTime: 1000 * 60 * 5,
+    queryFn: () => getLeadLogs(currentLead.id!),
+    enabled: !!currentLead.id
   });
   // Sync currentLead with prop lead and refreshKey
   React.useEffect(() => {
@@ -511,6 +519,41 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                       properties?.find(property => property.id === currentLead.inventoryInterestId)?.title
                     }</p>
                   </div>
+                  {currentLead.createdAt && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">{t('createdAt') || 'Created At'}</label>
+                      <p className="text-sm text-gray-900">{formatDate(currentLead.createdAt)}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Activity Logs Section */}
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('activityLogs') || 'Activity Logs'}</h3>
+                <div className="space-y-3">
+                  {isLoadingLogs ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-500" />
+                      <span className="ml-2 text-gray-500">{t('loadingLogs') || 'Loading logs...'}</span>
+                    </div>
+                  ) : logs && Array.isArray(logs) && logs.length > 0 ? (
+                    logs.map((log: Log) => (
+                      <div key={log.id} className="bg-gray-50 p-4 rounded-lg border-l-4 border-blue-500">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-900">{String(log.action || '')}</span>
+                          <span className="text-xs text-gray-500">{log.createdAt ? formatDateTime(log.createdAt) : ''}</span>
+                        </div>
+                        <p className="text-sm text-gray-700 mb-2">{String(log.description || '')}</p>
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{String(log.userName || log.email || 'Unknown User')}</span>
+                          <span>{String(log.userRole || '')}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">{t('noActivityLogs') || 'No activity logs found'}</p>
+                  )}
                 </div>
               </div>
             </div>
