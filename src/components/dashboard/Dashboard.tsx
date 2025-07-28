@@ -107,7 +107,7 @@ const useLeadFiltering = (leads: Lead[], users: UserType[], user: any, selectedM
   return useMemo(() => {
     let filteredLeads = leads;
     
-    if (!user) return filteredLeads;
+    if (!user || !user.id || !user.role) return filteredLeads;
 
     if (user.role === 'sales_rep') {
       filteredLeads = leads.filter(lead => lead.owner?.id === user.id);
@@ -122,15 +122,10 @@ const useLeadFiltering = (leads: Lead[], users: UserType[], user: any, selectedM
         
         // TEMPORARY: Show all leads for team leaders until team structure is fixed
         console.log('Team Leader Filtering Debug:', {
-          teamLeader: user.name,
-          teamLeaderId: user.id,
-          directTeamMembers,
-          totalLeads: leads.length,
-          allLeads: leads.map(lead => ({
-            leadId: lead.id,
-            ownerId: lead.owner?.id,
-            ownerName: lead.owner?.name
-          }))
+          teamLeader: user?.name || 'Unknown',
+          teamLeaderId: user?.id || 'Unknown',
+          directTeamMembers: directTeamMembers.length,
+          totalLeads: leads.length
         });
         
         // For now, show all leads to ensure team leaders can see everything
@@ -471,6 +466,18 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   // Get dashboard data
   const { users, leads, meetings, logs, isLoading, user } = useDashboardData();
   
+  // Safety check - don't render if user is not available
+  if (!user || !user.id || !user.role) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+  
   // Filter state
   const [selectedManager, setSelectedManager] = useState<UserType | null>(null);
   const [selectedSalesRep, setSelectedSalesRep] = useState<UserType | null>(null);
@@ -490,7 +497,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   // Team leader specific metrics
   const teamLeaderMetrics = useMemo(() => {
-    if (user?.role !== 'team_leader') return null;
+    if (!user || user.role !== 'team_leader') return null;
     
     // If a specific person is selected, don't show team metrics
     if (selectedSalesRep) return null;
@@ -503,15 +510,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     const teamLeads = leads.filter(lead => lead.owner?.id !== user.id);
     
     console.log('Team Leader Metrics Debug:', {
-      teamLeader: user.name,
-      teamLeaderId: user.id,
-      directTeamMembers,
+      teamLeader: user?.name || 'Unknown',
+      teamLeaderId: user?.id || 'Unknown',
+      directTeamMembers: directTeamMembers.length,
       totalLeads: leads.length,
       myLeads: myLeads.length,
-      teamLeads: teamLeads.length,
-      filteredLeads: filteredLeads.length,
-      allUsers: users.map(u => ({ id: u.id, name: u.name, role: u.role, teamLeaderId: u.teamLeaderId })),
-      allLeads: leads.map(lead => ({ id: lead.id, ownerId: lead.owner?.id, ownerName: lead.owner?.name }))
+      teamLeads: teamLeads.length
     });
     
     return {
