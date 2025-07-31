@@ -101,7 +101,16 @@
     "inProgressTasks": "In Progress",
     "completedTasks": "Completed",
     "overdueTasks": "Overdue",
-    "completionRate": "Completion Rate"
+    "completionRate": "Completion Rate",
+    "tasksByPriority": "Tasks by Priority",
+    "tasksByType": "Tasks by Type",
+    "overallPerformance": "Overall task completion performance",
+    "excellent": "Excellent",
+    "good": "Good",
+    "fair": "Fair",
+    "needsImprovement": "Needs Improvement",
+    "active": "Active",
+    "attentionNeeded": "Attention needed"
   },
   
   "notifications": {
@@ -121,7 +130,13 @@
     "createTask": "Create New Task",
     "bulkUpdate": "Bulk Update",
     "exportTasks": "Export Tasks",
-    "importTasks": "Import Tasks"
+    "importTasks": "Import Tasks",
+    "viewPending": "View Pending",
+    "viewInProgress": "View In Progress",
+    "viewCompleted": "View Completed",
+    "viewOverdue": "View Overdue",
+    "viewDueToday": "View Due Today",
+    "viewHighPriority": "View High Priority"
   },
   
   "bulkActions": {
@@ -157,5 +172,36 @@
     "title": "Upcoming Deadlines",
     "description": "Tasks due in the next 7 days",
     "noUpcoming": "No upcoming deadlines"
+  },
+  
+  "debug": {
+    "debugInfo": "Debug Info",
+    "tasks": "Tasks",
+    "analysis": "Analysis",
+    "loading": "Loading",
+    "error": "Error",
+    "available": "Available",
+    "notAvailable": "Not Available",
+    "yes": "Yes",
+    "no": "No"
+  },
+  
+  "analysis": {
+    "title": "Task Analysis & Insights",
+    "totalActiveTasks": "Total Active Tasks",
+    "tasksInSystem": "Tasks in the system",
+    "pendingTasks": "Pending Tasks",
+    "awaitingAction": "Awaiting action",
+    "inProgress": "In Progress",
+    "currentlyBeingWorkedOn": "Currently being worked on",
+    "completed": "Completed",
+    "successfullyFinished": "Successfully finished",
+    "overdueTasks": "Overdue Tasks",
+    "tasksPastDueDate": "Tasks past their due date",
+    "dueToday": "Due Today",
+    "tasksDueToday": "Tasks due today",
+    "highPriority": "High Priority",
+    "highUrgentPriorityTasks": "High & urgent priority tasks",
+    "myTasks": "My Tasks"
   }
 } 

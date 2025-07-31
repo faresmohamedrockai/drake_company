@@ -48,52 +48,54 @@ export const BulkActionsBar: React.FC<BulkActionsBarProps> = React.memo(({
   const assignableUsers = getAssignableUsers();
 
   return (
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 flex items-center justify-between">
-      <div className="flex items-center space-x-4">
-        <span className="text-blue-700 font-medium">
-          {selectedCount} {t('leadsSelected') || 'leads selected'}
-        </span>
-        <button
-          onClick={onClearSelection}
-          className="text-blue-600 hover:text-blue-800 text-sm underline"
-          aria-label={t('clearSelection') || 'Clear selection'}
-        >
-          {t('clearSelection') || 'Clear selection'}
-        </button>
-      </div>
-      <div className="flex items-center space-x-2">
-        <select
-          value={bulkAssignToUserId}
-          onChange={(e) => onBulkAssignChange(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-          aria-label={t('selectUser') || 'Select user to assign'}
-        >
-          <option value="">{t('selectUser') || 'Select user to assign'}</option>
-          {assignableUsers.map(assignUser => (
-            <option key={assignUser.id} value={assignUser.id}>
-              {assignUser.name} ({assignUser.role})
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={onBulkAssign}
-          disabled={!bulkAssignToUserId || isUpdating}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            bulkAssignToUserId && !isUpdating
-              ? 'bg-blue-600 text-white hover:bg-blue-700' 
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-          }`}
-          aria-label={t('bulkAssign') || 'Assign Selected'}
-        >
-          {isUpdating ? (
-            <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              {t('assigning') || 'Assigning...'}
-            </div>
-          ) : (
-            t('bulkAssign') || 'Assign Selected'
-          )}
-        </button>
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <span className="text-blue-700 font-medium text-sm sm:text-base">
+            {selectedCount} {t('leadsSelected') || 'leads selected'}
+          </span>
+          <button
+            onClick={onClearSelection}
+            className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm underline"
+            aria-label={t('clearSelection') || 'Clear selection'}
+          >
+            {t('clearSelection') || 'Clear selection'}
+          </button>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <select
+            value={bulkAssignToUserId}
+            onChange={(e) => onBulkAssignChange(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full sm:w-auto"
+            aria-label={t('selectUser') || 'Select user to assign'}
+          >
+            <option value="">{t('selectUser') || 'Select user to assign'}</option>
+            {assignableUsers.map(assignUser => (
+              <option key={assignUser.id} value={assignUser.id}>
+                {assignUser.name} ({assignUser.role})
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={onBulkAssign}
+            disabled={!bulkAssignToUserId || isUpdating}
+            className={`px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm w-full sm:w-auto ${
+              bulkAssignToUserId && !isUpdating
+                ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+            aria-label={t('bulkAssign') || 'Assign Selected'}
+          >
+            {isUpdating ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-white mr-2"></div>
+                <span className="text-xs sm:text-sm">{t('assigning') || 'Assigning...'}</span>
+              </div>
+            ) : (
+              <span className="text-xs sm:text-sm">{t('bulkAssign') || 'Assign Selected'}</span>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

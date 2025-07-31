@@ -74,10 +74,10 @@ const TaskStatistics: React.FC<TaskStatisticsProps> = ({ statistics }) => {
   };
 
   const getCompletionStatus = () => {
-    if (statistics.completionRate >= 80) return { status: 'Excellent', color: 'text-green-600', bgColor: 'bg-green-50' };
-    if (statistics.completionRate >= 60) return { status: 'Good', color: 'text-blue-600', bgColor: 'bg-blue-50' };
-    if (statistics.completionRate >= 40) return { status: 'Fair', color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
-    return { status: 'Needs Improvement', color: 'text-red-600', bgColor: 'bg-red-50' };
+    if (statistics.completionRate >= 80) return { status: t('statistics.excellent'), color: 'text-green-600', bgColor: 'bg-green-50' };
+    if (statistics.completionRate >= 60) return { status: t('statistics.good'), color: 'text-blue-600', bgColor: 'bg-blue-50' };
+    if (statistics.completionRate >= 40) return { status: t('statistics.fair'), color: 'text-yellow-600', bgColor: 'bg-yellow-50' };
+    return { status: t('statistics.needsImprovement'), color: 'text-red-600', bgColor: 'bg-red-50' };
   };
 
   const completionStatus = getCompletionStatus();
@@ -95,7 +95,7 @@ const TaskStatistics: React.FC<TaskStatisticsProps> = ({ statistics }) => {
                   <div className="flex items-center mt-1">
                     {getTrendIcon(card.trend)}
                     <span className={`text-xs ml-1 ${card.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                      {card.trend === 'up' ? 'Active' : 'Attention needed'}
+                      {card.trend === 'up' ? t('statistics.active') : t('statistics.attentionNeeded')}
                     </span>
                   </div>
                 )}
@@ -113,7 +113,7 @@ const TaskStatistics: React.FC<TaskStatisticsProps> = ({ statistics }) => {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-lg font-medium text-gray-900">{t('statistics.completionRate')}</h3>
-            <p className="text-sm text-gray-500">Overall task completion performance</p>
+            <p className="text-sm text-gray-500">{t('statistics.overallPerformance')}</p>
           </div>
           <div className="text-right">
             <span className="text-3xl font-bold text-green-600">
@@ -142,7 +142,7 @@ const TaskStatistics: React.FC<TaskStatisticsProps> = ({ statistics }) => {
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Priority Distribution */}
         <div className="bg-white rounded-lg shadow-sm border p-4">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Tasks by Priority</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">{t('statistics.tasksByPriority')}</h3>
           <div className="space-y-3">
             {statistics.tasksByPriority.map((item, index) => {
               const percentage = statistics.totalTasks > 0 
@@ -197,7 +197,7 @@ const TaskStatistics: React.FC<TaskStatisticsProps> = ({ statistics }) => {
 
         {/* Type Distribution */}
         <div className="bg-white rounded-lg shadow-sm border p-4">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Tasks by Type</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">{t('statistics.tasksByType')}</h3>
           <div className="space-y-3">
             {statistics.tasksByType.map((item, index) => {
               const percentage = statistics.totalTasks > 0 

@@ -57,13 +57,13 @@ export const CallOutcomeCards: React.FC<CallOutcomeCardsProps> = React.memo(({
   if (callOutcomeCards.length === 0) return null;
 
   return (
-    <div className="mb-2 mt-6">
-      <h2 className="text-lg font-semibold mb-4">
+    <div className="mb-2 mt-4 sm:mt-6">
+      <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
         {t('callOutcomesCards') !== 'callOutcomesCards' ? t('callOutcomesCards') : addSpacesToCamelCase('Call Outcomes')}
       </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
         {callOutcomeCards.map(card => {
-          const icon = outcomeIcons[card.key] || <Phone className="h-6 w-6 text-white" />;
+          const icon = outcomeIcons[card.key] || <Phone className="h-5 w-5 sm:h-6 sm:w-6 text-white" />;
           const iconBg = outcomeColors[card.key] || 'bg-blue-400';
           const isActive = activeCard === card.key;
           
@@ -71,7 +71,7 @@ export const CallOutcomeCards: React.FC<CallOutcomeCardsProps> = React.memo(({
             <div
               key={card.key}
               onClick={() => onCardClick(card.key)}
-              className={`bg-white rounded-xl shadow p-5 flex items-center border-2 transition-all hover:shadow-lg cursor-pointer ${
+              className={`bg-white rounded-xl shadow p-3 sm:p-5 flex items-center border-2 transition-all hover:shadow-lg cursor-pointer ${
                 isActive ? 'border-green-400 bg-green-50' : 'border-transparent'
               }`}
               role="button"
@@ -84,14 +84,14 @@ export const CallOutcomeCards: React.FC<CallOutcomeCardsProps> = React.memo(({
                 }
               }}
             >
-              <div className={`flex items-center justify-center rounded-full h-12 w-12 ${iconBg} mr-4`}>
+              <div className={`flex items-center justify-center rounded-full h-10 w-10 sm:h-12 sm:w-12 ${iconBg} mr-3 sm:mr-4`}>
                 {icon}
               </div>
               <div className="flex-1">
-                <div className="text-gray-700 font-medium">{getCardLabel(card.key, t)}</div>
-                <div className="text-2xl font-bold">{card.count}</div>
-                <div className="flex items-center text-sm mt-1 text-gray-400">
-                  <Minus className="h-4 w-4 mr-1" />0%
+                <div className="text-gray-700 font-medium text-sm sm:text-base">{getCardLabel(card.key, t)}</div>
+                <div className="text-xl sm:text-2xl font-bold">{card.count}</div>
+                <div className="flex items-center text-xs sm:text-sm mt-1 text-gray-400">
+                  <Minus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />0%
                 </div>
               </div>
             </div>

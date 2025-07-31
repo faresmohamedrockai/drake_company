@@ -85,13 +85,13 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
   const fullCards = dashboardCards;
 
   return (
-    <div className="mb-2 mt-6">
-      <h2 className="text-lg font-semibold mb-4">
+    <div className="mb-2 mt-4 sm:mt-6">
+      <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
         {t('leadStatusCards') !== 'leadStatusCards' ? t('leadStatusCards') : addSpacesToCamelCase('Lead Status')}
       </h2>
       <div className="w-full">
         {/* First row: compact cards + Show More button if needed */}
-        <div className="flex flex-row gap-1 bg-white rounded-lg p-1 border">
+        <div className="flex flex-wrap gap-1 bg-white rounded-lg p-1 border">
           {compactCards.map((card, idx) => {
             if (!card) return null;
             
@@ -101,12 +101,12 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
                 <button
                   key="show-more"
                   onClick={() => onToggleShowAll(!showAllCards)}
-                  className={`px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap
+                  className={`px-2 sm:px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap text-xs sm:text-sm
                     ${showAllCards
                       ? 'border-b-4 border-blue-600 bg-blue-50 text-blue-700 font-bold'
                       : 'border-b-4 border-transparent text-gray-700 hover:bg-gray-100'}
                   `}
-                  style={{ minWidth: 90 }}
+                  style={{ minWidth: 'fit-content' }}
                   aria-label={showAllCards ? t('showLess') : t('showMore')}
                 >
                   {showAllCards ? (t('showLess') !== 'showLess' ? t('showLess') : 'Show Less') : (t('showMore') !== 'showMore' ? t('showMore') : 'Show More')}
@@ -120,16 +120,17 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
               <button
                 key={card.key}
                 onClick={() => onCardClick(card.key)}
-                className={`px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap
+                className={`px-2 sm:px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap text-xs sm:text-sm
                   ${isActive
                     ? 'border-b-4 border-blue-600 bg-blue-50 text-blue-700 font-bold'
                     : 'border-b-4 border-transparent text-gray-700 hover:bg-gray-100'}
                 `}
-                style={{ minWidth: 90 }}
+                style={{ minWidth: 'fit-content' }}
                 aria-label={`${getCardLabel(card.key, t)} (${card.count})`}
               >
-                <span>{getCardLabel(card.key, t)}</span>
-                <span className={`ml-2 font-bold ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
+                <span className="hidden xs:inline">{getCardLabel(card.key, t)}</span>
+                <span className="xs:hidden">{getCardLabel(card.key, t).split(' ')[0]}</span>
+                <span className={`ml-1 sm:ml-2 font-bold ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
                   {card.count}
                 </span>
               </button>
@@ -139,7 +140,7 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
         
         {/* Second row: rest of the cards, only if showAllCards is true */}
         {showAllCards && fullCards.length > compactCards.length && (
-          <div className="flex flex-row gap-1 bg-white rounded-lg p-1 border mt-2">
+          <div className="flex flex-wrap gap-1 bg-white rounded-lg p-1 border mt-2">
             {fullCards.slice(compactCards.length).map(card => {
               if (!card) return null;
               const isActive = activeCard === card.key;
@@ -147,16 +148,17 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
                 <button
                   key={card.key}
                   onClick={() => onCardClick(card.key)}
-                  className={`px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap
+                  className={`px-2 sm:px-4 py-2 flex items-center rounded-md border transition-all whitespace-nowrap text-xs sm:text-sm
                     ${isActive
                       ? 'border-b-4 border-blue-600 bg-blue-50 text-blue-700 font-bold'
                       : 'border-b-4 border-transparent text-gray-700 hover:bg-gray-100'}
                   `}
-                  style={{ minWidth: 90 }}
+                  style={{ minWidth: 'fit-content' }}
                   aria-label={`${getCardLabel(card.key, t)} (${card.count})`}
                 >
-                  <span>{getCardLabel(card.key, t)}</span>
-                  <span className={`ml-2 font-bold ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
+                  <span className="hidden xs:inline">{getCardLabel(card.key, t)}</span>
+                  <span className="xs:hidden">{getCardLabel(card.key, t).split(' ')[0]}</span>
+                  <span className={`ml-1 sm:ml-2 font-bold ${isActive ? 'text-blue-600' : 'text-gray-500'}`}>
                     {card.count}
                   </span>
                 </button>
@@ -166,7 +168,7 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
         )}
       </div>
       {fullCards.length === 0 && (
-        <div className="text-gray-500 text-center py-4">
+        <div className="text-gray-500 text-center py-4 text-sm sm:text-base">
           {t('noStatusCards') || 'No status cards to display.'}
         </div>
       )}

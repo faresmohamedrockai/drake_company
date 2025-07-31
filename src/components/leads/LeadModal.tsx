@@ -25,7 +25,7 @@ function addSpacesToCamelCase(text: string) {
 
 const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const { user } = useAuth();
-  const { t } = useTranslation('leads');
+  const { t, i18n } = useTranslation('leads');
   const [activeTab, setActiveTab] = useState('details');
   const [newNote, setNewNote] = useState('');
   const [showCallForm, setShowCallForm] = useState(false);
@@ -298,10 +298,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] overflow-y-auto relative shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center z-10 rounded-t-xl">
           <h2 className="text-xl font-semibold text-gray-900">{t('leadDetails')}</h2>
           <button
             onClick={onClose}
@@ -312,30 +312,55 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         </div>
 
         {/* Lead Details */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-8 border-b border-gray-200">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
-              <p className="text-sm text-gray-900">{currentLead.contact || 'Not specified'}</p>
+              <p className="text-sm text-gray-900 font-mono">{currentLead.contact || 'Not specified'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('budget')}</label>
-              <p className="text-sm text-gray-900">{currentLead.budget || 'Not specified'}</p>
+              <p className="text-sm text-gray-900">
+                {currentLead.budget ? 
+                  new Intl.NumberFormat('en-US', { 
+                    style: 'currency', 
+                    currency: 'EGP',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                  }).format(currentLead.budget) : 
+                  'Not specified'
+                }
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('interest')}</label>
-              <p className="text-sm text-gray-900">{
-                properties?.find(property => property.id === currentLead.inventoryInterestId)?.title || 'Not specified'
-              }</p>
+              <div className="text-sm text-gray-900">
+                {(() => {
+                  const property = properties?.find(property => property.id === currentLead.inventoryInterestId);
+                  if (!property) return 'Not specified';
+                  
+                  // Display both English and Arabic names if available
+                  const hasBothNames = property.titleEn && property.titleAr;
+                  if (hasBothNames) {
+                    return (
+                      <div className="space-y-1">
+                        <div className="font-medium">{property.titleEn}</div>
+                        <div className="text-gray-600 font-arabic">{property.titleAr}</div>
+                      </div>
+                    );
+                  }
+                  return property.title || property.titleEn || property.titleAr || 'Not specified';
+                })()}
+              </div>
             </div>
           </div>
 
-          {/* Animated Deal Progress Bar */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">{t('dealProgress')}</label>
+          {/* Redesigned Deal Progress Tracker */}
+          <div className="mb-8">
+            <label className="block text-sm font-medium text-gray-700 mb-4 text-center w-full">{t('dealProgress')}</label>
 
             <div className="relative w-full">
-              <div className="flex items-center justify-center space-x-1 md:space-x-2 overflow-x-auto py-2 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <div className="flex items-center justify-center space-x-1 md:space-x-2 overflow-x-auto py-4 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {isSpecialStatus && currentSpecialStatus ? (
                   // Show single step for special statuses
                   <div className="flex items-center min-w-max">
@@ -345,12 +370,26 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                       className="flex flex-col items-center relative flex-shrink-0"
                     >
-                      <div className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300 bg-orange-500 border-orange-500 text-white">
+                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm font-bold border-3 transition-all duration-300 bg-orange-500 border-orange-500 text-white shadow-lg">
                         !
                       </div>
-                      <span className="mt-1 md:mt-2 text-xs font-medium text-center w-16 md:w-20 text-orange-600">
-                        {currentSpecialStatus?.label || 'Unknown Status'}
-                      </span>
+                      <div className="mt-2 text-center w-16 md:w-20 text-orange-600">
+                        <div className="text-xs font-medium">{currentSpecialStatus?.label || 'Unknown Status'}</div>
+                        {i18n.language === 'ar' && (
+                          <div className="text-xs font-arabic mt-1 opacity-80">
+                            {(() => {
+                              switch (currentSpecialStatus?.value) {
+                                case LeadStatus.NO_ANSWER:
+                                  return 'لا يوجد رد';
+                                case LeadStatus.NOT_INTERSTED_NOW:
+                                  return 'غير مهتم الآن';
+                                default:
+                                  return '';
+                              }
+                            })()}
+                          </div>
+                        )}
+                      </div>
                     </motion.div>
                   </div>
                 ) : (
@@ -368,28 +407,79 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                             className={`flex flex-col items-center relative flex-shrink-0`}
                           >
                             <div
-                              className={`w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors duration-300
+                              className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm font-bold border-3 transition-all duration-300 shadow-lg
                                 ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
                                   isCompleted ? 'bg-green-500 border-green-500 text-white' :
-                                    isActive ? 'bg-blue-600 border-blue-600 text-white' :
+                                    isActive ? 'bg-blue-600 border-blue-600 text-white shadow-xl' :
                                       'bg-gray-200 border-gray-300 text-gray-600'}
                               `}
                             >
                               {index + 1}
                             </div>
-                            <span className={`mt-1 md:mt-2 text-xs font-medium text-center w-16 md:w-20
+                            <div className={`mt-2 text-center w-16 md:w-20 leading-tight
                               ${isCancelled ? 'text-red-600' :
                                 isCompleted ? 'text-green-600' :
-                                  isActive ? 'text-blue-600' :
+                                  isActive ? 'text-blue-600 font-semibold' :
                                     'text-gray-500'}
-                            `}>{stage.label}</span>
+                            `}>
+                              {i18n.language === 'ar' ? (
+                                // Arabic layout: flex row (RTL)
+                                <div className="flex flex-row items-center justify-center space-x-1 space-x-reverse">
+                                  <div className="text-xs font-arabic font-medium">
+                                    {(() => {
+                                      switch (stage.value) {
+                                        case LeadStatus.FRESH_LEAD:
+                                          return 'عميل محتمل جديد';
+                                        case LeadStatus.FOLLOW_UP:
+                                          return 'متابعة';
+                                        case LeadStatus.SCHEDULED_VISIT:
+                                          return 'زيارة مجدولة';
+                                        case LeadStatus.OPEN_DEAL:
+                                          return 'صفقة مفتوحة';
+                                        case LeadStatus.RESERVATION:
+                                          return 'حجز';
+                                        case LeadStatus.CLOSED_DEAL:
+                                          return 'صفقة مغلقة';
+                                        default:
+                                          return '';
+                                      }
+                                    })()}
+                                  </div>
+                                </div>
+                              ) : (
+                                // English layout: flex column (LTR)
+                                <div className="flex flex-col items-center">
+                                  <div className="text-xs font-medium">{stage.label}</div>
+                                  <div className="text-xs font-arabic opacity-70 mt-1">
+                                    {(() => {
+                                      switch (stage.value) {
+                                        case LeadStatus.FRESH_LEAD:
+                                          return 'عميل محتمل جديد';
+                                        case LeadStatus.FOLLOW_UP:
+                                          return 'متابعة';
+                                        case LeadStatus.SCHEDULED_VISIT:
+                                          return 'زيارة مجدولة';
+                                        case LeadStatus.OPEN_DEAL:
+                                          return 'صفقة مفتوحة';
+                                        case LeadStatus.RESERVATION:
+                                          return 'حجز';
+                                        case LeadStatus.CLOSED_DEAL:
+                                          return 'صفقة مغلقة';
+                                        default:
+                                          return '';
+                                      }
+                                    })()}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </motion.div>
                           {index < mainStatusStages.length - 1 && (
                             <motion.div
                               initial={{ width: 0 }}
-                              animate={{ width: 20 }}
+                              animate={{ width: 16 }}
                               transition={{ duration: 0.5, delay: 0.1 * index }}
-                              className={`h-1 mx-1 rounded-full transition-colors duration-300 flex-shrink-0
+                              className={`h-1.5 mx-1 rounded-full transition-all duration-300 flex-shrink-0
                                 ${isCancelled ? 'bg-red-500' :
                                   index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
                               `}
@@ -404,92 +494,132 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               </div>
             </div>
             {isCancelled && (
-              <div className="mt-4 text-center">
-                <span className="inline-block bg-red-100 text-red-700 px-4 py-2 rounded font-semibold text-lg">
+              <div className="mt-6 text-center">
+                <span className="inline-block bg-red-100 text-red-700 px-6 py-3 rounded-lg font-semibold text-lg shadow-md">
                   {t('dealCancelled', 'Deal Cancelled')}
                 </span>
               </div>
             )}
           </div>
 
-          {/* Quick Actions */}
-          <div className="flex space-x-4">
-            <button
-              onClick={() => setShowCallForm(true)}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-            >
-              <Phone className="h-4 w-4 mr-2" />
-              {t('logCall')}
-            </button>
-            <button
-              onClick={() => setShowVisitForm(true)}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              {t('scheduleVisit')}
-            </button>
-            {canEdit && (
-              <select
-                value={currentLead.status}
-                onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
-                disabled={isUpdatingLead}
-                className={`px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500
-                  ${isUpdatingLead ? 'bg-gray-100 cursor-not-allowed opacity-50' : ''}
-                  ${currentLead.status === 'reservation'
-                    ? 'text-blue-600'
-                    : currentLead.status === 'not_intersted_now'
-                      ? 'text-gray-600'
-                      : currentLead.status === 'no_answer'
-                        ? 'text-orange-500'
-                        : ''}`}
+          {/* Enhanced Quick Actions */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              <button
+                onClick={() => setShowCallForm(true)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg"
               >
-                <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
-                <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
-                <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
-                <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
-                <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
-                <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
-                <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
-
-                <option value={LeadStatus.NO_ANSWER}>{"Not Answered"}</option>
-                <option value={LeadStatus.NOT_INTERSTED_NOW}>{"Not Interested Now"}</option>
-              </select>
+                <Phone className="h-5 w-5 mr-2" />
+                <span className="font-medium">{t('logCall')}</span>
+              </button>
+              <button
+                onClick={() => setShowVisitForm(true)}
+                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg"
+              >
+                <Calendar className="h-5 w-5 mr-2" />
+                <span className="font-medium">{t('scheduleVisit')}</span>
+              </button>
+            </div>
+            {canEdit && (
+              <div className="flex-shrink-0">
+                <select
+                  value={currentLead.status}
+                  onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
+                  disabled={isUpdatingLead}
+                  className={`px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 shadow-sm
+                    ${isUpdatingLead ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'hover:border-gray-400'}
+                    ${currentLead.status === 'reservation'
+                      ? 'text-blue-600 bg-blue-50 border-blue-300'
+                      : currentLead.status === 'not_intersted_now'
+                        ? 'text-gray-600 bg-gray-50 border-gray-300'
+                        : currentLead.status === 'no_answer'
+                          ? 'text-orange-500 bg-orange-50 border-orange-300'
+                          : 'bg-white'}`}
+                >
+                  <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
+                  <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
+                  <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
+                  <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+                  <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
+                  <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
+                  <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
+                  <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
+                  <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
+                </select>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="px-6">
+        {/* Enhanced Tabs */}
+        <div className="px-6 pt-4">
           <div className="flex space-x-8 border-b border-gray-200">
             {['details', 'calls', 'visits', 'notes'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-2 text-sm font-medium capitalize ${activeTab === tab
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-                  }`}
+                className={`py-4 px-3 text-sm font-medium capitalize transition-all duration-200 relative ${
+                  activeTab === tab
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
+                }`}
               >
                 {t(tab)}
+                {activeTab === tab && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"
+                    initial={false}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="p-6">
+        {/* Enhanced Tab Content */}
+        <div className="p-6 pt-8">
           {activeTab === 'details' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('contactInformation')}</h3>
-                <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('contactInformation')}</h3>
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('name')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.nameEn || 'Not specified'}</p>
+                    <div className="text-sm text-gray-900">
+                      {(() => {
+                        const hasBothNames = currentLead.nameEn && currentLead.nameAr;
+                        if (hasBothNames) {
+                          return (
+                            <div className="space-y-1">
+                              <div className="font-medium">{currentLead.nameEn}</div>
+                              <div className="text-gray-600 font-arabic">{currentLead.nameAr}</div>
+                            </div>
+                          );
+                        }
+                        return currentLead.nameEn || currentLead.nameAr || 'Not specified';
+                      })()}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('phone')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.contact || 'Not specified'}</p>
+                    <p className="text-sm text-gray-900 font-mono">{currentLead.contact || 'Not specified'}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">{t('email')}</label>
+                    <p className="text-sm text-gray-900">
+                      {currentLead.email ? (
+                        <a 
+                          href={`mailto:${currentLead.email}`}
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          {currentLead.email}
+                        </a>
+                      ) : (
+                        'Not specified'
+                      )}
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('source')}</label>
@@ -498,22 +628,65 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('leadDetailsSection')}</h3>
-                <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('leadDetailsSection')}</h3>
+                <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('status')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.status || 'Not specified'}</p>
+                    <div className="text-sm">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        currentLead.status === 'scheduled_visit' ? 'bg-blue-100 text-blue-800' :
+                        currentLead.status === 'open_deal' ? 'bg-green-100 text-green-800' :
+                        currentLead.status === 'closed_deal' ? 'bg-purple-100 text-purple-800' :
+                        currentLead.status === 'cancellation' ? 'bg-red-100 text-red-800' :
+                        currentLead.status === 'no_answer' ? 'bg-orange-100 text-orange-800' :
+                        currentLead.status === 'not_intersted_now' ? 'bg-gray-100 text-gray-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {t(currentLead.status) || currentLead.status || 'Not specified'}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('budget')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.budget || 'Not specified'}</p>
+                    <p className="text-sm text-gray-900">
+                      {currentLead.budget ? 
+                        new Intl.NumberFormat('en-US', { 
+                          style: 'currency', 
+                          currency: 'EGP',
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0
+                        }).format(currentLead.budget) : 
+                        'Not specified'
+                      }
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('interest')}</label>
-                    <p className="text-sm text-gray-900">{
-                      properties?.find(property => property.id === currentLead.inventoryInterestId)?.title || 'Not specified'
-                    }</p>
+                    <div className="text-sm text-gray-900">
+                      {(() => {
+                        const property = properties?.find(property => property.id === currentLead.inventoryInterestId);
+                        if (!property) return 'Not specified';
+                        
+                        // Display both English and Arabic names if available
+                        const hasBothNames = property.titleEn && property.titleAr;
+                        if (hasBothNames) {
+                          return (
+                            <div className="space-y-1">
+                              <div className="font-medium">{property.titleEn}</div>
+                              <div className="text-gray-600 font-arabic">{property.titleAr}</div>
+                            </div>
+                          );
+                        }
+                        return property.title || property.titleEn || property.titleAr || 'Not specified';
+                      })()}
+                    </div>
                   </div>
+                  {currentLead.owner && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">{t('owner') || 'Owner'}</label>
+                      <p className="text-sm text-gray-900">{currentLead.owner.name || 'Not specified'}</p>
+                    </div>
+                  )}
                   {currentLead.createdAt && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700">{t('createdAt') || 'Created At'}</label>
@@ -529,17 +702,17 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
           {activeTab === 'calls' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">{t('callHistory')}</h3>
                 <button
                   onClick={() => setShowCallForm(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center shadow-md hover:shadow-lg"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {t('addCall')}
                 </button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {
                   calls && calls.length > 0 ?
                     calls.map((call) => (
@@ -555,9 +728,24 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                           </div>
                           <div>
                             <span className="text-sm text-gray-600">{t('project')}: </span>
-                            <span className="text-sm text-gray-900">{
-                              projects?.find(project => project.id === call.projectId)?.nameEn || 'Not specified'
-                            }</span>
+                            <div className="text-sm text-gray-900">
+                              {(() => {
+                                const project = projects?.find(project => project.id === call.projectId);
+                                if (!project) return 'Not specified';
+                                
+                                // Display both English and Arabic names if available
+                                const hasBothNames = project.nameEn && project.nameAr;
+                                if (hasBothNames) {
+                                  return (
+                                    <div className="space-y-1">
+                                      <div className="font-medium">{project.nameEn}</div>
+                                      <div className="text-gray-600 font-arabic">{project.nameAr}</div>
+                                    </div>
+                                  );
+                                }
+                                return project.nameEn || project.nameAr || 'Not specified';
+                              })()}
+                            </div>
                           </div>
                         </div>
                         <p className="text-sm text-gray-700">{call.notes || 'No notes'}</p>
@@ -569,17 +757,17 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
           {activeTab === 'visits' && (
             <div>
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-gray-900">{t('visitHistory')}</h3>
                 <button
                   onClick={() => setShowVisitForm(true)}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all duration-200 flex items-center shadow-md hover:shadow-lg"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   {t('addVisit')}
                 </button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {visits && visits.length > 0 &&
                   visits.map((visit) => (
                     <div key={visit.id} className="bg-gray-50 p-4 rounded-lg">
@@ -590,9 +778,24 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                         <div>
                           <span className="text-sm text-gray-600">{t('project')}: </span>
-                          <span className="text-sm text-gray-900">{
-                            projects?.find(project => project.id === visit.project)?.nameEn || 'Not specified'
-                          }</span>
+                          <div className="text-sm text-gray-900">
+                            {(() => {
+                              const project = projects?.find(project => project.id === visit.project);
+                              if (!project) return 'Not specified';
+                              
+                              // Display both English and Arabic names if available
+                              const hasBothNames = project.nameEn && project.nameAr;
+                              if (hasBothNames) {
+                                return (
+                                  <div className="space-y-1">
+                                    <div className="font-medium">{project.nameEn}</div>
+                                    <div className="text-gray-600 font-arabic">{project.nameAr}</div>
+                                  </div>
+                                );
+                              }
+                              return project.nameEn || project.nameAr || 'Not specified';
+                            })()}
+                          </div>
                         </div>
                         <div>
                           <span className="text-sm text-gray-600">{t('objections')}: </span>
@@ -611,9 +814,9 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
           {activeTab === 'notes' && (
             <div>
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('notes')}</h3>
-                <div className="mb-4">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('notes')}</h3>
+                <div className="mb-6">
                   <textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
@@ -629,7 +832,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   </button>
                 </div>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {notes && notes.length > 0 &&
                   notes.map((note, index) => (
                     <div key={index} className="bg-gray-50 p-4 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-2">
@@ -740,7 +943,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   >
                     <option value="">{t('selectProject')}</option>
                     {projects?.map(project => (
-                      <option key={project.id} value={project.id}>{project.nameEn}</option>
+                      <option key={project.id} value={project.id}>
+                        {project.nameEn && project.nameAr 
+                          ? `${project.nameEn} / ${project.nameAr}`
+                          : project.nameEn || project.nameAr || 'Unnamed Project'
+                        }
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -798,7 +1006,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   >
                     <option value="">{t('selectProject')}</option>
                     {projects?.map(project => (
-                      <option key={project.id} value={project.nameEn}>{project.nameEn}</option>
+                      <option key={project.id} value={project.nameEn}>
+                        {project.nameEn && project.nameAr 
+                          ? `${project.nameEn} / ${project.nameAr}`
+                          : project.nameEn || project.nameAr || 'Unnamed Project'
+                        }
+                      </option>
                     ))}
                   </select>
                 </div>

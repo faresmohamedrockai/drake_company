@@ -413,14 +413,14 @@ const TasksManagement: React.FC = () => {
       {/* Task Analysis & Insights */}
       {(taskAnalysis || tasks.length > 0) && (
         <div className="mb-6 bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Task Analysis & Insights</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">{t('analysis.title')}</h3>
           
           {/* Debug info - remove in production */}
           {process.env.NODE_ENV === 'development' && (
             <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
-                <strong>Debug Info:</strong> Tasks: {tasks.length}, Analysis: {taskAnalysis ? 'Available' : 'Not Available'}, 
-                Loading: {tasksLoading ? 'Yes' : 'No'}, Error: {tasksError ? 'Yes' : 'No'}
+                <strong>{t('debug.debugInfo')}:</strong> {t('debug.tasks')}: {tasks.length}, {t('debug.analysis')}: {taskAnalysis ? t('debug.available') : t('debug.notAvailable')}, 
+                {t('debug.loading')}: {tasksLoading ? t('debug.yes') : t('debug.no')}, {t('debug.error')}: {tasksError ? t('debug.yes') : t('debug.no')}
               </p>
             </div>
           )}
@@ -430,54 +430,54 @@ const TasksManagement: React.FC = () => {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-800">Total Active Tasks</p>
+                  <p className="text-sm font-medium text-blue-800">{t('analysis.totalActiveTasks')}</p>
                   <p className="text-2xl font-bold text-blue-900">{tasks.length}</p>
                 </div>
                 <BarChart3 className="w-8 h-8 text-blue-600" />
               </div>
-              <p className="text-sm text-blue-700 mt-2">Tasks in the system</p>
+              <p className="text-sm text-blue-700 mt-2">{t('analysis.tasksInSystem')}</p>
             </div>
 
             {/* Show pending tasks count */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Pending Tasks</p>
+                  <p className="text-sm font-medium text-gray-800">{t('analysis.pendingTasks')}</p>
                   <p className="text-2xl font-bold text-gray-900">
                     {tasks.filter(task => task.status === 'pending').length}
                   </p>
                 </div>
                 <Clock className="w-8 h-8 text-gray-600" />
               </div>
-              <p className="text-sm text-gray-700 mt-2">Awaiting action</p>
+              <p className="text-sm text-gray-700 mt-2">{t('analysis.awaitingAction')}</p>
             </div>
 
             {/* Show in progress tasks count */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-800">In Progress</p>
+                  <p className="text-sm font-medium text-blue-800">{t('analysis.inProgress')}</p>
                   <p className="text-2xl font-bold text-blue-900">
                     {tasks.filter(task => task.status === 'in_progress').length}
                   </p>
                 </div>
                 <Clock className="w-8 h-8 text-blue-600" />
               </div>
-              <p className="text-sm text-blue-700 mt-2">Currently being worked on</p>
+              <p className="text-sm text-blue-700 mt-2">{t('analysis.currentlyBeingWorkedOn')}</p>
             </div>
 
             {/* Show completed tasks count */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-green-800">Completed</p>
+                  <p className="text-sm font-medium text-green-800">{t('analysis.completed')}</p>
                   <p className="text-2xl font-bold text-green-900">
                     {tasks.filter(task => task.status === 'completed').length}
                   </p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
               </div>
-              <p className="text-sm text-green-700 mt-2">Successfully finished</p>
+              <p className="text-sm text-green-700 mt-2">{t('analysis.successfullyFinished')}</p>
             </div>
 
             {taskAnalysis && (
@@ -486,12 +486,12 @@ const TasksManagement: React.FC = () => {
                   <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-red-800">Overdue Tasks</p>
+                        <p className="text-sm font-medium text-red-800">{t('analysis.overdueTasks')}</p>
                         <p className="text-2xl font-bold text-red-900">{taskAnalysis.overdue.length}</p>
                       </div>
                       <AlertCircle className="w-8 h-8 text-red-600" />
                     </div>
-                    <p className="text-sm text-red-700 mt-2">Tasks past their due date</p>
+                    <p className="text-sm text-red-700 mt-2">{t('analysis.tasksPastDueDate')}</p>
                   </div>
                 )}
                 
@@ -499,12 +499,12 @@ const TasksManagement: React.FC = () => {
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-orange-800">Due Today</p>
+                        <p className="text-sm font-medium text-orange-800">{t('analysis.dueToday')}</p>
                         <p className="text-2xl font-bold text-orange-900">{taskAnalysis.dueToday.length}</p>
                       </div>
                       <Calendar className="w-8 h-8 text-orange-600" />
                     </div>
-                    <p className="text-sm text-orange-700 mt-2">Tasks due today</p>
+                    <p className="text-sm text-orange-700 mt-2">{t('analysis.tasksDueToday')}</p>
                   </div>
                 )}
                 
@@ -512,12 +512,12 @@ const TasksManagement: React.FC = () => {
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-purple-800">High Priority</p>
+                        <p className="text-sm font-medium text-purple-800">{t('analysis.highPriority')}</p>
                         <p className="text-2xl font-bold text-purple-900">{taskAnalysis.highPriority.length}</p>
                       </div>
                       <AlertCircle className="w-8 h-8 text-purple-600" />
                     </div>
-                    <p className="text-sm text-purple-700 mt-2">High & urgent priority tasks</p>
+                    <p className="text-sm text-purple-700 mt-2">{t('analysis.highUrgentPriorityTasks')}</p>
                   </div>
                 )}
                 
@@ -525,12 +525,12 @@ const TasksManagement: React.FC = () => {
                   <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-indigo-800">My Tasks</p>
+                        <p className="text-sm font-medium text-indigo-800">{t('analysis.myTasks')}</p>
                         <p className="text-2xl font-bold text-indigo-900">{taskAnalysis.myTasks.length}</p>
                       </div>
                       <User className="w-8 h-8 text-indigo-600" />
                     </div>
-                    <p className="text-sm text-indigo-700 mt-2">Tasks assigned to you</p>
+                    <p className="text-sm text-indigo-700 mt-2">{t('filters.myTasks')}</p>
                   </div>
                 )}
               </>
@@ -539,34 +539,34 @@ const TasksManagement: React.FC = () => {
           
           {/* Quick Actions */}
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">Quick Actions</h4>
+            <h4 className="text-sm font-medium text-gray-700 mb-3">{t('quickActions.title')}</h4>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setTaskModalOpen(true)}
                 className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200"
               >
-                Create New Task
+                {t('quickActions.createTask')}
               </button>
               
               <button
                 onClick={() => handleFilterChange({ status: 'pending' })}
                 className="px-3 py-1 text-sm font-medium bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200"
               >
-                View Pending ({tasks.filter(task => task.status === 'pending').length})
+                {t('quickActions.viewPending')} ({tasks.filter(task => task.status === 'pending').length})
               </button>
               
               <button
                 onClick={() => handleFilterChange({ status: 'in_progress' })}
                 className="px-3 py-1 text-sm font-medium bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200"
               >
-                View In Progress ({tasks.filter(task => task.status === 'in_progress').length})
+                {t('quickActions.viewInProgress')} ({tasks.filter(task => task.status === 'in_progress').length})
               </button>
               
               <button
                 onClick={() => handleFilterChange({ status: 'completed' })}
                 className="px-3 py-1 text-sm font-medium bg-green-100 text-green-800 rounded-lg hover:bg-green-200"
               >
-                View Completed ({tasks.filter(task => task.status === 'completed').length})
+                {t('quickActions.viewCompleted')} ({tasks.filter(task => task.status === 'completed').length})
               </button>
               
               {taskAnalysis && (
@@ -576,7 +576,7 @@ const TasksManagement: React.FC = () => {
                       onClick={() => handleFilterChange({ status: 'overdue' })}
                       className="px-3 py-1 text-sm font-medium bg-red-100 text-red-800 rounded-lg hover:bg-red-200"
                     >
-                      View Overdue ({taskAnalysis.overdue.length})
+                      {t('quickActions.viewOverdue')} ({taskAnalysis.overdue.length})
                     </button>
                   )}
                   {taskAnalysis.dueToday.length > 0 && (
@@ -587,7 +587,7 @@ const TasksManagement: React.FC = () => {
                       }}
                       className="px-3 py-1 text-sm font-medium bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200"
                     >
-                      View Due Today ({taskAnalysis.dueToday.length})
+                      {t('quickActions.viewDueToday')} ({taskAnalysis.dueToday.length})
                     </button>
                   )}
                   {taskAnalysis.highPriority.length > 0 && (
@@ -595,7 +595,7 @@ const TasksManagement: React.FC = () => {
                       onClick={() => handleFilterChange({ priority: 'high' })}
                       className="px-3 py-1 text-sm font-medium bg-purple-100 text-purple-800 rounded-lg hover:bg-purple-200"
                     >
-                      View High Priority ({taskAnalysis.highPriority.length})
+                      {t('quickActions.viewHighPriority')} ({taskAnalysis.highPriority.length})
                     </button>
                   )}
                 </>

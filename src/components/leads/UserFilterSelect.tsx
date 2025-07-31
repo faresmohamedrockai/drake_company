@@ -148,68 +148,57 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
   selectedSalesRep,
   setSelectedSalesRep,
 }) => {
-  const { t, i18n } = useTranslation('leads');
+  const { t } = useTranslation('leads');
 
-  // Get all team leaders (users with role 'team_leader')
-  const teamLeaders = users.filter((u) => u.role === 'team_leader');
+  // Filter users based on current user's role
+  const managers = users.filter(user => user.role === 'team_leader');
+  const salesReps = users.filter(user => user.role === 'sales_rep');
 
-  // Get all sales reps
-  const allSalesReps = users.filter((u) => u.role === 'sales_rep');
-
-  // Role-based logic
-  if (currentUser.role === 'sales_rep') {
-    // Sales reps do not see the select
+  // Only show filters for admin, sales_admin, or team_leader
+  if (!['admin', 'sales_admin', 'team_leader'].includes(currentUser.role)) {
     return null;
   }
 
-  let teamLeaderOptions = teamLeaders;
-  let salesRepOptions: User[] = [...allSalesReps, ...teamLeaders]; // Include team leaders in sales rep options
-  let teamLeaderValue = selectedManager;
-  let salesRepValue = selectedSalesRep;
-  let teamLeaderDisabled = false;
-
-  if (currentUser.role === 'team_leader') {
-    // Team leader: manager select is their own name, not changeable
-    teamLeaderOptions = teamLeaders.filter((m) => m.id === currentUser.id);
-    teamLeaderValue = currentUser;
-    teamLeaderDisabled = true;
-    // Team leaders can see all sales reps and other team leaders in the dropdown
-    // The filtering logic in the parent components will handle the actual filtering
-  } else if (currentUser.role === 'sales_admin' || currentUser.role === 'admin') {
-    // Admin/Sales Manager: can select any team leader and any sales rep
-    // All sales reps and team leaders are shown in the dropdown
-  }
-
   return (
-    <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
-      {/* Team Leader Select */}
-      <div className="flex flex-col">
-        <label className="text-xs text-gray-500 mb-1">{t('manager')}</label>
-        <CustomDropdown
-          value={teamLeaderValue?.id || ''}
-          onChange={(value) => {
-            const selectedUser = users.find(u => u.id === value) || null;
-            setSelectedManager(selectedUser);
-            // Don't clear sales rep selection when team leader changes
-            // This allows independent selection of team leader and sales rep
-          }}
-          options={teamLeaderOptions}
-          placeholder={t('allManagers')}
-          disabled={teamLeaderDisabled}
-        />
-      </div>
-      {/* Sales Rep/Team Leader Select */}
-      <div className="flex flex-col">
-        <label className="text-xs text-gray-500 mb-1">Team Member</label>
-        <CustomDropdown
-          value={salesRepValue?.id || ''}
-          onChange={(value) => {
-            const selectedUser = users.find(u => u.id === value) || null;
-            setSelectedSalesRep(selectedUser);
-          }}
-          options={salesRepOptions}
-          placeholder="All Team Members"
-        />
+    <div className="bg-white rounded-lg shadow-sm border p-3 sm:p-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+        {/* Manager Filter - Only show for admin and sales_admin */}
+        {['admin', 'sales_admin'].includes(currentUser.role) && (
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+              {t('filterByManager') || 'Filter by Manager'}
+            </label>
+            <CustomDropdown
+              value={selectedManager?.id || ''}
+              onChange={(managerId) => {
+                const manager = managers.find(m => m.id === managerId) || null;
+                setSelectedManager(manager);
+                // Clear sales rep selection when manager changes
+                setSelectedSalesRep(null);
+              }}
+              options={managers}
+              placeholder={t('selectManager') || 'Select Manager'}
+              className="w-full"
+            />
+          </div>
+        )}
+
+        {/* Sales Rep Filter - Show for admin, sales_admin, and team_leader */}
+        <div className="flex-1 min-w-0">
+          <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+            {t('filterBySalesRep') || 'Filter by Sales Rep'}
+          </label>
+          <CustomDropdown
+            value={selectedSalesRep?.id || ''}
+            onChange={(salesRepId) => {
+              const salesRep = salesReps.find(s => s.id === salesRepId) || null;
+              setSelectedSalesRep(salesRep);
+            }}
+            options={salesReps}
+            placeholder={t('selectSalesRep') || 'Select Sales Rep'}
+            className="w-full"
+          />
+        </div>
       </div>
     </div>
   );

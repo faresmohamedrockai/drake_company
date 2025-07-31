@@ -101,7 +101,16 @@
     "inProgressTasks": "قيد التنفيذ",
     "completedTasks": "مكتمل",
     "overdueTasks": "متأخر",
-    "completionRate": "معدل الإنجاز"
+    "completionRate": "معدل الإنجاز",
+    "tasksByPriority": "المهام حسب الأولوية",
+    "tasksByType": "المهام حسب النوع",
+    "overallPerformance": "أداء إنجاز المهام الإجمالي",
+    "excellent": "ممتاز",
+    "good": "جيد",
+    "fair": "مقبول",
+    "needsImprovement": "يحتاج تحسين",
+    "active": "نشط",
+    "attentionNeeded": "يحتاج انتباه"
   },
   
   "notifications": {
@@ -121,7 +130,13 @@
     "createTask": "إنشاء مهمة جديدة",
     "bulkUpdate": "تحديث جماعي",
     "exportTasks": "تصدير المهام",
-    "importTasks": "استيراد المهام"
+    "importTasks": "استيراد المهام",
+    "viewPending": "عرض في الانتظار",
+    "viewInProgress": "عرض قيد التنفيذ",
+    "viewCompleted": "عرض المكتمل",
+    "viewOverdue": "عرض المتأخر",
+    "viewDueToday": "عرض مستحق اليوم",
+    "viewHighPriority": "عرض الأولوية العالية"
   },
   
   "bulkActions": {
@@ -157,5 +172,36 @@
     "title": "المواعيد النهائية القادمة",
     "description": "المهام المستحقة في الأسبوع القادم",
     "noUpcoming": "لا توجد مواعيد نهائية قادمة"
+  },
+  
+  "debug": {
+    "debugInfo": "معلومات التصحيح",
+    "tasks": "المهام",
+    "analysis": "التحليل",
+    "loading": "جاري التحميل",
+    "error": "خطأ",
+    "available": "متاح",
+    "notAvailable": "غير متاح",
+    "yes": "نعم",
+    "no": "لا"
+  },
+  
+  "analysis": {
+    "title": "تحليل المهام والرؤى",
+    "totalActiveTasks": "إجمالي المهام النشطة",
+    "tasksInSystem": "المهام في النظام",
+    "pendingTasks": "المهام في الانتظار",
+    "awaitingAction": "في انتظار الإجراء",
+    "inProgress": "قيد التنفيذ",
+    "currentlyBeingWorkedOn": "قيد العمل حالياً",
+    "completed": "مكتمل",
+    "successfullyFinished": "تم الإنجاز بنجاح",
+    "overdueTasks": "المهام المتأخرة",
+    "tasksPastDueDate": "المهام التي تجاوزت تاريخ استحقاقها",
+    "dueToday": "مستحق اليوم",
+    "tasksDueToday": "المهام المستحقة اليوم",
+    "highPriority": "أولوية عالية",
+    "highUrgentPriorityTasks": "المهام عالية وعاجلة الأولوية",
+    "myTasks": "مهامي"
   }
 } 

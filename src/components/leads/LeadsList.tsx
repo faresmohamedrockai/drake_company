@@ -16,6 +16,7 @@ import * as XLSX from 'xlsx';
 import LeadModal from './LeadModal';
 import AddLeadModal from './AddLeadModal';
 import EditLeadModal from './EditLeadModal';
+import ImportLeadsModal from './ImportLeadsModal';
 import UserFilterSelect from './UserFilterSelect';
 import { LeadsTable } from './LeadsTable';
 import { StatusCards } from './StatusCards';
@@ -290,7 +291,11 @@ const LeadsList: React.FC = React.memo(() => {
         const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] || 
                            row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
                            row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
-                           row['PhoneNumber'] || row['Phone_Number'];
+                           row['PhoneNumber'] || row['Phone_Number'] ||
+                           row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+                           row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+                           row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+                           row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'];
         return phoneNumber && phoneNumber.toString().trim() !== '';
       })
       .map(row => {
@@ -298,23 +303,61 @@ const LeadsList: React.FC = React.memo(() => {
         const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] || 
                            row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
                            row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
-                           row['PhoneNumber'] || row['Phone_Number'] || '';
+                           row['PhoneNumber'] || row['Phone_Number'] ||
+                           row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+                           row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+                           row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+                           row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'] || '';
         
         // Get Arabic name from various possible column names
         const arabicName = row['Arabic Name'] || row['nameAr'] || row['Name (Arabic)'] || 
                           row['الاسم العربي'] || row['اسم عربي'] || row['الاسم'] ||
                           row['arabic_name'] || row['arabicName'] || row['ARABIC_NAME'] ||
-                          row['ArabicName'] || row['Arabic_Name'] || '';
+                          row['ArabicName'] || row['Arabic_Name'] ||
+                          row['Arabic Name'] || row['Name (Arabic)'] || row['الاسم العربي'] ||
+                          row['اسم عربي'] || row['الاسم'] || row['arabic_name'] ||
+                          row['arabicName'] || row['ARABIC_NAME'] || row['ArabicName'] ||
+                          row['Arabic_Name'] || '';
+        
+        // Get English name from various possible column names
+        const englishName = row['English Name'] || row['nameEn'] || row['Name (English)'] || 
+                           row['الاسم الإنجليزي'] || row['اسم إنجليزي'] || row['الاسم الانجليزي'] ||
+                           row['english_name'] || row['englishName'] || row['ENGLISH_NAME'] ||
+                           row['EnglishName'] || row['English_Name'] ||
+                           row['English Name'] || row['Name (English)'] || row['الاسم الإنجليزي'] ||
+                           row['اسم إنجليزي'] || row['الاسم الانجليزي'] || row['english_name'] ||
+                           row['englishName'] || row['ENGLISH_NAME'] || row['EnglishName'] ||
+                           row['English_Name'] || '';
+        
+        // Get email from various possible column names
+        const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] || 
+                     row['email_address'] || row['emailAddress'] || row['EMAIL'] ||
+                     row['EmailAddress'] || row['Email_Address'] || '';
+        
+        // Get budget from various possible column names
+        const budget = row['Budget'] || row['budget'] || row['الميزانية'] || 
+                      row['budget_amount'] || row['budgetAmount'] || row['BUDGET'] ||
+                      row['BudgetAmount'] || row['Budget_Amount'] || 0;
+        
+        // Get source from various possible column names
+        const source = row['Source'] || row['source'] || row['المصدر'] || 
+                      row['lead_source'] || row['leadSource'] || row['SOURCE'] ||
+                      row['LeadSource'] || row['Lead_Source'] || 'Data Sheet';
         
         // Clean phone number (remove spaces, dashes, etc.)
         const cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)]/g, '');
         
+        // Parse budget as number
+        const parsedBudget = typeof budget === 'string' ? parseFloat(budget.replace(/[^\d.]/g, '')) || 0 : Number(budget) || 0;
+        
         return {
           nameAr: arabicName.toString().trim(),
+          nameEn: englishName.toString().trim(),
           contact: cleanPhone,
-          source: 'Data Sheet', // Default source as requested
+          email: email.toString().trim(),
+          source: source.toString().trim(),
           status: LeadStatus.FOLLOW_UP, // Default status as requested
-          budget: 0, // Default budget
+          budget: parsedBudget,
           assignedToId: user?.id || '',
           ownerId: user?.id || '',
           createdBy: user?.name || 'System',
@@ -561,15 +604,15 @@ const LeadsList: React.FC = React.memo(() => {
 
   return (
     <div
-      className={`p-6 bg-gray-50 min-h-screen ${i18n.language === 'ar' ? 'font-arabic' : ''}`}
+      className={`p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen ${i18n.language === 'ar' ? 'font-arabic' : ''}`}
       dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
     >
       {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h1>
-            <p className="text-gray-600">{t('description')}</p>
+      <div className="mb-4 sm:mb-6 md:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">{t('title')}</h1>
+            <p className="text-sm sm:text-base text-gray-600">{t('description')}</p>
           </div>
           <div className="flex items-center space-x-2">
             <button
@@ -577,13 +620,13 @@ const LeadsList: React.FC = React.memo(() => {
               className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
               title={t('refreshData')}
             >
-              <RefreshCw className="h-5 w-5" />
+              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
             <button
               className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
               title={t('settings')}
             >
-              <Settings className="h-5 w-5" />
+              <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
           </div>
         </div>
@@ -591,85 +634,98 @@ const LeadsList: React.FC = React.memo(() => {
 
       {/* User Filter Select */}
       {user && (
-        <UserFilterSelect
-          currentUser={user as any}
-          users={users}
-          selectedManager={selectedManager}
-          setSelectedManager={setSelectedManager}
-          selectedSalesRep={selectedSalesRep}
-          setSelectedSalesRep={setSelectedSalesRep}
-        />
+        <div className="mb-4 sm:mb-6">
+          <UserFilterSelect
+            currentUser={user as any}
+            users={users}
+            selectedManager={selectedManager}
+            setSelectedManager={setSelectedManager}
+            selectedSalesRep={selectedSalesRep}
+            setSelectedSalesRep={setSelectedSalesRep}
+          />
+        </div>
       )}
 
       {/* Call Outcomes Cards */}
-      <CallOutcomeCards
-        leads={leads}
-        activeCard={activeCallOutcomeCard}
-        onCardClick={(key) => {
-          setActiveCallOutcomeCard(prev => prev === key ? '' : key);
-          setActiveStatusCard('');
-          setActiveVisitStatusCard('');
-        }}
-        t={t}
-      />
+      <div className="mb-4 sm:mb-6">
+        <CallOutcomeCards
+          leads={leads}
+          activeCard={activeCallOutcomeCard}
+          onCardClick={(key) => {
+            setActiveCallOutcomeCard(prev => prev === key ? '' : key);
+            setActiveStatusCard('');
+            setActiveVisitStatusCard('');
+          }}
+          t={t}
+        />
+      </div>
 
       {/* Lead Status Cards */}
-      <StatusCards
-        leads={leads}
-        user={user as any}
-        activeCard={activeStatusCard}
-        onCardClick={(key) => {
-          setActiveStatusCard(prev => prev === key ? '' : key);
-          setActiveCallOutcomeCard('');
-          setActiveVisitStatusCard('');
-        }}
-        showAllCards={showAllCards}
-        onToggleShowAll={setShowAllCards}
-        t={t}
-      />
+      <div className="mb-4 sm:mb-6">
+        <StatusCards
+          leads={leads}
+          user={user as any}
+          activeCard={activeStatusCard}
+          onCardClick={(key) => {
+            setActiveStatusCard(prev => prev === key ? '' : key);
+            setActiveCallOutcomeCard('');
+            setActiveVisitStatusCard('');
+          }}
+          showAllCards={showAllCards}
+          onToggleShowAll={setShowAllCards}
+          t={t}
+        />
+      </div>
 
       {/* Search and Actions */}
-      <SearchAndActions
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        activeFiltersCount={activeFiltersCount}
-        onFilterClick={() => setShowFilterModal(true)}
-        onAddClick={() => setShowAddModal(true)}
-        t={t}
-      />
+      <div className="mb-4 sm:mb-6">
+        <SearchAndActions
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          activeFiltersCount={activeFiltersCount}
+          onFilterClick={() => setShowFilterModal(true)}
+          onAddClick={() => setShowAddModal(true)}
+          onImportClick={() => setShowImportModal(true)}
+          t={t}
+        />
+      </div>
 
       {/* Bulk Actions Bar */}
       {showBulkActions && (
-        <BulkActionsBar
-          selectedCount={selectedLeads.size}
-          bulkAssignToUserId={bulkAssignToUserId}
-          onBulkAssignChange={setBulkAssignToUserId}
-          onBulkAssign={handleBulkAssign}
-          onClearSelection={clearSelection}
-          isUpdating={isBulkUpdating}
-          users={users}
-          user={user as any}
-          t={t}
-        />
+        <div className="mb-4 sm:mb-6">
+          <BulkActionsBar
+            selectedCount={selectedLeads.size}
+            bulkAssignToUserId={bulkAssignToUserId}
+            onBulkAssignChange={setBulkAssignToUserId}
+            onBulkAssign={handleBulkAssign}
+            onClearSelection={clearSelection}
+            isUpdating={isBulkUpdating}
+            users={users}
+            user={user as any}
+            t={t}
+          />
+        </div>
       )}
 
       {/* Leads Table */}
-      <LeadsTable
-        leads={filteredLeads}
-        isLoading={isLoadingLeads}
-        properties={properties}
-        users={users}
-        selectedLeads={selectedLeads}
-        isSelectAllChecked={isSelectAllChecked}
-        onSelectLead={(leadId) => handleSelectLeadBase(leadId, filteredLeads.length)}
-        onSelectAll={() => handleSelectAllBase(filteredLeads.map(lead => lead.id!))}
-        onLeadClick={handleLeadClick}
-        onEditLead={handleEditLead}
-        onDeleteLead={handleDeleteLead}
-        t={t}
-        i18n={i18n}
-        searchTerm={searchTerm}
-      />
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <LeadsTable
+          leads={filteredLeads}
+          isLoading={isLoadingLeads}
+          properties={properties}
+          users={users}
+          selectedLeads={selectedLeads}
+          isSelectAllChecked={isSelectAllChecked}
+          onSelectLead={(leadId) => handleSelectLeadBase(leadId, filteredLeads.length)}
+          onSelectAll={() => handleSelectAllBase(filteredLeads.map(lead => lead.id!))}
+          onLeadClick={handleLeadClick}
+          onEditLead={handleEditLead}
+          onDeleteLead={handleDeleteLead}
+          t={t}
+          i18n={i18n}
+          searchTerm={searchTerm}
+        />
+      </div>
 
       {/* Modals */}
       <AddLeadModal
@@ -716,6 +772,14 @@ const LeadsList: React.FC = React.memo(() => {
         lead={deletingLead}
         t={t}
         i18n={i18n}
+      />
+
+      <ImportLeadsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleExcelImport}
+        isImporting={isImporting}
+        importProgress={importProgress}
       />
     </div>
   );

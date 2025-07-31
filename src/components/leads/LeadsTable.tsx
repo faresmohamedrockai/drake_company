@@ -92,43 +92,43 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
         <table className="w-full min-w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-3 py-3 text-left w-8">
+              <th className="px-2 sm:px-3 py-3 text-left w-6 sm:w-8">
                 <input
                   type="checkbox"
                   checked={isSelectAllChecked}
                   onChange={handleSelectAll}
-                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   aria-label={t('selectAll') || 'Select all leads'}
                 />
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 sm:w-24">
                 {t('name')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 hidden sm:table-cell">
                 {t('phone')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
                 {t('budget')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 hidden lg:table-cell">
                 {t('interest')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
                 {t('source')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20">
                 {t('status')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 hidden md:table-cell">
                 {t('assignedTo')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
                 {t('lastCall')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
                 {t('lastVisit')}
               </th>
-              <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+              <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8 sm:w-12">
                 {t('actions')}
               </th>
             </tr>
@@ -136,56 +136,56 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
           <tbody className="bg-white divide-y divide-gray-200">
             {isLoading ? (
               <tr>
-                <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={11} className="px-4 sm:px-6 py-8 text-center text-gray-500">
                   <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-blue-600 mr-2"></div>
-                    Loading leads...
+                    <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:w-7 border-b-2 border-blue-600 mr-2"></div>
+                    <span className="text-sm sm:text-base">Loading leads...</span>
                   </div>
                 </td>
               </tr>
             ) : (
               leads?.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-4">
+                  <td className="px-2 sm:px-3 py-4">
                     <input
                       type="checkbox"
                       checked={selectedLeads.has(lead.id!)}
                       onChange={() => handleSelectLead(lead.id!)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       aria-label={`Select ${getDisplayName(lead)}`}
                     />
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-2 sm:px-3 md:px-6 py-4">
                     <button
                       onClick={() => onLeadClick(lead)}
-                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-sm truncate block w-full text-left"
+                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-xs sm:text-sm truncate block w-full text-left"
                       title={getDisplayName(lead)}
                       aria-label={`View details for ${getDisplayName(lead)}`}
                     >
                       {getDisplayName(lead)}
                     </button>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.contact}>
+                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden sm:table-cell">
+                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.contact}>
                       {lead.contact}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.budget.toString()}>
+                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
+                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toString()}>
                       {lead.budget}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.inventoryInterestId}>
+                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden lg:table-cell">
+                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.inventoryInterestId}>
                       {properties?.find(property => property.id === lead.inventoryInterestId)?.titleEn}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-2 sm:px-3 md:px-6 py-4">
                     <span className="text-sm text-gray-900 truncate block" title={lead.source}>
                       {lead.source}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-2 sm:px-3 md:px-6 py-4">
                     <span 
                       className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`} 
                       title={lead.status}
@@ -193,7 +193,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       {lead.status}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
                     {lead.owner ? (
                       <div className="flex items-center space-x-2 min-w-0">
                         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0 ${getUserColor(lead.owner.name)}`}>
@@ -207,17 +207,17 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       <span className="text-sm text-gray-400">{t('unassigned')}</span>
                     )}
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden lg:table-cell">
                     <span className="text-sm text-gray-900 truncate block" title={lead.calls?.[lead.calls.length - 1]?.date}>
                       {lead.calls?.[lead.calls.length - 1]?.date}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden lg:table-cell">
                     <span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>
                       {lead.visits?.[lead.visits.length - 1]?.date}
                     </span>
                   </td>
-                  <td className="px-3 sm:px-6 py-4">
+                  <td className="px-2 sm:px-3 py-4">
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => onLeadClick(lead)}
