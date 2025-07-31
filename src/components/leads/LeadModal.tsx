@@ -10,6 +10,8 @@ import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project } from '../inventory/ProjectsTab';
 import { Id, toast } from 'react-toastify';
+import { formatDate } from '../../utils/formatters';
+
 
 interface LeadModalProps {
   lead: Lead;
@@ -154,6 +156,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     staleTime: 1000 * 60 * 5,
     queryFn: () => getVisits()
   });
+
   // Sync currentLead with prop lead and refreshKey
   React.useEffect(() => {
     setCurrentLead(lead);
@@ -313,16 +316,16 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
-              <p className="text-sm text-gray-900">{currentLead.contact}</p>
+              <p className="text-sm text-gray-900">{currentLead.contact || 'Not specified'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('budget')}</label>
-              <p className="text-sm text-gray-900">{currentLead.budget}</p>
+              <p className="text-sm text-gray-900">{currentLead.budget || 'Not specified'}</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('interest')}</label>
               <p className="text-sm text-gray-900">{
-                properties?.find(property => property.id === currentLead.inventoryInterestId)?.title
+                properties?.find(property => property.id === currentLead.inventoryInterestId)?.title || 'Not specified'
               }</p>
             </div>
           </div>
@@ -346,7 +349,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                         !
                       </div>
                       <span className="mt-1 md:mt-2 text-xs font-medium text-center w-16 md:w-20 text-orange-600">
-                        {currentSpecialStatus.label}
+                        {currentSpecialStatus?.label || 'Unknown Status'}
                       </span>
                     </motion.div>
                   </div>
@@ -482,15 +485,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('name')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.nameEn}</p>
+                    <p className="text-sm text-gray-900">{currentLead.nameEn || 'Not specified'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('phone')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.contact}</p>
+                    <p className="text-sm text-gray-900">{currentLead.contact || 'Not specified'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('source')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.source}</p>
+                    <p className="text-sm text-gray-900">{currentLead.source || 'Not specified'}</p>
                   </div>
                 </div>
               </div>
@@ -499,20 +502,28 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <div className="space-y-3">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('status')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.status}</p>
+                    <p className="text-sm text-gray-900">{currentLead.status || 'Not specified'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('budget')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.budget}</p>
+                    <p className="text-sm text-gray-900">{currentLead.budget || 'Not specified'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('interest')}</label>
                     <p className="text-sm text-gray-900">{
-                      properties?.find(property => property.id === currentLead.inventoryInterestId)?.title
+                      properties?.find(property => property.id === currentLead.inventoryInterestId)?.title || 'Not specified'
                     }</p>
                   </div>
+                  {currentLead.createdAt && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">{t('createdAt') || 'Created At'}</label>
+                      <p className="text-sm text-gray-900">{currentLead.createdAt ? formatDate(currentLead.createdAt) : 'Not specified'}</p>
+                    </div>
+                  )}
                 </div>
               </div>
+              
+
             </div>
           )}
 
@@ -534,24 +545,24 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     calls.map((call) => (
                       <div key={call.id} className="bg-gray-50 p-4 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-900">{call.date}</span>
-                          <span className="text-sm text-gray-600">{call.duration}</span>
+                          <span className="text-sm font-medium text-gray-900">{call.date || 'No date'}</span>
+                          <span className="text-sm text-gray-600">{call.duration || 'No duration'}</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                           <div>
                             <span className="text-sm text-gray-600">{t('outcome')}: </span>
-                            <span className="text-sm text-gray-900">{call.outcome}</span>
+                            <span className="text-sm text-gray-900">{call.outcome || 'No outcome'}</span>
                           </div>
                           <div>
                             <span className="text-sm text-gray-600">{t('project')}: </span>
                             <span className="text-sm text-gray-900">{
-                              projects?.find(project => project.id === call.projectId)?.nameEn
+                              projects?.find(project => project.id === call.projectId)?.nameEn || 'Not specified'
                             }</span>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-700">{call.notes}</p>
+                        <p className="text-sm text-gray-700">{call.notes || 'No notes'}</p>
                       </div>
-                    )) : <p className="text-gray-500 text-center py-4">{t('noCallsLogged')}</p>}
+                    )) : <p className="text-gray-500 text-center py-4">{String(t('noCallsLogged') || 'No calls logged')}</p>}
               </div>
             </div>
           )}
@@ -573,26 +584,26 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   visits.map((visit) => (
                     <div key={visit.id} className="bg-gray-50 p-4 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-900">{visit.date}</span>
-                        <span className="text-sm text-green-600">{visit.status}</span>
+                        <span className="text-sm font-medium text-gray-900">{visit.date || 'No date'}</span>
+                        <span className="text-sm text-green-600">{visit.status || 'No status'}</span>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                         <div>
                           <span className="text-sm text-gray-600">{t('project')}: </span>
                           <span className="text-sm text-gray-900">{
-                            projects?.find(project => project.id === visit.project)?.nameEn
+                            projects?.find(project => project.id === visit.project)?.nameEn || 'Not specified'
                           }</span>
                         </div>
                         <div>
                           <span className="text-sm text-gray-600">{t('objections')}: </span>
-                          <span className="text-sm text-gray-900">{visit.objections}</span>
+                          <span className="text-sm text-gray-900">{visit.objections || 'None'}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-700">{visit.notes}</p>
+                      <p className="text-sm text-gray-700">{visit.notes || 'No notes'}</p>
                     </div>
                   ))}
                 {visits?.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">{t('noVisitsLogged')}</p>
+                  <p className="text-gray-500 text-center py-4">{String(t('noVisitsLogged') || 'No visits logged')}</p>
                 )}
               </div>
             </div>
@@ -671,7 +682,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     </div>
                   ))}
                 {notes && notes.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">{t('noNotesAdded')}</p>
+                  <p className="text-gray-500 text-center py-4">{String(t('noNotesAdded') || 'No notes added')}</p>
                 )}
               </div>
             </div>
@@ -784,7 +795,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     value={visitForm.project}
                     onChange={(e) => setVisitForm({ ...visitForm, project: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
                   >
                     <option value="">{t('selectProject')}</option>
                     {projects?.map(project => (

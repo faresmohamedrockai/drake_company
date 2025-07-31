@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useData } from '../../contexts/DataContext';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import {
   Users,
   TrendingUp,
@@ -9,16 +11,14 @@ import {
   DollarSign,
   CheckCircle,
   Clock,
-  Target
+  Target,
+  BarChart3,
+  Activity
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
-import { motion } from 'framer-motion';
 
-import { useQuery } from '@tanstack/react-query';
 import { getLeads, getLogs, getMeetings, getUsers } from '../../queries/queries';
-import { Lead, Log, Meeting, User, LeadStatus } from '../../types';
-import { Activity } from '../../types';
-import { useNavigate } from 'react-router-dom';
+import { Lead, Log, Meeting, User as UserType, LeadStatus } from '../../types';
 import UserFilterSelect from '../leads/UserFilterSelect';
 import LeadsSummaryCards from '../leads/LeadsSummaryCards';
 
@@ -29,7 +29,7 @@ interface DashboardProps {
 // Custom hook for counting animation
 const useCountAnimation = (endValue: number, duration: number = 2000, delay: number = 0) => {
   const [count, setCount] = useState(0);
-  const navigate = useNavigate();
+
   useEffect(() => {
     const startTime = Date.now();
     const startValue = 0;
@@ -64,47 +64,95 @@ const useCountAnimation = (endValue: number, duration: number = 2000, delay: num
   return count;
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
+// Custom hook for dashboard data processing
+const useDashboardData = () => {
   const { user } = useAuth();
-  const { data: users = [] } = useQuery<User[]>({
+  
+  const { data: users = [] } = useQuery<UserType[]>({
     queryKey: ['users'],
     queryFn: getUsers,
     staleTime: 1000 * 60 * 5,
   });
-  const { t } = useTranslation('dashboard');
-  const navigate = useNavigate();
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery<Lead[]>({
     queryKey: ['leads'],
     queryFn: getLeads,
     staleTime: 1000 * 60 * 5,
   });
+
   const { data: meetings = [], isLoading: meetingsLoading } = useQuery<Meeting[]>({
     queryKey: ['meetings'],
     queryFn: getMeetings,
     staleTime: 1000 * 60 * 5,
   });
+
   const { data: logs = [], isLoading: logsLoading } = useQuery<Log[]>({
     queryKey: ['logs'],
     queryFn: getLogs,
     staleTime: 1000 * 60 * 5,
   });
 
-  const today = new Date().toISOString().split('T')[0];
-  const totalProspects = leads.length;
-  const activeLeads = leads.filter(l => [LeadStatus.FRESH_LEAD, LeadStatus.FOLLOW_UP, LeadStatus.SCHEDULED_VISIT, LeadStatus.OPEN_DEAL].includes(l.status)).length;
-  const todayMeetings = meetings.filter(m => m.date === today).length;
-  const followUpLeads = leads.filter(l => l.status === LeadStatus.FOLLOW_UP).length;
-
-  // Conversion rates (customize as needed)
-  const conversionRates = {
-    leadsToFollowUp: totalProspects ? Math.round((followUpLeads / totalProspects) * 100) : 0,
-    callsToMeetings: 0, // Add logic if you have call data
-    meetingsToDeals: meetings.length ? Math.round((meetings.filter(m => m.status === 'Completed').length / meetings.length) * 100) : 0,
-    callCompletionRate: 0, // Add logic if you have call data
+  return {
+    users,
+    leads,
+    meetings,
+    logs,
+    isLoading: leadsLoading || meetingsLoading || logsLoading,
+    user
   };
+};
 
-  // Animated counts for KPI cards
+// Custom hook for lead filtering logic
+const useLeadFiltering = (leads: Lead[], users: UserType[], user: any, selectedManager: UserType | null, selectedSalesRep: UserType | null) => {
+  return useMemo(() => {
+    let filteredLeads = leads;
+    
+    if (!user || !user.id || !user.role) return filteredLeads;
+
+    if (user.role === 'sales_rep') {
+      filteredLeads = leads.filter(lead => lead.owner?.id === user.id);
+    } else if (user.role === 'team_leader') {
+      if (selectedSalesRep) {
+        // If a specific sales rep or team leader is selected, show only that person's leads
+        filteredLeads = leads.filter(lead => lead.owner?.id === selectedSalesRep.id);
+      } else {
+        // Show team leader's own leads + their direct team members' leads
+        // Get all sales reps under this team leader
+        const directTeamMembers = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user.id).map(u => u.id);
+        
+        // TEMPORARY: Show all leads for team leaders until team structure is fixed
+        console.log('Team Leader Filtering Debug:', {
+          teamLeader: user?.name || 'Unknown',
+          teamLeaderId: user?.id || 'Unknown',
+          directTeamMembers: directTeamMembers.length,
+          totalLeads: leads.length
+        });
+        
+        // For now, show all leads to ensure team leaders can see everything
+        filteredLeads = leads;
+      }
+    } else if (user.role === 'sales_admin' || user.role === 'admin') {
+      if (selectedSalesRep) {
+        filteredLeads = leads.filter(lead => lead.owner?.id === selectedSalesRep.id);
+      } else if (selectedManager) {
+        const teamMembers = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === selectedManager.id).map(u => u.id);
+        filteredLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || teamMembers.includes(lead.owner?.id!));
+      }
+    }
+
+    return filteredLeads;
+  }, [leads, users, user, selectedManager, selectedSalesRep]);
+};
+
+// KPI Cards Component
+const KPICards: React.FC<{ 
+  totalProspects: number; 
+  activeLeads: number; 
+  todayMeetings: number; 
+  followUpLeads: number; 
+  t: (key: string) => string;
+  navigate: (path: string) => void;
+}> = ({ totalProspects, activeLeads, todayMeetings, followUpLeads, t, navigate }) => {
   const animatedTotalProspects = useCountAnimation(totalProspects, 1000, 0);
   const animatedActiveLeads = useCountAnimation(activeLeads, 1000, 100);
   const animatedTodayMeetings = useCountAnimation(todayMeetings, 1000, 200);
@@ -114,35 +162,85 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     {
       title: t('totalLeads'),
       value: animatedTotalProspects.toString(),
-      change: null, // You can implement change logic if you want
       icon: Users,
-      description: t('overview')
+      color: 'blue',
+      description: t('overview'),
+      onClick: () => navigate('/leads')
     },
     {
       title: t('activeLeads'),
       value: animatedActiveLeads.toString(),
-      change: null,
       icon: TrendingUp,
-      description: t('overview')
+      color: 'purple',
+      description: t('overview'),
+      onClick: () => navigate('/leads?filterType=status&filterValue=active')
     },
     {
       title: t('meetingScheduled'),
       value: animatedTodayMeetings.toString(),
-      change: null,
       icon: Calendar,
+      color: 'orange',
       description: t('overview'),
-      info: true
+      info: true,
+      onClick: () => navigate('/meetings')
     },
     {
       title: t('followUpLeads'),
       value: animatedFollowUpLeads.toString(),
-      change: null,
       icon: CheckCircle,
-      description: t('overview')
+      color: 'green',
+      description: t('overview'),
+      onClick: () => navigate('/leads?filterType=status&filterValue=follow_up')
     }
   ];
 
-  // Animated conversion rates
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      {kpiCards.map((card, index) => (
+        <motion.div
+          key={index}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: index * 0.1 }}
+          className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer group"
+          onClick={card.onClick}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className={`p-3 rounded-full bg-${card.color}-100 group-hover:bg-${card.color}-200 transition-colors`}>
+              <card.icon className={`h-6 w-6 text-${card.color}-600`} />
+            </div>
+            {card.info ? (
+              <a
+                href="#"
+                className="text-xs text-blue-600 underline hover:text-blue-800"
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate('/meetings');
+                }}
+              >
+                {t('goToViewAllMeetings')}
+              </a>
+            ) : (
+              <span className="text-sm font-medium text-gray-600">--</span>
+            )}
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">{card.title}</h3>
+          <p className="text-3xl font-bold text-gray-900 mb-2">{card.value}</p>
+          <p className="text-sm text-gray-600">{card.description}</p>
+        </motion.div>
+      ))}
+    </div>
+  );
+};
+
+// Conversion Metrics Component
+const ConversionMetrics: React.FC<{ 
+  conversionRates: any; 
+  totalProspects: number; 
+  activeLeads: number; 
+  t: (key: string) => string;
+}> = ({ conversionRates, totalProspects, activeLeads, t }) => {
   const animatedLeadsToFollowUp = useCountAnimation(conversionRates.leadsToFollowUp, 1000, 400);
   const animatedCallCompletion = useCountAnimation(conversionRates.callCompletionRate, 1000, 500);
   const animatedMeetingSuccess = useCountAnimation(conversionRates.meetingsToDeals, 1000, 600);
@@ -181,53 +279,263 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     }
   ];
 
-  // Prepare data for Recharts
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <CheckCircle className="h-5 w-5 mr-2" />
+        {t('conversionMetrics')}
+      </h3>
+      <p className="text-sm text-gray-600 mb-6">{t('monitorSalesPerformance')}</p>
+
+      <div className="space-y-4">
+        {conversionMetrics.map((metric, index) => {
+          const percent = parseInt(metric.value.replace(/[^0-9]/g, ''));
+          return (
+            <div key={index} className="mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-gray-700">{metric.label}</span>
+                <div className="flex items-center">
+                  <span className="text-sm font-bold text-gray-900 mr-2">{metric.value}</span>
+                  <span className="text-xs font-medium text-gray-600">--</span>
+                </div>
+              </div>
+              <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: percent + '%' }}
+                  transition={{ duration: 1, delay: 0.2 + index * 0.15, ease: 'easeOut' }}
+                  className="h-3 bg-blue-500 rounded-full"
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Conversion Chart Component
+const ConversionChart: React.FC<{ 
+  conversionRates: any; 
+  t: (key: string) => string;
+}> = ({ conversionRates, t }) => {
   const conversionChartData = [
     { stage: t('leadsToFollowUp'), value: conversionRates.leadsToFollowUp },
     { stage: t('callsToMeetings'), value: conversionRates.callsToMeetings },
     { stage: t('meetingsToDeals'), value: conversionRates.meetingsToDeals }
   ];
 
-  // --- LEADS SUMMARY CARDS LOGIC (copied and adapted from LeadsList) ---
-  // Helper to add spaces to camelCase or PascalCase
-  function addSpacesToCamelCase(text: string) {
-    return text.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/\b([A-Z])([A-Z]+)\b/g, '$1 $2');
+  return (
+    <motion.div
+      className="bg-white p-6 rounded-lg shadow-md"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.7, delay: 0.2 }}
+    >
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <Target className="h-5 w-5 mr-2" />
+        {t('conversionRates')}
+      </h3>
+      <p className="text-sm text-gray-600 mb-6">{t('visualizeSalesFunnel')}</p>
+      <ResponsiveContainer width="100%" height={260}>
+        <BarChart data={conversionChartData} barCategoryGap={40}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="stage" tick={{ fontSize: 13 }} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 13 }} />
+          <Tooltip formatter={(value) => `${value}%`} />
+          <Bar dataKey="value" fill="#2563eb" radius={[8, 8, 0, 0]} isAnimationActive>
+            <LabelList dataKey="value" position="top" formatter={(v) => `${v}%`} />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </motion.div>
+  );
+};
+
+// Team Summary Component
+const TeamSummary: React.FC<{ 
+  metrics: { myLeads: number; teamLeads: number; totalLeads: number; teamMembers: number } | null;
+  t: (key: string) => string;
+  onViewMyLeads: () => void;
+  onViewTeamLeads: () => void;
+}> = ({ metrics, t, onViewMyLeads, onViewTeamLeads }) => {
+  if (!metrics) return null;
+
+  return (
+    <motion.div
+      className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-200 mb-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold text-blue-900 flex items-center">
+          <Users className="h-5 w-5 mr-2" />
+          Team Overview
+        </h3>
+        <div className="flex gap-2">
+          <button
+            onClick={onViewMyLeads}
+            className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
+          >
+            View My Leads
+          </button>
+          <button
+            onClick={onViewTeamLeads}
+            className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+          >
+            View Team Leads
+          </button>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">{metrics.totalLeads}</div>
+          <div className="text-sm text-blue-700">Total Team Leads</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600">{metrics.myLeads}</div>
+          <div className="text-sm text-green-700">Your Leads</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-purple-600">{metrics.teamLeads}</div>
+          <div className="text-sm text-purple-700">Direct Team Members' Leads</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-indigo-600">{metrics.teamMembers}</div>
+          <div className="text-sm text-indigo-700">Direct Team Members</div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Recent Activity Component
+const RecentActivity: React.FC<{ 
+  logs: Log[]; 
+  t: (key: string) => string;
+}> = ({ logs, t }) => {
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+        <Activity className="h-5 w-5 mr-2" />
+        {t('recentActivityFeed')}
+      </h3>
+      <p className="text-sm text-gray-600 mb-6">{t('latestActionsUpdates')}</p>
+
+      <div className="space-y-4">
+        {logs.slice(0, 10).map((log) => (
+          <motion.div
+            key={log.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex items-start space-x-3"
+          >
+            <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
+              {log.userName?.split(' ').map((n: string) => n[0]).join('')}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-gray-900">{log.action}</p>
+              <p className="text-xs text-gray-500">{log.description}</p>
+              <p className="text-xs text-gray-500">{
+                new Date(log.createdAt).toLocaleString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              }</p>
+            </div>
+          </motion.div>
+        ))}
+        {logs.length === 0 && (
+          <p className="text-gray-500 text-center py-4">{t('noRecentActivities')}</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
+  const { t } = useTranslation('dashboard');
+  const navigate = useNavigate();
+  
+  // Get dashboard data
+  const { users, leads, meetings, logs, isLoading, user } = useDashboardData();
+  
+  // Safety check - don't render if user is not available
+  if (!user || !user.id || !user.role) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Loading user data...</p>
+        </div>
+      </div>
+    );
   }
-  // Helper to get translated label for cards, fallback to humanized label
-  function getCardLabel(key: string, t: (k: string) => string) {
-    const translated = t(key);
-    return translated !== key ? translated : addSpacesToCamelCase(key);
-  }
-  // Status cards
-  const [selectedManager, setSelectedManager] = useState<User | null>(null);
-  const [selectedSalesRep, setSelectedSalesRep] = useState<User | null>(null);
-  // Filter leads based on user role and selected manager/sales rep
-  let filteredLeads = leads;
-  if (user?.role === 'sales_rep') {
-    filteredLeads = leads.filter(lead => lead.owner?.id === user.id);
-  } else if (user?.role === 'team_leader') {
-    // Get sales reps that have this team leader as their teamLeaderId
-    const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user.id).map(u => u.id);
-    filteredLeads = leads.filter(lead => lead.owner?.id === user.id || salesReps.includes(lead.owner?.id || ''));
-    if (selectedSalesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
-    }
-  } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-    if (selectedManager) {
-      if (selectedManager) {
-        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === selectedManager.id).map(u => u.id);
-        console.log("salesReps", salesReps);
-        filteredLeads = leads.filter(lead => lead.owner?.id === selectedManager.id || salesReps.includes(lead.owner?.id!));
-      }
-    }
-    if (selectedSalesRep) {
-      filteredLeads = filteredLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);
-    }
-  }
-  // Use filteredLeads for dashboardCards, callOutcomeCards, visitStatusCards
+  // Filter state
+  const [selectedManager, setSelectedManager] = useState<UserType | null>(null);
+  const [selectedSalesRep, setSelectedSalesRep] = useState<UserType | null>(null);
+  const [showAllStatusCards, setShowAllStatusCards] = useState(false);
+
+  // Filter leads based on user role and selections
+  const filteredLeads = useLeadFiltering(leads, users, user, selectedManager, selectedSalesRep);
+
+  // Calculate metrics
+  const today = new Date().toISOString().split('T')[0];
+  const totalProspects = filteredLeads.length;
+  const activeLeads = filteredLeads.filter(l => 
+    [LeadStatus.FRESH_LEAD, LeadStatus.FOLLOW_UP, LeadStatus.SCHEDULED_VISIT, LeadStatus.OPEN_DEAL].includes(l.status)
+  ).length;
+  const todayMeetings = meetings.filter(m => m.date === today).length;
+  const followUpLeads = filteredLeads.filter(l => l.status === LeadStatus.FOLLOW_UP).length;
+
+  // Team leader specific metrics
+  const teamLeaderMetrics = useMemo(() => {
+    if (!user || user.role !== 'team_leader') return null;
+    
+    // If a specific person is selected, don't show team metrics
+    if (selectedSalesRep) return null;
+    
+    // Get all sales reps under this team leader
+    const directTeamMembers = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user.id).map(u => u.id);
+    
+    // TEMPORARY: Show all leads breakdown
+    const myLeads = leads.filter(lead => lead.owner?.id === user.id);
+    const teamLeads = leads.filter(lead => lead.owner?.id !== user.id);
+    
+    console.log('Team Leader Metrics Debug:', {
+      teamLeader: user?.name || 'Unknown',
+      teamLeaderId: user?.id || 'Unknown',
+      directTeamMembers: directTeamMembers.length,
+      totalLeads: leads.length,
+      myLeads: myLeads.length,
+      teamLeads: teamLeads.length
+    });
+    
+    return {
+      myLeads: myLeads.length,
+      teamLeads: teamLeads.length,
+      totalLeads: myLeads.length + teamLeads.length,
+      teamMembers: users.length // Show all users as team members for now
+    };
+  }, [user, selectedSalesRep, leads, users]);
+
+  // Conversion rates
+  const conversionRates = {
+    leadsToFollowUp: totalProspects ? Math.round((followUpLeads / totalProspects) * 100) : 0,
+    callsToMeetings: 0,
+    meetingsToDeals: meetings.length ? Math.round((meetings.filter(m => m.status === 'Completed').length / meetings.length) * 100) : 0,
+    callCompletionRate: 0,
+  };
+
+  // Prepare lead status cards data
   const dashboardCards = [
     { key: 'all', count: filteredLeads.length },
-    // { key: 'duplicate', count: filteredLeads.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contact && l.contact.email === lead.contact.email)) !== idx).length },
     { key: 'fresh_lead', count: filteredLeads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
     { key: 'cold_call', count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
     { key: 'follow_up', count: filteredLeads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length },
@@ -239,38 +547,62 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     { key: 'not_intersted_now', count: filteredLeads.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW).length },
     { key: 'reservation', count: filteredLeads.filter(lead => lead.status === LeadStatus.RESERVATION).length },
   ];
-  const compactCards = dashboardCards.slice(0, 4);
-  const fullCards = dashboardCards;
 
   // Extract unique call outcomes and visit statuses
-  const allCallOutcomes = Array.from(new Set(filteredLeads.flatMap(lead => (lead.calls || []).map(call => call.outcome)))).filter(Boolean);
-  const allVisitStatuses = Array.from(new Set(filteredLeads.flatMap(lead => (lead.visits || []).map(visit => visit.status)))).filter(Boolean);
+  const allCallOutcomes = Array.from(new Set(filteredLeads.flatMap(lead => 
+    (lead.calls || []).map(call => call.outcome)
+  ))).filter(Boolean);
+  
+  const allVisitStatuses = Array.from(new Set(filteredLeads.flatMap(lead => 
+    (lead.visits || []).map(visit => visit.status)
+  ))).filter(Boolean);
 
-  // Count leads for each outcome/status (always from all leads)
   const callOutcomeCards = allCallOutcomes.map(outcome => ({
     key: outcome,
-    count: filteredLeads.filter(lead => (lead.calls || []).some(call => call.outcome === outcome)).length,
+    count: filteredLeads.filter(lead => 
+      (lead.calls || []).some(call => call.outcome === outcome)
+    ).length,
   }));
+
   const visitStatusCards = allVisitStatuses.map(status => ({
     key: status,
-    count: filteredLeads.filter(lead => (lead.visits || []).some(visit => visit.status === status)).length,
+    count: filteredLeads.filter(lead => 
+      (lead.visits || []).some(visit => visit.status === status)
+    ).length,
   }));
 
-  // --- END LEADS SUMMARY CARDS LOGIC ---
-
-  // Card click handlers for navigation
+  // Card click handlers
   const handleStatusCardClick = (key: string) => {
     navigate(`/leads?filterType=status&filterValue=${encodeURIComponent(key)}`);
   };
+
   const handleCallOutcomeCardClick = (key: string) => {
     navigate(`/leads?filterType=callOutcome&filterValue=${encodeURIComponent(key)}`);
   };
+
   const handleVisitStatusCardClick = (key: string) => {
     navigate(`/leads?filterType=visitStatus&filterValue=${encodeURIComponent(key)}`);
   };
 
-  const [showAllStatusCards, setShowAllStatusCards] = useState(false);
+  // Team leader quick actions
+  const handleViewMyLeads = () => {
+    navigate(`/leads?filterType=owner&filterValue=${user?.id}`);
+  };
 
+  const handleViewTeamLeads = () => {
+    // Get all sales reps under this team leader
+    const directTeamMembers = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user?.id).map(u => u.id);
+    
+    navigate(`/leads?filterType=team&filterValue=${directTeamMembers.join(',')}`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -280,6 +612,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
       exit={{ opacity: 0, y: -30 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           {t('title')}, {user?.name}! 👋
@@ -288,56 +621,17 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        {kpiCards.map((card, index) => {
-          let changeType = 'neutral';
-          if (typeof card.change === 'number') {
-            if (card.change > 0) changeType = 'increase';
-            else if (card.change < 0) changeType = 'decrease';
-          }
-          return (
-            <div key={index} className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-full ${index === 0 ? 'bg-blue-100' :
-                  index === 1 ? 'bg-purple-100' :
-                    index === 2 ? 'bg-orange-100' :
-                      index === 3 ? 'bg-green-100' : 'bg-gray-100'
-                  }`}>
-                  <card.icon className={`h-6 w-6 ${index === 0 ? 'text-blue-600' :
-                    index === 1 ? 'text-purple-600' :
-                      index === 2 ? 'text-orange-600' :
-                        index === 3 ? 'text-green-600' : 'text-gray-600'
-                    }`} />
-                </div>
-                {card.info ? (
-                  <a
-                    href="#"
-                    className="text-xs text-blue-600 underline hover:text-blue-800 cursor-pointer"
-                    onClick={e => {
-                      e.preventDefault();
-                      navigate('/meetings');
-                    }}
-                  >
-                    {t('goToViewAllMeetings')}
-                  </a>
-                ) : (
-                  <span className={`text-sm font-medium ${changeType === 'increase' ? 'text-green-600' :
-                    changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
-                    }`}>
-                    {card.change !== null && card.change !== undefined ? <>{card.change > 0 && '+'}{card.change}%</> : '--'}
-                  </span>
-                )}
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">{card.title}</h3>
-              <p className="text-3xl font-bold text-gray-900 mb-2">{card.value}</p>
-              <p className="text-sm text-gray-600">{card.description}</p>
-            </div>
-          );
-        })}
-      </div>
+      <KPICards
+        totalProspects={totalProspects}
+        activeLeads={activeLeads}
+        todayMeetings={todayMeetings}
+        followUpLeads={followUpLeads}
+        t={t}
+        navigate={navigate}
+      />
 
-      {/* Show More/Less Toggle for Status Cards */}
-      <div className="flex justify-end mb-6"> {/* Increased mb-2 to mb-6 for more space below cards */}
+      {/* Show More/Less Toggle */}
+      <div className="flex justify-end mb-6">
         {dashboardCards.length > 4 && (
           <button
             onClick={() => setShowAllStatusCards((v) => !v)}
@@ -347,17 +641,47 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
           </button>
         )}
       </div>
-      {/* User Filter Select for Manager/Sales Rep */}
+
+      {/* User Filter Select */}
       {user && (
-        <UserFilterSelect
-          currentUser={user as User}
-          users={users}
-          selectedManager={selectedManager}
-          setSelectedManager={setSelectedManager}
-          selectedSalesRep={selectedSalesRep}
-          setSelectedSalesRep={setSelectedSalesRep}
-        />
+        <div className="mb-6">
+          <UserFilterSelect
+            currentUser={user as UserType}
+            users={users}
+            selectedManager={selectedManager}
+            setSelectedManager={setSelectedManager}
+            selectedSalesRep={selectedSalesRep}
+            setSelectedSalesRep={setSelectedSalesRep}
+          />
+          
+          {/* Filter Status Indicator */}
+          {user.role === 'team_leader' && (
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center text-sm text-blue-800">
+                <Users className="h-4 w-4 mr-2" />
+                {selectedSalesRep ? (
+                  <span>
+                    Showing leads for <strong>{selectedSalesRep.name}</strong>
+                    {selectedSalesRep.role === 'team_leader' && <span className="text-blue-600 ml-1">(Team Leader)</span>}
+                  </span>
+                ) : (
+                  <span>Showing leads for <strong>your team</strong> (your leads + your direct team members' leads)</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
+
+      {/* Team Summary for Team Leaders */}
+      <TeamSummary 
+        metrics={teamLeaderMetrics} 
+        t={t} 
+        onViewMyLeads={handleViewMyLeads}
+        onViewTeamLeads={handleViewTeamLeads}
+      />
+
+      {/* Lead Summary Cards */}
       <LeadsSummaryCards
         statusCards={dashboardCards}
         callOutcomeCards={callOutcomeCards}
@@ -369,114 +693,22 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
         onShowAllStatusCardsToggle={() => setShowAllStatusCards((v) => !v)}
       />
 
-      {/* Add extra space between cards and Conversion Rates & Metrics */}
+      {/* Extra space */}
       <div className="mb-10" />
 
+      {/* Conversion Rates & Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        {/* Conversion Rates Chart */}
-        <motion.div
-          className="bg-white p-6 rounded-lg shadow-md"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-        >
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Target className="h-5 w-5 mr-2" />
-            {t('conversionRates')}
-          </h3>
-          <p className="text-sm text-gray-600 mb-6">{t('visualizeSalesFunnel')}</p>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={conversionChartData} barCategoryGap={40}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="stage" tick={{ fontSize: 13 }} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 13 }} />
-              <Tooltip formatter={(value) => `${value}%`} />
-              <Bar dataKey="value" fill="#2563eb" radius={[8, 8, 0, 0]} isAnimationActive>
-                <LabelList dataKey="value" position="top" formatter={(v) => `${v}%`} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </motion.div>
-
-        {/* Conversion Metrics */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <CheckCircle className="h-5 w-5 mr-2" />
-            {t('conversionMetrics')}
-          </h3>
-          <p className="text-sm text-gray-600 mb-6">{t('monitorSalesPerformance')}</p>
-
-          <div className="space-y-4">
-            {conversionMetrics.map((metric, index) => {
-              let changeType = 'neutral';
-              if (typeof metric.change === 'number') {
-                if (metric.change > 0) changeType = 'increase';
-                else if (metric.change < 0) changeType = 'decrease';
-              }
-              // Extract numeric value for progress bar
-              const percent = parseInt(metric.value.replace(/[^0-9]/g, ''));
-              return (
-                <div key={index} className="mb-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium text-gray-700">{metric.label}</span>
-                    <div className="flex items-center">
-                      <span className="text-sm font-bold text-gray-900 mr-2">{metric.value}</span>
-                      <span className={`text-xs font-medium ${changeType === 'increase' ? 'text-green-600' :
-                        changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
-                        }`}>
-                        {metric.change !== null && metric.change !== undefined ? <>{metric.change > 0 && '+'}{metric.change}%</> : '--'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: percent + '%' }}
-                      transition={{ duration: 1, delay: 0.2 + index * 0.15, ease: 'easeOut' }}
-                      className="h-3 bg-blue-500 rounded-full"
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <ConversionChart conversionRates={conversionRates} t={t} />
+        <ConversionMetrics 
+          conversionRates={conversionRates} 
+          totalProspects={totalProspects} 
+          activeLeads={activeLeads} 
+          t={t} 
+        />
       </div>
 
-      {/* Recent Activity Feed */}
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Clock className="h-5 w-5 mr-2" />
-          {t('recentActivityFeed')}
-        </h3>
-        <p className="text-sm text-gray-600 mb-6">{t('latestActionsUpdates')}</p>
-
-        <div className="space-y-4">
-          {logs.slice(0, 10).map((log) => (
-            <div key={log.id} className="flex items-start space-x-3">
-              <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                {log.userName?.split(' ').map((n: string) => n[0]).join('')}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm text-gray-900">{log.action}</p>
-                <p className="text-xs text-gray-500">{log.description}</p>
-                <p className="text-xs text-gray-500">{
-                  new Date(log.createdAt).toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })
-                }</p>
-              </div>
-            </div>
-          ))}
-          {logs.length === 0 && (
-            <p className="text-gray-500 text-center py-4">{t('noRecentActivities')}</p>
-          )}
-        </div>
-      </div>
+      {/* Recent Activity */}
+      <RecentActivity logs={logs} t={t} />
     </motion.div>
   );
 };

@@ -153,3 +153,8 @@ export const deleteTask = async (id: string) => {
     const response = await axiosInterceptor.delete(`/tasks/${id}`);
     return response.data;
 }
+
+export const getLeadLogs = async (leadId: string) => {
+    const response = await axiosInterceptor.get(`/logs?leadId=${leadId}`);
+    return response.data as Log[];
+}

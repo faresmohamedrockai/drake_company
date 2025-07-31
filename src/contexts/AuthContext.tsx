@@ -8,8 +8,8 @@ export interface User {
   email: string;
   role: 'admin' | 'sales_admin' | 'team_leader' | 'sales_rep' | 'sales_manager';
   teamId?: string;
+  teamLeaderId?: string | null;
   image?: string | null;
-
 }
 
 interface AuthContextType {

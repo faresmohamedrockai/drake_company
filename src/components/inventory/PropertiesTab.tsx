@@ -535,7 +535,7 @@ const PropertiesTab: React.FC = () => {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
-    if (user?.role === 'team_leader' && found.assignedToId !== user.id && !(user.teamId && found.assignedToId.includes(user.teamId))) {
+            if (user?.role === 'team_leader' && found.assignedToId !== user.id && !(user.teamLeaderId && found.assignedToId.includes(user.teamLeaderId))) {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
