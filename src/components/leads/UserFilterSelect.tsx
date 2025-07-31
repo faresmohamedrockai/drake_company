@@ -129,7 +129,9 @@ const CustomDropdown: React.FC<CustomDropdownProps> = ({
                   {option.name}
                 </span>
                 <div className="text-xs text-gray-500">
-                  {option.role === 'team_leader' ? 'Team Leader' : 'Sales Representative'}
+                  {option.role === 'team_leader' ? 'Team Leader' : 
+                   option.role === 'sales_rep' ? 'Sales Representative' : 
+                   option.role}
                 </div>
               </div>
             </div>
@@ -152,7 +154,12 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
 
   // Filter users based on current user's role
   const managers = users.filter(user => user.role === 'team_leader');
-  const salesReps = users.filter(user => user.role === 'sales_rep');
+  
+  // For team leaders, include both team leaders and sales reps in the sales rep filter
+  // For admin/sales_admin, only show sales reps
+  const salesReps = currentUser.role === 'team_leader' 
+    ? users.filter(user => ['sales_rep', 'team_leader'].includes(user.role))
+    : users.filter(user => user.role === 'sales_rep');
 
   // Only show filters for admin, sales_admin, or team_leader
   if (!['admin', 'sales_admin', 'team_leader'].includes(currentUser.role)) {

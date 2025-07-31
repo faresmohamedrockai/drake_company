@@ -225,5 +225,9 @@
   "owner": "Owner",
   "updatedAt": "Updated At",
   "save": "Save",
-  "edit": "Edit"
+  "edit": "Edit",
+  "filterByManager": "Filter by Manager",
+  "filterBySalesRep": "Filter by Sales Rep",
+  "selectManager": "Select Manager",
+  "selectSalesRep": "Select Sales Rep"
 } 

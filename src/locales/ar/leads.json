@@ -224,5 +224,9 @@
   "owner": "المالك",
   "updatedAt": "تاريخ التحديث",
   "save": "حفظ",
-  "edit": "تعديل"
+  "edit": "تعديل",
+  "filterByManager": "تصفية حسب المدير",
+  "filterBySalesRep": "تصفية حسب مندوب المبيعات",
+  "selectManager": "اختيار المدير",
+  "selectSalesRep": "اختيار مندوب المبيعات"
 } 
