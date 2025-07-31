@@ -1,6 +1,6 @@
 import axiosInterceptor from "../../axiosInterceptor/axiosInterceptor";
 import { Project } from "../components/inventory/ProjectsTab";
-import { Contract, Developer, Lead, Log, Meeting, Property, User, Zone } from "../types";
+import { Contract, Developer, Lead, Log, Meeting, Property, User, Zone, Task, TaskStatistics, CreateTaskDto, UpdateTaskDto, TaskFilters } from "../types";
 
 export const getDevelopers = async () => {
     const response = await axiosInterceptor.get('/developers');
@@ -21,6 +21,11 @@ export const getLeads = async () => {
 export const deleteLead = async (leadId: string) => {
     const response = await axiosInterceptor.delete(`/leads/${leadId}`);
     return response.data;
+}
+
+export const createLead = async (lead: Partial<Lead>) => {
+    const response = await axiosInterceptor.post('/leads/create', lead);
+    return response.data.data.lead;
 }
 
 export const bulkUpdateLeads = async (leadIds: string[], updateData: Partial<Lead>) => {
@@ -76,4 +81,75 @@ export const getProjects = async () => {
 export const getLogs = async () => {
     const response = await axiosInterceptor.get('/logs');
     return response.data as Log[];
+}
+
+// Task Management Queries
+export const getTasks = async (filters?: TaskFilters) => {
+    const params = new URLSearchParams();
+    
+    if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                params.append(key, value.toString());
+            }
+        });
+    }
+    
+    const response = await axiosInterceptor.get(`/tasks?${params.toString()}`);
+    return response.data as Task[];
+}
+
+export const getMyTasks = async (filters?: Omit<TaskFilters, 'assignedToId' | 'createdById'>) => {
+    const params = new URLSearchParams();
+    
+    if (filters) {
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== '') {
+                params.append(key, value.toString());
+            }
+        });
+    }
+    
+    const response = await axiosInterceptor.get(`/tasks/my-tasks?${params.toString()}`);
+    return response.data as Task[];
+}
+
+export const getTasksByLead = async (leadId: string) => {
+    const response = await axiosInterceptor.get(`/tasks/lead/${leadId}`);
+    return response.data as Task[];
+}
+
+export const getTasksByProject = async (projectId: string) => {
+    const response = await axiosInterceptor.get(`/tasks/project/${projectId}`);
+    return response.data as Task[];
+}
+
+export const getTaskStatistics = async () => {
+    const response = await axiosInterceptor.get('/tasks/statistics');
+    return response.data as TaskStatistics;
+}
+
+export const getTask = async (id: string) => {
+    const response = await axiosInterceptor.get(`/tasks/${id}`);
+    return response.data as Task;
+}
+
+export const createTask = async (task: CreateTaskDto) => {
+    const response = await axiosInterceptor.post('/tasks', task);
+    return response.data as Task;
+}
+
+export const updateTask = async (id: string, task: UpdateTaskDto) => {
+    const response = await axiosInterceptor.patch(`/tasks/${id}`, task);
+    return response.data as Task;
+}
+
+export const updateTaskStatus = async (id: string, status: Task['status']) => {
+    const response = await axiosInterceptor.patch(`/tasks/${id}/status`, { status });
+    return response.data as Task;
+}
+
+export const deleteTask = async (id: string) => {
+    const response = await axiosInterceptor.delete(`/tasks/${id}`);
+    return response.data;
 }

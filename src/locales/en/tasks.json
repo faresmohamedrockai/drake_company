@@ -1,0 +1,161 @@
+{
+  "title": "Tasks & Reminders",
+  "subtitle": "Manage your tasks and track progress",
+  "createTask": "Create Task",
+  "editTask": "Edit Task",
+  "deleteTask": "Delete Task",
+  "taskDetails": "Task Details",
+  
+  "form": {
+    "title": "Title",
+    "titlePlaceholder": "Enter task title",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter task description",
+    "dueDate": "Due Date",
+    "dueTime": "Due Time",
+    "priority": "Priority",
+    "type": "Task Type",
+    "status": "Status",
+    "assignTo": "Assign To",
+    "assignToPlaceholder": "Select user to assign",
+    "relatedLead": "Related Lead",
+    "relatedLeadPlaceholder": "Select related lead",
+    "relatedProject": "Related Project",
+    "relatedProjectPlaceholder": "Select related project",
+    "relatedInventory": "Related Property",
+    "relatedInventoryPlaceholder": "Select related property",
+    "reminder": "Set Reminder",
+    "reminderTime": "Reminder Time",
+    "reminderTimePlaceholder": "Select reminder time"
+  },
+  
+  "priorities": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  
+  "types": {
+    "follow_up": "Follow Up",
+    "meeting_preparation": "Meeting Preparation",
+    "contract_review": "Contract Review",
+    "payment_reminder": "Payment Reminder",
+    "visit_scheduling": "Visit Scheduling",
+    "lead_nurturing": "Lead Nurturing",
+    "general": "General"
+  },
+  
+  "statuses": {
+    "pending": "Pending",
+    "in_progress": "In Progress",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "overdue": "Overdue"
+  },
+  
+  "filters": {
+    "title": "Filters",
+    "status": "Status",
+    "priority": "Priority",
+    "type": "Type",
+    "assignedTo": "Assigned To",
+    "dateRange": "Date Range",
+    "dueDateFrom": "Due Date From",
+    "dueDateTo": "Due Date To",
+    "search": "Search tasks...",
+    "clearFilters": "Clear Filters",
+    "myTasks": "My Tasks",
+    "overdue": "Overdue",
+    "dueToday": "Due Today",
+    "dueThisWeek": "Due This Week"
+  },
+  
+  "table": {
+    "title": "Title",
+    "description": "Description",
+    "dueDate": "Due Date",
+    "priority": "Priority",
+    "status": "Status",
+    "type": "Type",
+    "assignedTo": "Assigned To",
+    "relatedTo": "Related To",
+    "actions": "Actions",
+    "noTasks": "No tasks found",
+    "loading": "Loading tasks..."
+  },
+  
+  "actions": {
+    "view": "View",
+    "edit": "Edit",
+    "delete": "Delete",
+    "markComplete": "Mark Complete",
+    "markInProgress": "Mark In Progress",
+    "markPending": "Mark Pending",
+    "markCancelled": "Mark Cancelled"
+  },
+  
+  "statistics": {
+    "totalTasks": "Total Tasks",
+    "pendingTasks": "Pending",
+    "inProgressTasks": "In Progress",
+    "completedTasks": "Completed",
+    "overdueTasks": "Overdue",
+    "completionRate": "Completion Rate"
+  },
+  
+  "notifications": {
+    "taskCreated": "Task created successfully",
+    "taskUpdated": "Task updated successfully",
+    "taskDeleted": "Task deleted successfully",
+    "statusUpdated": "Task status updated successfully",
+    "errorCreating": "Error creating task",
+    "errorUpdating": "Error updating task",
+    "errorDeleting": "Error deleting task",
+    "confirmDelete": "Are you sure you want to delete this task?",
+    "confirmDeleteMultiple": "Are you sure you want to delete {{count}} tasks?"
+  },
+  
+  "quickActions": {
+    "title": "Quick Actions",
+    "createTask": "Create New Task",
+    "bulkUpdate": "Bulk Update",
+    "exportTasks": "Export Tasks",
+    "importTasks": "Import Tasks"
+  },
+  
+  "bulkActions": {
+    "title": "Bulk Actions",
+    "markComplete": "Mark Complete",
+    "markInProgress": "Mark In Progress",
+    "markPending": "Mark Pending",
+    "markCancelled": "Mark Cancelled",
+    "assignTo": "Assign To",
+    "changePriority": "Change Priority",
+    "changeType": "Change Type",
+    "deleteSelected": "Delete Selected"
+  },
+  
+  "details": {
+    "createdBy": "Created By",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At",
+    "reminderSet": "Reminder Set",
+    "emailSent": "Email Sent",
+    "relatedLead": "Related Lead",
+    "relatedProject": "Related Project",
+    "relatedProperty": "Related Property"
+  },
+  
+  "overdue": {
+    "title": "Overdue Tasks",
+    "description": "Tasks that are past their due date",
+    "noOverdue": "No overdue tasks"
+  },
+  
+  "upcoming": {
+    "title": "Upcoming Deadlines",
+    "description": "Tasks due in the next 7 days",
+    "noUpcoming": "No upcoming deadlines"
+  }
+} 

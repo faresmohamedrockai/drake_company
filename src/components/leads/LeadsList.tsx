@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, Eye, Calendar as CalendarIcon, Edit, Trash2, X, ArrowUp, ArrowDown, Minus, Phone, Check, Star, TrendingUp, TrendingDown, MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Clock, HelpCircle, User as UserIcon } from 'lucide-react';
+import { Search, Plus, Eye, Calendar as CalendarIcon, Edit, Trash2, X, ArrowUp, ArrowDown, Minus, Phone, Check, Star, TrendingUp, TrendingDown, MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Clock, HelpCircle, User as UserIcon, Upload, Info } from 'lucide-react';
 import { Filter } from 'lucide-react';
 import LeadModal from './LeadModal';
 import AddLeadModal from './AddLeadModal';
@@ -14,8 +14,9 @@ import { Lead, LeadStatus, Property } from '../../types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { User } from '../../types'
 import type { PaymentPlan, Project } from '../inventory/ProjectsTab';
-import { deleteLead, getLeads, getProperties, getUsers, bulkUpdateLeads } from '../../queries/queries';
+import { deleteLead, getLeads, getProperties, getUsers, bulkUpdateLeads, createLead } from '../../queries/queries';
 import { Id, toast } from 'react-toastify';
+import * as XLSX from 'xlsx';
 
 // Icon and color mappings for status cards
 const statusCardIcons: Record<string, JSX.Element> = {
@@ -91,7 +92,7 @@ const LeadsList: React.FC = () => {
     queryFn: () => getLeads()
   });
 
-  const { data: properties = [], isLoading: isLoadingProperties } = useQuery<Property[]>({
+  const { data: properties = [] } = useQuery<Property[]>({
     queryKey: ['properties'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProperties()
@@ -130,6 +131,16 @@ const LeadsList: React.FC = () => {
     }
   });
 
+  const { mutateAsync: createLeadMutation, isPending: isCreatingLead } = useMutation({
+    mutationFn: (lead: Partial<Lead>) => createLead(lead),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Error creating lead');
+    }
+  });
+
   // const { projects, users } = useData(); // Add users from DataContext
   const { t, i18n } = useTranslation('leads');
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,6 +166,11 @@ const LeadsList: React.FC = () => {
   const [isSelectAllChecked, setIsSelectAllChecked] = useState(false);
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [bulkAssignToUserId, setBulkAssignToUserId] = useState('');
+  
+  // Import functionality state
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   // On mount, check for filterType and filterValue in query params and set active card
   React.useEffect(() => {
@@ -230,6 +246,143 @@ const LeadsList: React.FC = () => {
     setShowBulkActions(false);
     setIsSelectAllChecked(false);
     setBulkAssignToUserId('');
+  };
+
+  // Excel import functionality
+  const handleExcelImport = async (file: File) => {
+    setIsImporting(true);
+    setImportProgress(0);
+    setShowImportModal(true);
+
+    try {
+      const data = await readExcelFile(file);
+      const leads = processExcelData(data);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (let i = 0; i < leads.length; i++) {
+        try {
+          await createLeadMutation(leads[i]);
+          successCount++;
+        } catch (error) {
+          errorCount++;
+          console.error('Error importing lead:', error);
+        }
+        
+        // Update progress
+        const progress = Math.round(((i + 1) / leads.length) * 100);
+        setImportProgress(progress);
+      }
+      
+      // Show results
+      if (successCount > 0) {
+        toast.success(`Successfully imported ${successCount} leads${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
+      }
+      if (errorCount > 0) {
+        toast.error(`Failed to import ${errorCount} leads`);
+      }
+      
+    } catch (error) {
+      toast.error('Error processing Excel file');
+      console.error('Excel import error:', error);
+    } finally {
+      setIsImporting(false);
+      setImportProgress(0);
+      setShowImportModal(false);
+    }
+  };
+
+  const readExcelFile = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          // Remove header row and convert to objects
+          const headers = jsonData[0] as string[];
+          const rows = jsonData.slice(1) as any[][];
+          
+          const result = rows.map(row => {
+            const obj: any = {};
+            headers.forEach((header, index) => {
+              obj[header] = row[index];
+            });
+            return obj;
+          });
+          
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const processExcelData = (data: any[]): Partial<Lead>[] => {
+    const processedData = data
+      .filter(row => {
+        // Check for phone number in various possible column names
+        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] || 
+                           row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+                           row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+                           row['PhoneNumber'] || row['Phone_Number'];
+        return phoneNumber && phoneNumber.toString().trim() !== '';
+      })
+      .map(row => {
+        // Get phone number from various possible column names
+        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] || 
+                           row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+                           row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+                           row['PhoneNumber'] || row['Phone_Number'] || '';
+        
+        // Get Arabic name from various possible column names
+        const arabicName = row['Arabic Name'] || row['nameAr'] || row['Name (Arabic)'] || 
+                          row['الاسم العربي'] || row['اسم عربي'] || row['الاسم'] ||
+                          row['arabic_name'] || row['arabicName'] || row['ARABIC_NAME'] ||
+                          row['ArabicName'] || row['Arabic_Name'] || '';
+        
+        // Clean phone number (remove spaces, dashes, etc.)
+        const cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)]/g, '');
+        
+        return {
+          nameAr: arabicName.toString().trim(),
+          contact: cleanPhone,
+          source: 'Data Sheet', // Default source as requested
+          status: LeadStatus.FOLLOW_UP, // Default status as requested
+          budget: 0, // Default budget
+          assignedToId: user?.id || '',
+          ownerId: user?.id || '',
+          createdBy: user?.name || 'System',
+          createdAt: new Date().toISOString(),
+        };
+      })
+      .filter(lead => lead.contact && lead.contact.length >= 10); // Filter out invalid phone numbers
+
+    // Remove duplicates based on phone number
+    const uniqueLeads = processedData.filter((lead, index, self) => 
+      index === self.findIndex(l => l.contact === lead.contact)
+    );
+
+    // Check for existing leads in database
+    const existingPhones = new Set(leads.map(lead => lead.contact));
+    const newLeads = uniqueLeads.filter(lead => !existingPhones.has(lead.contact));
+
+    if (uniqueLeads.length !== newLeads.length) {
+      const duplicateCount = uniqueLeads.length - newLeads.length;
+      toast.warning(`${duplicateCount} leads with duplicate phone numbers were skipped`);
+    }
+
+    return newLeads;
   };
 
 
@@ -787,6 +940,31 @@ const LeadsList: React.FC = () => {
                 <Plus className="h-5 w-5 mr-2" />
                 <span className="hidden xs:inline">{t('addNewLead')}</span>
               </button>
+              <div className="flex items-center gap-1">
+                <label className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center w-full sm:w-auto cursor-pointer">
+                  <Upload className="h-5 w-5 mr-2" />
+                  <span className="hidden xs:inline">{t('importFromExcel') || 'Import Excel'}</span>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleExcelImport(file);
+                      }
+                    }}
+                    className="hidden"
+                    disabled={isImporting}
+                  />
+                </label>
+                <button
+                  onClick={() => window.open('excel_template_guide.html', '_blank')}
+                  className="bg-gray-100 text-gray-600 p-2 rounded-lg hover:bg-gray-200 transition-colors"
+                  title={t('importHelp') || 'Import Help'}
+                >
+                  <Info className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -930,8 +1108,8 @@ const LeadsList: React.FC = () => {
                 } else if (user?.role === 'team_leader') {
                   // Team Leaders can assign to their team members and themselves
                   assignableUsers = users?.filter(u =>
-                    u.name === user.name ||
-                    (u.role === 'sales_rep' && u.teamId === user.teamId)
+                    u.id === user.id ||
+                    (u.role === 'sales_rep' && u.teamLeaderId === user.id)
                   );
                 } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                   // Sales Admin and Admin can assign to anyone
@@ -1173,6 +1351,32 @@ const LeadsList: React.FC = () => {
               >
                 {t('cancel')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Progress Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">{t('importingLeads') || 'Importing Leads'}</h3>
+            </div>
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-gray-600">{t('progress') || 'Progress'}</span>
+                <span className="text-sm font-medium text-gray-900">{importProgress}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                  style={{ width: `${importProgress}%` }}
+                ></div>
+              </div>
+            </div>
+            <div className="text-center text-sm text-gray-600">
+              {isImporting ? (t('pleaseWait') || 'Please wait while we import your leads...') : (t('importComplete') || 'Import complete!')}
             </div>
           </div>
         </div>

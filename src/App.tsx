@@ -9,6 +9,7 @@ import Dashboard from './components/dashboard/Dashboard';
 import LeadsList from './components/leads/LeadsList';
 import InventoryManagement from './components/inventory/InventoryManagement';
 import MeetingsManagement from './components/meetings/MeetingsManagement';
+import TasksManagement from './components/tasks/TasksManagement';
 import ContractsManagement from './components/contracts/ContractsManagement';
 import Reports from './components/reports/Reports';
 import Settings from './components/settings/Settings';
@@ -17,7 +18,7 @@ import './i18n';
 import './styles/rtl.css';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
-import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProjects, getProperties, getUsers, getZones } from './queries/queries';
+import { getContracts, getDevelopers, getLeads, getLogs, getMeetings, getProjects, getProperties, getUsers, getZones, getTaskStatistics } from './queries/queries';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 // Custom hook for managing persisted view state with URL sync
@@ -122,6 +123,11 @@ const AppContent: React.FC = () => {
         queryFn: () => getProjects(),
         staleTime: 1000 * 60 * 5 // 5 minutes
       });
+      queryClient.prefetchQuery({
+        queryKey: ['taskStatistics'],
+        queryFn: () => getTaskStatistics(),
+        staleTime: 1000 * 60 * 5 // 5 minutes
+      });
     }
   }, [isAuthenticated]);
 
@@ -171,6 +177,7 @@ const AppContent: React.FC = () => {
               <Route path="/leads" element={<LeadsList />} />
               <Route path="/inventory" element={<InventoryManagement />} />
               <Route path="/meetings" element={<MeetingsManagement />} />
+              <Route path="/tasks" element={<TasksManagement />} />
               <Route path="/contracts" element={<ContractsManagement />} />
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />

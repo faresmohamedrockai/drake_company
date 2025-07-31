@@ -266,8 +266,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                 } else if (user?.role === 'team_leader') {
                   // Team Leaders can assign to their team members and themselves
                   assignableUsers = users?.filter(u =>
-                    u.name === user.name ||
-                    (u.role === 'sales_rep' && u.teamId === user.teamId)
+                    u.id === user.id ||
+                    (u.role === 'sales_rep' && u.teamLeaderId === user.id)
                   );
                 } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                   // Sales Admin and Admin can assign to anyone

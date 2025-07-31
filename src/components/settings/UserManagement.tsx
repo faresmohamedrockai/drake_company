@@ -69,7 +69,16 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   })
 
   const { mutateAsync: addUserMutation, isPending: isAdding } = useMutation({
-    mutationFn: (data: { formData: any }) => addUser(data.formData),
+    mutationFn: async (data: { formData: any }) => {
+      const response = await addUser(data.formData);
+      
+      // If this is a team leader, update their teamId to their own ID
+      if (data.formData.role === 'team_leader' && response.user) {
+        await updateUser(response.user.id, { teamId: response.user.id });
+      }
+      
+      return response;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       setFormData({
@@ -143,6 +152,11 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const canManageUsers = currentUser?.role === 'admin';
   const canDeleteUsers = currentUser?.role === 'admin';
 
+  // Helper function to get team members for a team leader
+  const getTeamMembers = (teamLeaderId: string) => {
+    return users.filter(user => user.role === 'sales_rep' && user.teamLeaderId === teamLeaderId);
+  };
+
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -170,7 +184,8 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       // For new users, we'll set this after user creation
       // For editing, we'll keep the existing team ID
       if (!editingUser) {
-        submitData.teamLeaderId = 'auto-assign'; // Will be set to user ID after creation
+        submitData.teamId = 'auto-assign'; // Will be set to user ID after creation
+        submitData.teamLeaderId = null; // Team leaders don't have a team leader
       }
     }
     if (editingUser) {
@@ -563,12 +578,14 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                         // If changing to team leader, set team ID to auto-assign
                         if (newRole === 'team_leader') {
                           newTeamId = editingUser ? editingUser.id : 'auto-assign';
+                          setFormData({ ...formData, role: newRole, teamId: newTeamId, teamLeaderId: null });
                         } else if (newRole === 'sales_rep') {
                           // If changing to sales rep, clear team ID
                           newTeamId = '';
+                          setFormData({ ...formData, role: newRole, teamId: '', teamLeaderId: newTeamId });
+                        } else {
+                          setFormData({ ...formData, role: newRole, teamLeaderId: newTeamId });
                         }
-
-                        setFormData({ ...formData, role: newRole, teamLeaderId: newTeamId });
                       }}
                       className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                       dir={isRTL ? 'rtl' : 'ltr'}

@@ -236,3 +236,78 @@ export interface Activity {
   time: string;
   type: 'lead' | 'property' | 'meeting' | 'contract' | 'call' | 'visit';
 }
+
+// Task Management Types
+export interface Task {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate: Date | {} | null; // Handle empty object and null cases from backend
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'overdue';
+  type: 'follow_up' | 'meeting_preparation' | 'contract_review' | 'payment_reminder' | 'visit_scheduling' | 'lead_nurturing' | 'general';
+  reminder: boolean;
+  reminderTime?: Date | {} | null; // Handle empty object and null cases from backend
+  emailSent: boolean;
+  
+  // Relations
+  assignedToId?: string | null;
+  createdById?: string | null;
+  leadId?: string | null;
+  projectId?: string | null;
+  inventoryId?: string | null;
+  
+  createdAt: Date | {} | null; // Handle empty object and null cases from backend
+  updatedAt: Date | {} | null; // Handle empty object and null cases from backend
+  
+  // Populated relations
+  assignedTo?: User | null;
+  createdBy?: User | null;
+  lead?: Lead | null;
+  project?: Project | null;
+  inventory?: Property | null;
+}
+
+export interface TaskStatistics {
+  totalTasks: number;
+  pendingTasks: number;
+  inProgressTasks: number;
+  completedTasks: number;
+  overdueTasks: number;
+  tasksByPriority: Array<{ priority: string; _count: { id: number } }>;
+  tasksByType: Array<{ type: string; _count: { id: number } }>;
+  completionRate: number;
+}
+
+export interface CreateTaskDto {
+  title: string;
+  description?: string;
+  dueDate: string | Date | {}; // Allow string, Date object, or empty object for backend
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  status?: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'overdue';
+  type: 'follow_up' | 'meeting_preparation' | 'contract_review' | 'payment_reminder' | 'visit_scheduling' | 'lead_nurturing' | 'general';
+  reminder?: boolean;
+  reminderTime?: string | Date | null; // Allow string, Date object, or null for backend
+  assignedToId?: string | null;
+  createdById?: string | null;
+  leadId?: string | null;
+  projectId?: string | null;
+  inventoryId?: string | null;
+}
+
+export interface UpdateTaskDto extends Partial<CreateTaskDto> {}
+
+export interface TaskFilters {
+  status?: Task['status'];
+  priority?: Task['priority'];
+  type?: Task['type'];
+  assignedToId?: string;
+  createdById?: string;
+  leadId?: string;
+  projectId?: string;
+  inventoryId?: string;
+  dueDateFrom?: string;
+  dueDateTo?: string;
+  page?: number;
+  limit?: number;
+}

@@ -8,6 +8,7 @@ import enDashboard from './locales/en/dashboard.json';
 import enLeads from './locales/en/leads.json';
 import enInventory from './locales/en/inventory.json';
 import enMeetings from './locales/en/meetings.json';
+import enTasks from './locales/en/tasks.json';
 import enContracts from './locales/en/contracts.json';
 import enReports from './locales/en/reports.json';
 import enSettings from './locales/en/settings.json';
@@ -17,6 +18,7 @@ import arDashboard from './locales/ar/dashboard.json';
 import arLeads from './locales/ar/leads.json';
 import arInventory from './locales/ar/inventory.json';
 import arMeetings from './locales/ar/meetings.json';
+import arTasks from './locales/ar/tasks.json';
 import arContracts from './locales/ar/contracts.json';
 import arReports from './locales/ar/reports.json';
 import arSettings from './locales/ar/settings.json';
@@ -29,6 +31,7 @@ const resources = {
     leads: enLeads,
     inventory: enInventory,
     meetings: enMeetings,
+    tasks: enTasks,
     contracts: enContracts,
     reports: enReports,
     settings: enSettings,
@@ -40,6 +43,7 @@ const resources = {
     leads: arLeads,
     inventory: arInventory,
     meetings: arMeetings,
+    tasks: arTasks,
     contracts: arContracts,
     reports: arReports,
     settings: arSettings,

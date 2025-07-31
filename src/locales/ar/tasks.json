@@ -1,0 +1,161 @@
+{
+  "title": "المهام والتذكيرات",
+  "subtitle": "إدارة المهام وتتبع التقدم",
+  "createTask": "إنشاء مهمة",
+  "editTask": "تعديل المهمة",
+  "deleteTask": "حذف المهمة",
+  "taskDetails": "تفاصيل المهمة",
+  
+  "form": {
+    "title": "العنوان",
+    "titlePlaceholder": "أدخل عنوان المهمة",
+    "description": "الوصف",
+    "descriptionPlaceholder": "أدخل وصف المهمة",
+    "dueDate": "تاريخ الاستحقاق",
+    "dueTime": "وقت الاستحقاق",
+    "priority": "الأولوية",
+    "type": "نوع المهمة",
+    "status": "الحالة",
+    "assignTo": "تعيين إلى",
+    "assignToPlaceholder": "اختر المستخدم للتعيين",
+    "relatedLead": "العميل المحتمل المرتبط",
+    "relatedLeadPlaceholder": "اختر العميل المحتمل المرتبط",
+    "relatedProject": "المشروع المرتبط",
+    "relatedProjectPlaceholder": "اختر المشروع المرتبط",
+    "relatedInventory": "العقار المرتبط",
+    "relatedInventoryPlaceholder": "اختر العقار المرتبط",
+    "reminder": "تعيين تذكير",
+    "reminderTime": "وقت التذكير",
+    "reminderTimePlaceholder": "اختر وقت التذكير"
+  },
+  
+  "priorities": {
+    "low": "منخفضة",
+    "medium": "متوسطة",
+    "high": "عالية",
+    "urgent": "عاجلة"
+  },
+  
+  "types": {
+    "follow_up": "متابعة",
+    "meeting_preparation": "تحضير الاجتماع",
+    "contract_review": "مراجعة العقد",
+    "payment_reminder": "تذكير الدفع",
+    "visit_scheduling": "جدولة الزيارة",
+    "lead_nurturing": "رعاية العميل المحتمل",
+    "general": "عام"
+  },
+  
+  "statuses": {
+    "pending": "في الانتظار",
+    "in_progress": "قيد التنفيذ",
+    "completed": "مكتمل",
+    "cancelled": "ملغي",
+    "overdue": "متأخر"
+  },
+  
+  "filters": {
+    "title": "المرشحات",
+    "status": "الحالة",
+    "priority": "الأولوية",
+    "type": "النوع",
+    "assignedTo": "معين إلى",
+    "dateRange": "نطاق التاريخ",
+    "dueDateFrom": "تاريخ الاستحقاق من",
+    "dueDateTo": "تاريخ الاستحقاق إلى",
+    "search": "البحث في المهام...",
+    "clearFilters": "مسح المرشحات",
+    "myTasks": "مهامي",
+    "overdue": "متأخر",
+    "dueToday": "مستحق اليوم",
+    "dueThisWeek": "مستحق هذا الأسبوع"
+  },
+  
+  "table": {
+    "title": "العنوان",
+    "description": "الوصف",
+    "dueDate": "تاريخ الاستحقاق",
+    "priority": "الأولوية",
+    "status": "الحالة",
+    "type": "النوع",
+    "assignedTo": "معين إلى",
+    "relatedTo": "مرتبط بـ",
+    "actions": "الإجراءات",
+    "noTasks": "لم يتم العثور على مهام",
+    "loading": "جاري تحميل المهام..."
+  },
+  
+  "actions": {
+    "view": "عرض",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "markComplete": "تحديد كمكتمل",
+    "markInProgress": "تحديد قيد التنفيذ",
+    "markPending": "تحديد في الانتظار",
+    "markCancelled": "تحديد كملغي"
+  },
+  
+  "statistics": {
+    "totalTasks": "إجمالي المهام",
+    "pendingTasks": "في الانتظار",
+    "inProgressTasks": "قيد التنفيذ",
+    "completedTasks": "مكتمل",
+    "overdueTasks": "متأخر",
+    "completionRate": "معدل الإنجاز"
+  },
+  
+  "notifications": {
+    "taskCreated": "تم إنشاء المهمة بنجاح",
+    "taskUpdated": "تم تحديث المهمة بنجاح",
+    "taskDeleted": "تم حذف المهمة بنجاح",
+    "statusUpdated": "تم تحديث حالة المهمة بنجاح",
+    "errorCreating": "خطأ في إنشاء المهمة",
+    "errorUpdating": "خطأ في تحديث المهمة",
+    "errorDeleting": "خطأ في حذف المهمة",
+    "confirmDelete": "هل أنت متأكد من حذف هذه المهمة؟",
+    "confirmDeleteMultiple": "هل أنت متأكد من حذف {{count}} مهام؟"
+  },
+  
+  "quickActions": {
+    "title": "إجراءات سريعة",
+    "createTask": "إنشاء مهمة جديدة",
+    "bulkUpdate": "تحديث جماعي",
+    "exportTasks": "تصدير المهام",
+    "importTasks": "استيراد المهام"
+  },
+  
+  "bulkActions": {
+    "title": "إجراءات جماعية",
+    "markComplete": "تحديد كمكتمل",
+    "markInProgress": "تحديد قيد التنفيذ",
+    "markPending": "تحديد في الانتظار",
+    "markCancelled": "تحديد كملغي",
+    "assignTo": "تعيين إلى",
+    "changePriority": "تغيير الأولوية",
+    "changeType": "تغيير النوع",
+    "deleteSelected": "حذف المحدد"
+  },
+  
+  "details": {
+    "createdBy": "أنشئ بواسطة",
+    "createdAt": "تاريخ الإنشاء",
+    "updatedAt": "تاريخ التحديث",
+    "reminderSet": "تم تعيين التذكير",
+    "emailSent": "تم إرسال البريد الإلكتروني",
+    "relatedLead": "العميل المحتمل المرتبط",
+    "relatedProject": "المشروع المرتبط",
+    "relatedProperty": "العقار المرتبط"
+  },
+  
+  "overdue": {
+    "title": "المهام المتأخرة",
+    "description": "المهام التي تجاوزت تاريخ استحقاقها",
+    "noOverdue": "لا توجد مهام متأخرة"
+  },
+  
+  "upcoming": {
+    "title": "المواعيد النهائية القادمة",
+    "description": "المهام المستحقة في الأسبوع القادم",
+    "noUpcoming": "لا توجد مواعيد نهائية قادمة"
+  }
+} 

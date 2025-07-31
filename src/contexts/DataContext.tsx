@@ -1288,7 +1288,7 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         filteredContracts = contracts.filter(contract => contract.createdBy === user.name);
       } else if (user.role === 'team_leader') {
         // Team leaders see their own and their sales reps' leads/meetings/contracts
-        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.name).map(u => u.name);
+        const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user.name).map(u => u.name);
         filteredLeads = leads.filter(lead => lead.assignedTo === user.name || salesReps.includes(lead.assignedTo));
         filteredMeetings = meetings.filter(meeting => meeting.assignedTo === user.name || salesReps.includes(meeting.assignedTo));
         filteredContracts = contracts.filter(contract => contract.createdBy === user.name || salesReps.includes(contract.createdBy));

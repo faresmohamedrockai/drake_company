@@ -323,8 +323,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
 
                           if (user?.role === 'team_leader') {
                             assignableUsers = users!.filter(u =>
-                              u.name === user.name ||
-                              (u.role === 'sales_rep' && u.teamId === user.teamId)
+                              u.id === user.id ||
+                              (u.role === 'sales_rep' && u.teamLeaderId === user.id)
                             );
                           } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
                             assignableUsers = users!.filter(u => u.role !== 'admin' || user?.role === 'admin');

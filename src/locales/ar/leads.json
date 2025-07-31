@@ -183,5 +183,11 @@
   "open_deal": "صفقة مفتوحة",
   "closed_deal": "صفقة مغلقة",
   "no_answer": "لا يوجد رد",
-  "not_interested_now": "غير مهتم الآن"
+  "not_interested_now": "غير مهتم الآن",
+  "importFromExcel": "استيراد من إكسل",
+  "importingLeads": "استيراد العملاء المحتملين",
+  "progress": "التقدم",
+  "pleaseWait": "يرجى الانتظار بينما نقوم باستيراد عملائك المحتملين...",
+  "importComplete": "اكتمل الاستيراد!",
+  "importHelp": "مساعدة الاستيراد"
 } 

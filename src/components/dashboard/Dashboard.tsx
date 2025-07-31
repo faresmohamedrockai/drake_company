@@ -206,7 +206,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   if (user?.role === 'sales_rep') {
     filteredLeads = leads.filter(lead => lead.owner?.id === user.id);
   } else if (user?.role === 'team_leader') {
-    const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamId === user.teamId).map(u => u.name);
+    // Get sales reps that have this team leader as their teamLeaderId
+    const salesReps = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user.id).map(u => u.id);
     filteredLeads = leads.filter(lead => lead.owner?.id === user.id || salesReps.includes(lead.owner?.id || ''));
     if (selectedSalesRep) {
       filteredLeads = filteredLeads.filter(lead => lead.owner?.id === selectedSalesRep.id);

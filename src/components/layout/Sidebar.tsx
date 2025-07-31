@@ -13,7 +13,8 @@ import {
   Building,
   Menu,
   BarChart3,
-  Globe
+  Globe,
+  CheckSquare
 } from 'lucide-react';
 import { User as UserType } from '../../types';
 import UserProfileModal from '../settings/UserProfileModal';
@@ -49,6 +50,7 @@ const Sidebar: React.FC = () => {
     { id: 'leads', label: t('navigation.leads'), icon: Users, path: '/leads' },
     { id: 'inventory', label: t('navigation.inventory'), icon: Building2, path: '/inventory' },
     { id: 'meetings', label: t('navigation.meetings'), icon: Calendar, path: '/meetings' },
+    { id: 'tasks', label: t('navigation.tasks'), icon: CheckSquare, path: '/tasks' },
     { id: 'contracts', label: t('navigation.contracts'), icon: FileText, path: '/contracts', adminOnly: true, salesAdminOnly: true },
     { id: 'reports', label: t('navigation.reports'), icon: BarChart3, path: '/reports', adminOnly: true },
     { id: 'settings', label: t('navigation.settings'), icon: Settings, path: '/settings' },

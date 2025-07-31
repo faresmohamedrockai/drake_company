@@ -184,5 +184,11 @@
   "open_deal": "Open Deal",
   "closed_deal": "Closed Deal",
   "no_answer": "No Answer",
-  "not_interested_now": "Not Interested Now"
+  "not_interested_now": "Not Interested Now",
+  "importFromExcel": "Import Excel",
+  "importingLeads": "Importing Leads",
+  "progress": "Progress",
+  "pleaseWait": "Please wait while we import your leads...",
+  "importComplete": "Import complete!",
+  "importHelp": "Import Help"
 } 

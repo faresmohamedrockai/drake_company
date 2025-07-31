@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Import Guide - Propai CRM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .header {
+            background: #2563eb;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2563eb;
+        }
+        .example-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .example-table th, .example-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .example-table th {
+            background: #2563eb;
+            color: white;
+        }
+        .example-table tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+        .required {
+            color: #dc2626;
+            font-weight: bold;
+        }
+        .optional {
+            color: #059669;
+        }
+        .note {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Excel Import Guide</h1>
+        <p>How to prepare your Excel file for importing leads into Propai CRM</p>
+    </div>
+
+    <div class="section">
+        <h2>📋 Required Format</h2>
+        <p>Your Excel file should have the following columns:</p>
+        
+        <table class="example-table">
+            <thead>
+                <tr>
+                    <th>Column Name</th>
+                    <th>Description</th>
+                    <th>Required</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Phone Number</strong><br><em>or</em><br><strong>phone</strong><br><em>or</em><br><strong>Phone</strong></td>
+                    <td>Contact phone number</td>
+                    <td class="required">Required</td>
+                    <td>01012345678</td>
+                </tr>
+                <tr>
+                    <td><strong>Arabic Name</strong><br><em>or</em><br><strong>nameAr</strong><br><em>or</em><br><strong>Name (Arabic)</strong></td>
+                    <td>Lead's name in Arabic</td>
+                    <td class="required">Required</td>
+                    <td>أحمد محمد</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>📝 Example Excel File</h2>
+        <p>Here's how your Excel file should look:</p>
+        
+        <table class="example-table">
+            <thead>
+                <tr>
+                    <th>Phone Number</th>
+                    <th>Arabic Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>01012345678</td>
+                    <td>أحمد محمد علي</td>
+                </tr>
+                <tr>
+                    <td>01123456789</td>
+                    <td>فاطمة أحمد</td>
+                </tr>
+                <tr>
+                    <td>01234567890</td>
+                    <td>محمد سعيد</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>⚙️ Default Values</h2>
+        <p>When importing, the following values will be automatically set:</p>
+        <ul>
+            <li><strong>Source:</strong> "Data Sheet"</li>
+            <li><strong>Status:</strong> "Follow Up"</li>
+            <li><strong>Budget:</strong> 0</li>
+            <li><strong>Assigned To:</strong> Current user</li>
+            <li><strong>Created By:</strong> Current user</li>
+        </ul>
+    </div>
+
+    <div class="note">
+        <h3>💡 Important Notes:</h3>
+        <ul>
+            <li>Only rows with a phone number will be imported</li>
+            <li>Duplicate phone numbers will be skipped</li>
+            <li>The first sheet of your Excel file will be used</li>
+            <li>Supported formats: .xlsx and .xls</li>
+            <li>Column names are case-insensitive</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🚀 How to Import</h2>
+        <ol>
+            <li>Prepare your Excel file according to the format above</li>
+            <li>Go to the Leads Management page</li>
+            <li>Click the "Import Excel" button (green button with upload icon)</li>
+            <li>Select your Excel file</li>
+            <li>Wait for the import to complete</li>
+            <li>Check the success/error messages</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>❓ Troubleshooting</h2>
+        <p><strong>If import fails:</strong></p>
+        <ul>
+            <li>Make sure your Excel file has the correct column headers</li>
+            <li>Ensure phone numbers are in the correct format</li>
+            <li>Check that the file is not corrupted</li>
+            <li>Try saving the file as .xlsx format</li>
+            <li>Make sure the file is not too large (recommended: less than 1000 rows)</li>
+        </ul>
+    </div>
+</body>
+</html> 
