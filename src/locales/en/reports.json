@@ -177,5 +177,18 @@
       "salesMember": "Sales Member Report",
       "allSalesMembers": "All Sales Members Report"
     }
+  },
+  "additionalLabels": {
+    "allActivities": "All Activities",
+    "callsOnly": "Calls Only",
+    "visitsOnly": "Visits Only",
+    "meetingsOnly": "Meetings Only",
+    "dealsOnly": "Deals Only",
+    "yearToDate": "Year to Date",
+    "highActivity": "High Activity",
+    "mediumActivity": "Medium Activity",
+    "lowActivity": "Low Activity",
+    "conversionRatePercent": "Conversion Rate (%)",
+    "callCompletionPercent": "Call Completion (%)"
   }
 } 

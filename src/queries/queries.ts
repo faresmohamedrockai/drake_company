@@ -18,6 +18,12 @@ export const getLeads = async () => {
     return response.data.leads as Lead[];
 }
 
+// Get leads with calls and visits populated
+export const getLeadsWithDetails = async () => {
+    const response = await axiosInterceptor.get('/leads?include=calls,visits');
+    return response.data.leads as Lead[];
+}
+
 export const deleteLead = async (leadId: string) => {
     const response = await axiosInterceptor.delete(`/leads/${leadId}`);
     return response.data;
@@ -157,4 +163,61 @@ export const deleteTask = async (id: string) => {
 export const getLeadLogs = async (leadId: string) => {
     const response = await axiosInterceptor.get(`/logs?leadId=${leadId}`);
     return response.data as Log[];
+}
+
+// Get all calls data
+export const getAllCalls = async () => {
+    const response = await axiosInterceptor.get('/calls');
+    return response.data.data || response.data.calls || [];
+}
+
+// Get all visits data
+export const getAllVisits = async () => {
+    const response = await axiosInterceptor.get('/visits');
+    return response.data.visits || response.data.data || [];
+}
+
+// Get calls for a specific lead
+export const getCallsByLead = async (leadId: string) => {
+    const response = await axiosInterceptor.get(`/calls/${leadId}`);
+    return response.data.data || [];
+}
+
+// Get visits for a specific lead
+export const getVisitsByLead = async (leadId: string) => {
+    const response = await axiosInterceptor.get(`/visits/${leadId}`);
+    return response.data.visits || [];
+}
+
+// Populate leads with their calls and visits data
+export const populateLeadsWithCallsAndVisits = async (leads: Lead[]): Promise<Lead[]> => {
+    try {
+        const populatedLeads = await Promise.all(
+            leads.map(async (lead) => {
+                try {
+                    // Only fetch if calls/visits are not already populated
+                    if (!lead.calls || !lead.visits) {
+                        const [calls, visits] = await Promise.all([
+                            lead.calls ? Promise.resolve(lead.calls) : getCallsByLead(lead.id!).catch(() => []),
+                            lead.visits ? Promise.resolve(lead.visits) : getVisitsByLead(lead.id!).catch(() => [])
+                        ]);
+                        
+                        return {
+                            ...lead,
+                            calls: calls || [],
+                            visits: visits || []
+                        };
+                    }
+                    return lead;
+                } catch (error) {
+                    console.warn(`Failed to populate data for lead ${lead.id}:`, error);
+                    return lead; // Return original lead if population fails
+                }
+            })
+        );
+        return populatedLeads;
+    } catch (error) {
+        console.warn('Failed to populate leads with calls and visits:', error);
+        return leads; // Return original leads if population fails
+    }
 }

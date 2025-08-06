@@ -13,7 +13,6 @@ import { getMeetings, getUsers } from '../../queries/queries';
 import { CalendarPlus } from 'lucide-react';
 import { Apple } from 'lucide-react';
 import { CalendarDays } from 'lucide-react';
-import { use } from 'i18next';
 
 
 
@@ -164,21 +163,48 @@ const MeetingsManagement: React.FC = () => {
 
   // Helper to format date/time for Google Calendar (UTC, YYYYMMDDTHHmmssZ)
   const formatGoogleDate = (date: string, time: string, duration: string) => {
-    // Parse date and time
-    const [year, month, day] = date.split('-').map(Number);
-    const [hour, minute] = time.split(':').map(Number);
-    const start = new Date(Date.UTC(year, month - 1, day, hour, minute));
-    // Parse duration (assume format like '1h', '30m', '1h 30m')
-    let durMins = 0;
-    const hMatch = duration.match(/(\d+)h/);
-    const mMatch = duration.match(/(\d+)m/);
-    if (hMatch) durMins += parseInt(hMatch[1], 10) * 60;
-    if (mMatch) durMins += parseInt(mMatch[1], 10);
-    if (durMins === 0) durMins = 60; // default 1h
-    const end = new Date(start.getTime() + durMins * 60000);
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const fmt = (d: Date) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
-    return { start: fmt(start), end: fmt(end) };
+    // Validate inputs
+    if (!date || !time || !duration) {
+      console.error('Invalid date/time/duration provided:', { date, time, duration });
+      // Return current date/time as fallback
+      const now = new Date();
+      const start = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const end = new Date(now.getTime() + 60 * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      return { start, end };
+    }
+
+    try {
+      // Parse date and time
+      const [year, month, day] = date.split('-').map(Number);
+      const [hour, minute] = time.split(':').map(Number);
+      
+      // Validate parsed values
+      if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hour) || isNaN(minute)) {
+        throw new Error('Invalid date or time format');
+      }
+      
+      const start = new Date(Date.UTC(year, month - 1, day, hour, minute));
+      
+      // Parse duration (assume format like '1h', '30m', '1h 30m')
+      let durMins = 0;
+      const hMatch = duration.match(/(\d+)h/);
+      const mMatch = duration.match(/(\d+)m/);
+      if (hMatch) durMins += parseInt(hMatch[1], 10) * 60;
+      if (mMatch) durMins += parseInt(mMatch[1], 10);
+      if (durMins === 0) durMins = 60; // default 1h
+      
+      const end = new Date(start.getTime() + durMins * 60000);
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      const fmt = (d: Date) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
+      return { start: fmt(start), end: fmt(end) };
+    } catch (error) {
+      console.error('Error formatting date:', error, { date, time, duration });
+      // Return current date/time as fallback
+      const now = new Date();
+      const start = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      const end = new Date(now.getTime() + 60 * 60000).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      return { start, end };
+    }
   };
 
   // Helper to generate Google Calendar link
@@ -189,8 +215,19 @@ const MeetingsManagement: React.FC = () => {
       `Type: ${meeting.type}`,
       `Status: ${meeting.status}`,
       meeting.location ? `Location: ${meeting.location}` : '',
+      meeting.notes ? `Notes: ${meeting.notes}` : '',
+      '',
+      '⏰ Reminders set for:',
+      '• 1 day before the meeting',
+      '• 1 hour before the meeting', 
+      '• At meeting start time'
     ].filter(Boolean).join('\n');
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(meeting.title)}&dates=${start}%2F${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(meeting.location || '')}&trp=false`;
+    
+    // Google Calendar supports reminder parameters via URL
+    // Multiple reminders: 1440 minutes (1 day), 60 minutes (1 hour), 0 minutes (at time)
+    const reminders = '&rem=1440&rem=60&rem=0';
+    
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(meeting.title)}&dates=${start}%2F${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(meeting.location || '')}&trp=false${reminders}`;
   };
 
   // Helper to generate .ics file content for Apple Calendar
@@ -203,8 +240,20 @@ const MeetingsManagement: React.FC = () => {
       `Type: ${meeting.type}`,
       `Status: ${meeting.status}`,
       meeting.location ? `Location: ${meeting.location}` : '',
+      meeting.notes ? `Notes: ${meeting.notes}` : '',
     ].filter(Boolean).join('\\n');
-    return `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Propai CRM//EN\nBEGIN:VEVENT\nUID:${uid}\nDTSTAMP:${start}\nDTSTART:${start}\nDTEND:${end}\nSUMMARY:${meeting.title}\nDESCRIPTION:${description}\nLOCATION:${meeting.location || ''}\nBEGIN:VALARM\nTRIGGER:-PT30M\nACTION:DISPLAY\nDESCRIPTION:Reminder\nEND:VALARM\nEND:VEVENT\nEND:VCALENDAR`;
+    
+    // Multiple reminders: 1 day before, 1 hour before, and at appointment time
+    const alarms = [
+      // 1 day before
+      'BEGIN:VALARM\\nTRIGGER:-P1D\\nACTION:DISPLAY\\nDESCRIPTION:Meeting tomorrow: ' + meeting.title + '\\nEND:VALARM',
+      // 1 hour before
+      'BEGIN:VALARM\\nTRIGGER:-PT1H\\nACTION:DISPLAY\\nDESCRIPTION:Meeting in 1 hour: ' + meeting.title + '\\nEND:VALARM',
+      // At appointment time
+      'BEGIN:VALARM\\nTRIGGER:PT0M\\nACTION:DISPLAY\\nDESCRIPTION:Meeting starting now: ' + meeting.title + '\\nEND:VALARM'
+    ].join('\\n');
+    
+    return `BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//Propai CRM//EN\\nBEGIN:VEVENT\\nUID:${uid}\\nDTSTAMP:${start}\\nDTSTART:${start}\\nDTEND:${end}\\nSUMMARY:${meeting.title}\\nDESCRIPTION:${description}\\nLOCATION:${meeting.location || ''}\\n${alarms}\\nEND:VEVENT\\nEND:VCALENDAR`;
   };
 
   // Download .ics file
@@ -671,54 +720,128 @@ const MeetingsManagement: React.FC = () => {
                   {t('addToCalendar', { defaultValue: 'Add to Calendar' })}
                 </h3>
                 <p className="text-gray-500 text-sm leading-relaxed">
-                  {t('addToCalendarDesc', { defaultValue: 'Easily add this meeting to your calendar with a 30-minute reminder.' })}
+                  {t('addToCalendarDesc', { defaultValue: 'Add this meeting to your calendar with automatic reminders: 1 day before, 1 hour before, and at the meeting time.' })}
                 </p>
               </div>
 
               {/* Calendar Buttons */}
-              <div className="space-y-3 mb-6">
+              <div className="space-y-4 mb-6">
+                {/* Show warning if meeting data is incomplete */}
+                {(!selectedMeeting.date || !selectedMeeting.time || !selectedMeeting.duration) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 text-yellow-600">⚠️</div>
+                      <span className="text-sm text-yellow-800 font-medium">
+                        {t('incompleteMeetingData', { defaultValue: 'This meeting is missing date, time, or duration information. Calendar integration will use current time as fallback.' })}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Google Calendar Button */}
                 <button
                   type="button"
-                  onClick={() => window.open(getGoogleCalendarUrl(selectedMeeting), '_blank')}
+                  onClick={() => {
+                    if (!selectedMeeting.date || !selectedMeeting.time || !selectedMeeting.duration) {
+                      toast.warning(t('usingFallbackData', { defaultValue: 'Using current time as fallback for missing meeting data' }));
+                    }
+                    window.open(getGoogleCalendarUrl(selectedMeeting), '_blank');
+                    toast.success(t('calendarLinkOpened', { defaultValue: 'Google Calendar opened in new tab' }));
+                  }}
                   className="
-                    w-full flex items-center justify-center gap-3
-                    bg-blue-600 hover:bg-blue-700 text-white
-                    px-6 py-4 rounded-xl font-semibold
-                    transition-all duration-200 ease-in-out
+                    w-full flex items-center justify-center gap-4
+                    bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 
+                    text-white px-6 py-5 rounded-xl font-semibold text-lg
+                    transition-all duration-300 ease-in-out
                     transform hover:scale-[1.02] active:scale-[0.98]
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                    shadow-md hover:shadow-lg
+                    focus:outline-none focus:ring-3 focus:ring-blue-500 focus:ring-offset-2
+                    shadow-lg hover:shadow-xl
+                    border border-blue-500/20
                   "
                 >
-                  <img 
-                    src="https://www.svgrepo.com/show/475656/google-color.svg" 
-                    alt="Google Calendar" 
-                    className="h-6 w-6 flex-shrink-0" 
-                  />
-                  <span className="text-center">
-                    {t('addToGoogleCalendar', { defaultValue: 'Add to Google Calendar' })}
-                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-lg">
+                    <img 
+                      src="https://www.svgrepo.com/show/475656/google-color.svg" 
+                      alt="Google Calendar" 
+                      className="h-6 w-6 flex-shrink-0" 
+                    />
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold">
+                      {t('addToGoogleCalendar', { defaultValue: 'Add to Google Calendar' })}
+                    </span>
+                    <span className="text-blue-100 text-sm font-normal">
+                      {t('withReminders', { defaultValue: 'With 3 automatic reminders' })}
+                    </span>
+                  </div>
                 </button>
 
                 {/* Apple Calendar Button */}
                 <button
                   type="button"
-                  onClick={() => downloadICS(selectedMeeting)}
+                  onClick={() => {
+                    if (!selectedMeeting.date || !selectedMeeting.time || !selectedMeeting.duration) {
+                      toast.warning(t('usingFallbackData', { defaultValue: 'Using current time as fallback for missing meeting data' }));
+                    }
+                    downloadICS(selectedMeeting);
+                    toast.success(t('calendarFileDownloaded', { defaultValue: 'Calendar file downloaded successfully' }));
+                  }}
                   className="
-                    w-full flex items-center justify-center gap-3
-                    bg-gray-900 hover:bg-gray-800 text-white
-                    px-6 py-4 rounded-xl font-semibold
-                    transition-all duration-200 ease-in-out
+                    w-full flex items-center justify-center gap-4
+                    bg-gradient-to-r from-gray-800 to-gray-900 hover:from-gray-900 hover:to-black 
+                    text-white px-6 py-5 rounded-xl font-semibold text-lg
+                    transition-all duration-300 ease-in-out
                     transform hover:scale-[1.02] active:scale-[0.98]
-                    focus:outline-none focus:ring-2 focus:ring-gray-700 focus:ring-offset-2
-                    shadow-md hover:shadow-lg
+                    focus:outline-none focus:ring-3 focus:ring-gray-700 focus:ring-offset-2
+                    shadow-lg hover:shadow-xl
+                    border border-gray-600/20
                   "
                 >
-                  <Apple className="h-6 w-6 flex-shrink-0 text-white" />
-                  <span className="text-center">
-                    {t('addToAppleCalendar', { defaultValue: 'Add to Apple Calendar (.ics)' })}
-                  </span>
+                  <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-lg">
+                    <Apple className="h-6 w-6 flex-shrink-0 text-white" />
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold">
+                      {t('addToAppleCalendar', { defaultValue: 'Add to Apple Calendar' })}
+                    </span>
+                    <span className="text-gray-300 text-sm font-normal">
+                      {t('downloadIcsFile', { defaultValue: 'Downloads .ics file with reminders' })}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Outlook/Other Calendar Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!selectedMeeting.date || !selectedMeeting.time || !selectedMeeting.duration) {
+                      toast.warning(t('usingFallbackData', { defaultValue: 'Using current time as fallback for missing meeting data' }));
+                    }
+                    downloadICS(selectedMeeting);
+                    toast.info(t('universalCalendarFile', { defaultValue: 'Universal calendar file downloaded - works with Outlook, Thunderbird, and other calendar apps' }));
+                  }}
+                  className="
+                    w-full flex items-center justify-center gap-4
+                    bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 
+                    text-white px-6 py-5 rounded-xl font-semibold text-lg
+                    transition-all duration-300 ease-in-out
+                    transform hover:scale-[1.02] active:scale-[0.98]
+                    focus:outline-none focus:ring-3 focus:ring-purple-500 focus:ring-offset-2
+                    shadow-lg hover:shadow-xl
+                    border border-purple-500/20
+                  "
+                >
+                  <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-lg">
+                    <CalendarIcon className="h-6 w-6 flex-shrink-0 text-white" />
+                  </div>
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold">
+                      {t('addToOtherCalendar', { defaultValue: 'Add to Other Calendar' })}
+                    </span>
+                    <span className="text-purple-100 text-sm font-normal">
+                      {t('outlookThunderbirdEtc', { defaultValue: 'Outlook, Thunderbird, etc.' })}
+                    </span>
+                  </div>
                 </button>
               </div>
 
@@ -731,13 +854,16 @@ const MeetingsManagement: React.FC = () => {
                 </div>
               )}
 
-              {/* Privacy Notice */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-                  <CalendarDays className="h-4 w-4 text-blue-400 flex-shrink-0" />
-                  <span className="text-center">
+              {/* Privacy Notice & Features */}
+              <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-green-100">
+                <div className="flex items-center justify-center gap-2 text-xs text-gray-600 mb-2">
+                  <CalendarDays className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  <span className="text-center font-medium">
                     {t('calendarPrivacy', { defaultValue: 'Your calendar data is not stored or shared.' })}
                   </span>
+                </div>
+                <div className="text-center text-xs text-gray-500">
+                  ✅ {t('reminderFeatures', { defaultValue: '3 automatic reminders • Cross-platform compatibility • Secure local processing' })}
                 </div>
               </div>
             </div>

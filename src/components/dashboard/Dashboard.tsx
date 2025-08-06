@@ -13,12 +13,17 @@ import {
   Clock,
   Target,
   BarChart3,
-  Activity
+  Activity,
+  ListTodo,
+  AlertCircle,
+  PlayCircle,
+  XCircle,
+  ArrowRight
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 
-import { getLeads, getLogs, getMeetings, getUsers } from '../../queries/queries';
-import { Lead, Log, Meeting, User as UserType, LeadStatus } from '../../types';
+import { getLeads, getLogs, getMeetings, getUsers, getMyTasks, getTaskStatistics, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits } from '../../queries/queries';
+import { Lead, Log, Meeting, User as UserType, LeadStatus, Task, TaskStatistics } from '../../types';
 import UserFilterSelect from '../leads/UserFilterSelect';
 import LeadsSummaryCards from '../leads/LeadsSummaryCards';
 
@@ -76,7 +81,11 @@ const useDashboardData = () => {
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery<Lead[]>({
     queryKey: ['leads'],
-    queryFn: getLeads,
+    queryFn: async () => {
+      const leadsData = await getLeads();
+      // Try to populate with calls and visits data
+      return await populateLeadsWithCallsAndVisits(leadsData);
+    },
     staleTime: 1000 * 60 * 5,
   });
 
@@ -92,12 +101,42 @@ const useDashboardData = () => {
     staleTime: 1000 * 60 * 5,
   });
 
+  const { data: myTasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
+    queryKey: ['myTasks'],
+    queryFn: () => getMyTasks({ limit: 10 }),
+    staleTime: 1000 * 60 * 5,
+    enabled: !!user,
+  });
+
+  const { data: taskStatistics, isLoading: taskStatsLoading } = useQuery<TaskStatistics>({
+    queryKey: ['taskStatistics'],
+    queryFn: getTaskStatistics,
+    staleTime: 1000 * 60 * 5,
+    enabled: !!user,
+  });
+
+  const { data: allCalls = [], isLoading: callsLoading } = useQuery({
+    queryKey: ['allCalls'],
+    queryFn: getAllCalls,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: allVisits = [], isLoading: visitsLoading } = useQuery({
+    queryKey: ['allVisits'],
+    queryFn: getAllVisits,
+    staleTime: 1000 * 60 * 5,
+  });
+
   return {
     users,
     leads,
     meetings,
     logs,
-    isLoading: leadsLoading || meetingsLoading || logsLoading,
+    myTasks,
+    taskStatistics,
+    allCalls,
+    allVisits,
+    isLoading: leadsLoading || meetingsLoading || logsLoading || tasksLoading || taskStatsLoading || callsLoading || visitsLoading,
     user
   };
 };
@@ -411,6 +450,283 @@ const TeamSummary: React.FC<{
   );
 };
 
+// Utility function to clean log descriptions by removing ID information
+const cleanLogDescription = (description: string): string => {
+  // Remove patterns like "id=59c7fa9e-5dd5-4352-bba0-87fd7f3070c2"
+  let cleaned = description.replace(/,?\s*id=[a-f0-9-]+/gi, '');
+  
+  // Remove patterns like "Updated lead: id=..." from the beginning
+  cleaned = cleaned.replace(/^Updated lead:\s*id=[a-f0-9-]+,?\s*/i, 'Updated lead: ');
+  
+  // Remove trailing commas and extra spaces
+  cleaned = cleaned.replace(/,\s*,/g, ',').replace(/,\s*$/, '').trim();
+  
+  // If the description starts with a comma, remove it
+  cleaned = cleaned.replace(/^,\s*/, '');
+  
+  return cleaned;
+};
+
+// Tasks Card Component
+const TasksCard: React.FC<{
+  myTasks: Task[];
+  taskStatistics: TaskStatistics | undefined;
+  t: (key: string) => string;
+  onNavigateToTasks: () => void;
+}> = ({ myTasks, taskStatistics, t, onNavigateToTasks }) => {
+  // Debug logging
+  React.useEffect(() => {
+    console.log('TasksCard Debug:', {
+      myTasksLength: myTasks.length,
+      myTasks: myTasks,
+      taskStatistics: taskStatistics
+    });
+  }, [myTasks, taskStatistics]);
+
+  const formatDueDate = (dueDate: Date | {} | null) => {
+    if (!dueDate) return '';
+    
+    try {
+      let date: Date;
+      
+      if (dueDate instanceof Date) {
+        date = dueDate;
+      } else if (typeof dueDate === 'string') {
+        date = new Date(dueDate);
+      } else if (typeof dueDate === 'object' && 'toISOString' in dueDate) {
+        date = new Date(dueDate as any);
+      } else {
+        return '';
+      }
+
+      if (isNaN(date.getTime())) return '';
+
+      const today = new Date();
+      const diffTime = date.getTime() - today.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return t('tasks:dashboard.today');
+      if (diffDays === 1) return t('tasks:dashboard.tomorrow');
+      if (diffDays < 0) return `${Math.abs(diffDays)} ${t('tasks:dashboard.daysOverdue')}`;
+      if (diffDays <= 7) return `${diffDays} ${t('tasks:dashboard.daysLeft')}`;
+      return date.toLocaleDateString();
+    } catch {
+      return '';
+    }
+  };
+
+  const getStatusIcon = (status: Task['status']) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'in_progress':
+        return <PlayCircle className="h-4 w-4 text-blue-500" />;
+      case 'overdue':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'cancelled':
+        return <XCircle className="h-4 w-4 text-gray-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+    }
+  };
+
+  const getPriorityColor = (priority: Task['priority']) => {
+    switch (priority) {
+      case 'urgent':
+        return 'text-red-600 bg-red-50';
+      case 'high':
+        return 'text-orange-600 bg-orange-50';
+      case 'medium':
+        return 'text-yellow-600 bg-yellow-50';
+      default:
+        return 'text-gray-600 bg-gray-50';
+    }
+  };
+
+  // Calculate task counts from myTasks data as fallback
+  const pendingTasksCount = myTasks.filter(task => task.status === 'pending').length;
+  const inProgressTasksCount = myTasks.filter(task => task.status === 'in_progress').length;
+  const overdueTasksCount = myTasks.filter(task => {
+    if (task.status === 'overdue') return true;
+    if (!task.dueDate || task.status === 'completed' || task.status === 'cancelled') return false;
+    
+    try {
+      let dueDate: Date;
+      
+      if (task.dueDate instanceof Date) {
+        dueDate = task.dueDate;
+      } else if (typeof task.dueDate === 'string') {
+        dueDate = new Date(task.dueDate);
+      } else if (typeof task.dueDate === 'object' && 'toISOString' in task.dueDate) {
+        dueDate = new Date(task.dueDate as any);
+      } else {
+        return false;
+      }
+
+      if (isNaN(dueDate.getTime())) return false;
+
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // End of today
+      return dueDate.getTime() < today.getTime();
+    } catch {
+      return false;
+    }
+  }).length;
+
+  const upcomingTasks = myTasks.filter(task => 
+    task.status === 'pending' || task.status === 'in_progress'
+  ).slice(0, 5);
+
+  const completedToday = myTasks.filter(task => {
+    if (task.status !== 'completed' || !task.updatedAt) return false;
+    try {
+      let updatedDate: Date;
+      
+      if (task.updatedAt instanceof Date) {
+        updatedDate = task.updatedAt;
+      } else if (typeof task.updatedAt === 'string') {
+        updatedDate = new Date(task.updatedAt);
+      } else if (typeof task.updatedAt === 'object' && 'toISOString' in task.updatedAt) {
+        updatedDate = new Date(task.updatedAt as any);
+      } else {
+        return false;
+      }
+
+      if (isNaN(updatedDate.getTime())) return false;
+
+      const today = new Date();
+      return updatedDate.toDateString() === today.toDateString();
+    } catch {
+      return false;
+    }
+  }).length;
+
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+          <ListTodo className="h-5 w-5 mr-2" />
+          {t('tasks:analysis.myTasks')}
+        </h3>
+        <button
+          onClick={onNavigateToTasks}
+          className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center"
+        >
+          {t('viewAll') || 'View All'}
+          <ArrowRight className="h-4 w-4 ml-1" />
+        </button>
+      </div>
+
+      {/* Task Statistics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-blue-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-blue-600">
+            {taskStatistics?.pendingTasks ?? pendingTasksCount}
+          </div>
+          <div className="text-xs text-blue-600">{t('tasks:dashboard.pending')}</div>
+        </div>
+        <div className="bg-yellow-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-yellow-600">
+            {taskStatistics?.inProgressTasks ?? inProgressTasksCount}
+          </div>
+          <div className="text-xs text-yellow-600">{t('tasks:dashboard.inProgress')}</div>
+        </div>
+        <div className="bg-green-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-green-600">{completedToday}</div>
+          <div className="text-xs text-green-600">{t('tasks:dashboard.completedToday')}</div>
+        </div>
+        <div className="bg-red-50 p-3 rounded-lg">
+          <div className="text-2xl font-bold text-red-600">
+            {taskStatistics?.overdueTasks ?? overdueTasksCount}
+          </div>
+          <div className="text-xs text-red-600">{t('tasks:dashboard.overdue')}</div>
+        </div>
+      </div>
+
+      {/* Upcoming Tasks */}
+      <div className="space-y-3">
+        <h4 className="text-sm font-medium text-gray-700 mb-3">
+          {t('tasks:dashboard.upcomingTasks')}
+        </h4>
+        
+        {upcomingTasks.length > 0 ? (
+          upcomingTasks.map((task) => (
+            <motion.div
+              key={task.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center space-x-3 flex-1">
+                {getStatusIcon(task.status)}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {task.title}
+                  </p>
+                  <div className="flex items-center space-x-2 mt-1">
+                    <span className={`text-xs px-2 py-1 rounded ${getPriorityColor(task.priority)}`}>
+                      {task.priority}
+                    </span>
+                    {task.dueDate && (
+                      <span className="text-xs text-gray-500">
+                        {formatDueDate(task.dueDate)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))
+        ) : myTasks.length === 0 ? (
+          <div className="text-center py-6 text-gray-500">
+            <ListTodo className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm font-medium mb-1">{t('noTasksYet') || 'No tasks yet'}</p>
+            <p className="text-xs text-gray-400">{t('createFirstTask') || 'Create your first task to get started'}</p>
+          </div>
+        ) : (
+          <div className="text-center py-4 text-gray-500">
+            <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-300" />
+            <p className="text-sm">{t('allTasksCompleted') || 'All tasks completed! Great job!'}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Progress Bar */}
+      {(() => {
+        const totalTasks = taskStatistics?.totalTasks ?? myTasks.length;
+        const completedTasks = taskStatistics?.completedTasks ?? myTasks.filter(task => task.status === 'completed').length;
+        
+        if (totalTasks > 0) {
+          return (
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  {t('overallProgress') || 'Overall Progress'}
+                </span>
+                <span className="text-sm text-gray-500">
+                  {completedTasks} / {totalTasks}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${(completedTasks / totalTasks) * 100}%`
+                  }}
+                />
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {Math.round((completedTasks / totalTasks) * 100)}% {t('completed') || 'completed'}
+              </div>
+            </div>
+          );
+        }
+        return null;
+      })()}
+    </div>
+  );
+};
+
 // Recent Activity Component
 const RecentActivity: React.FC<{ 
   logs: Log[]; 
@@ -438,7 +754,12 @@ const RecentActivity: React.FC<{
             </div>
             <div className="flex-1">
               <p className="text-sm text-gray-900">{log.action}</p>
-              <p className="text-xs text-gray-500">{log.description}</p>
+              <p className="text-xs text-gray-500">{
+                (() => {
+                  const cleanedDescription = cleanLogDescription(log.description);
+                  return cleanedDescription.length > 100 ? cleanedDescription.substring(0, 100) + '...' : cleanedDescription;
+                })()
+              }</p>
               <p className="text-xs text-gray-500">{
                 new Date(log.createdAt).toLocaleString('en-US', {
                   year: 'numeric',
@@ -460,11 +781,11 @@ const RecentActivity: React.FC<{
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
-  const { t } = useTranslation('dashboard');
+  const { t } = useTranslation(['dashboard', 'common', 'tasks']);
   const navigate = useNavigate();
   
   // Get dashboard data
-  const { users, leads, meetings, logs, isLoading, user } = useDashboardData();
+  const { users, leads, meetings, logs, myTasks, taskStatistics, allCalls, allVisits, isLoading, user } = useDashboardData();
   
   // Safety check - don't render if user is not available
   if (!user || !user.id || !user.role) {
@@ -472,7 +793,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading user data...</p>
+          <p className="text-gray-600">{t('common:loadingUserData')}</p>
         </div>
       </div>
     );
@@ -493,6 +814,173 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   ).length;
   const todayMeetings = meetings.filter(m => m.date === today).length;
   const followUpLeads = filteredLeads.filter(l => l.status === LeadStatus.FOLLOW_UP).length;
+
+  // Calculate conversion rates with actual data
+  const calculateConversionRates = () => {
+    // Get calls and visits from leads data (nested approach)
+    let totalCalls = 0;
+    let completedCalls = 0;
+    let totalVisits = 0;
+    let completedVisits = 0;
+    
+    filteredLeads.forEach(lead => {
+      // Count calls from leads data
+      if (lead.calls && Array.isArray(lead.calls)) {
+        totalCalls += lead.calls.length;
+        completedCalls += lead.calls.filter((call: any) => 
+          call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered'
+        ).length;
+      }
+      
+      // Count visits from leads data
+      if (lead.visits && Array.isArray(lead.visits)) {
+        totalVisits += lead.visits.length;
+        completedVisits += lead.visits.filter((visit: any) => 
+          visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful')
+        ).length;
+      }
+    });
+    
+    // Also try to get from global APIs as fallback
+    const userLeadIds = filteredLeads.map(lead => lead.id);
+    
+    const globalCalls = allCalls.filter((call: any) => 
+      userLeadIds.includes(call.leadId || call.lead_id)
+    );
+    
+    const globalVisits = allVisits.filter((visit: any) => 
+      userLeadIds.includes(visit.leadId || visit.lead_id)
+    );
+    
+    // Use global data if no nested data found
+    if (totalCalls === 0 && globalCalls.length > 0) {
+      totalCalls = globalCalls.length;
+      completedCalls = globalCalls.filter((call: any) => 
+        call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered'
+      ).length;
+    }
+    
+    if (totalVisits === 0 && globalVisits.length > 0) {
+      totalVisits = globalVisits.length;
+      completedVisits = globalVisits.filter((visit: any) => 
+        visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful')
+      ).length;
+    }
+    
+    const callCompletionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
+    
+    // Calculate calls to meetings rate properly
+    // We need to count actual calls that led to meetings, not leads
+    let callsResultingInMeetings = 0;
+    
+    // Method 1: Count calls from leads that have meetings
+    const leadsWithMeetings = new Set(meetings.map(m => m.leadId).filter(Boolean));
+    
+    filteredLeads.forEach(lead => {
+      if (leadsWithMeetings.has(lead.id)) {
+        // Count calls for this lead since it has meetings
+        if (lead.calls && Array.isArray(lead.calls)) {
+          callsResultingInMeetings += lead.calls.length;
+        } else {
+          // Fallback to global calls for this lead
+          const leadCalls = allCalls.filter((call: any) => 
+            call.leadId === lead.id || call.lead_id === lead.id
+          );
+          callsResultingInMeetings += leadCalls.length;
+        }
+      }
+    });
+    
+    // Alternative: If no meetings data, use successful call outcomes
+    if (callsResultingInMeetings === 0) {
+      filteredLeads.forEach(lead => {
+        if (lead.calls && Array.isArray(lead.calls)) {
+          callsResultingInMeetings += lead.calls.filter((call: any) => 
+            call.outcome && (
+              call.outcome.toLowerCase().includes('meeting') ||
+              call.outcome.toLowerCase().includes('visit') ||
+              call.outcome.toLowerCase().includes('appointment') ||
+              call.outcome.toLowerCase() === 'interested' ||
+              call.outcome.toLowerCase() === 'follow up'
+            )
+          ).length;
+        }
+      });
+      
+      // Also check global calls
+      if (callsResultingInMeetings === 0) {
+        const userLeadIds = filteredLeads.map(lead => lead.id);
+        callsResultingInMeetings = allCalls.filter((call: any) => {
+          const isUserCall = userLeadIds.includes(call.leadId || call.lead_id);
+          const hasPositiveOutcome = call.outcome && (
+            call.outcome.toLowerCase().includes('meeting') ||
+            call.outcome.toLowerCase().includes('visit') ||
+            call.outcome.toLowerCase().includes('appointment') ||
+            call.outcome.toLowerCase() === 'interested' ||
+            call.outcome.toLowerCase() === 'follow up'
+          );
+          return isUserCall && hasPositiveOutcome;
+        }).length;
+      }
+    }
+    
+    const callsToMeetingsRate = totalCalls > 0 ? Math.round((callsResultingInMeetings / totalCalls) * 100) : 0;
+    
+    return {
+      callCompletionRate,
+      callsToMeetingsRate,
+      totalCalls,
+      totalVisits,
+      completedCalls,
+      completedVisits,
+      callsResultingInMeetings,
+      leadsWithMeetingsCount: leadsWithMeetings.size
+    };
+  };
+
+  const { callCompletionRate, callsToMeetingsRate, totalCalls, totalVisits, completedCalls, completedVisits, callsResultingInMeetings, leadsWithMeetingsCount } = calculateConversionRates();
+  
+  // Debug logging for visits data
+  React.useEffect(() => {
+    const leadsWithVisits = filteredLeads.filter(lead => lead.visits && lead.visits.length > 0);
+    const leadsWithCalls = filteredLeads.filter(lead => lead.calls && lead.calls.length > 0);
+    
+    console.log('Dashboard Debug:', {
+      filteredLeadsCount: filteredLeads.length,
+      totalMeetings: meetings.length,
+      allCallsCount: allCalls.length,
+      allVisitsCount: allVisits.length,
+      totalCalls,
+      totalVisits,
+      completedCalls,
+      completedVisits,
+      callCompletionRate,
+      callsToMeetingsRate,
+      leadsWithMeetingsCount,
+      calculationBreakdown: {
+        formula: 'callsResultingInMeetings / totalCalls * 100',
+        callsResultingInMeetings,
+        totalCalls,
+        leadsWithMeetingsCount,
+        result: callsToMeetingsRate,
+        explanation: 'Counts actual calls that led to meetings vs total calls made'
+      },
+      leadsWithVisitsCount: leadsWithVisits.length,
+      sampleLeadStructure: filteredLeads[0] ? {
+        id: filteredLeads[0].id,
+        hasVisits: !!filteredLeads[0].visits,
+        visitsLength: filteredLeads[0].visits?.length || 0,
+        hasCalls: !!filteredLeads[0].calls,
+        callsLength: filteredLeads[0].calls?.length || 0,
+      } : null,
+      meetingsSample: meetings.slice(0, 3).map(m => ({
+        id: m.id,
+        leadId: m.leadId,
+        title: m.title,
+        status: m.status
+      })),
+    });
+  }, [filteredLeads, allCalls, allVisits, totalCalls, totalVisits]);
 
   // Team leader specific metrics
   const teamLeaderMetrics = useMemo(() => {
@@ -528,9 +1016,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   // Conversion rates
   const conversionRates = {
     leadsToFollowUp: totalProspects ? Math.round((followUpLeads / totalProspects) * 100) : 0,
-    callsToMeetings: 0,
+    callsToMeetings: callsToMeetingsRate,
     meetingsToDeals: meetings.length ? Math.round((meetings.filter(m => m.status === 'Completed').length / meetings.length) * 100) : 0,
-    callCompletionRate: 0,
+    callCompletionRate: callCompletionRate,
   };
 
   // Prepare lead status cards data
@@ -594,6 +1082,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     const directTeamMembers = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user?.id).map(u => u.id);
     
     navigate(`/leads?filterType=team&filterValue=${directTeamMembers.join(',')}`);
+  };
+
+  const handleNavigateToTasks = () => {
+    if (setCurrentView) {
+      setCurrentView('tasks');
+    } else {
+      navigate('/tasks');
+    }
   };
 
   if (isLoading) {
@@ -696,6 +1192,20 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
       {/* Extra space */}
       <div className="mb-10" />
 
+      {/* Tasks and Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Tasks Card */}
+        <TasksCard 
+          myTasks={myTasks}
+          taskStatistics={taskStatistics}
+          t={t}
+          onNavigateToTasks={handleNavigateToTasks}
+        />
+        
+        {/* Recent Activity */}
+        <RecentActivity logs={logs} t={t} />
+      </div>
+
       {/* Conversion Rates & Metrics */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <ConversionChart conversionRates={conversionRates} t={t} />
@@ -706,9 +1216,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
           t={t} 
         />
       </div>
-
-      {/* Recent Activity */}
-      <RecentActivity logs={logs} t={t} />
     </motion.div>
   );
 };

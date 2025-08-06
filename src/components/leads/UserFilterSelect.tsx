@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { User as UserIcon, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { User } from '../../types';
 
 interface UserFilterSelectProps {
@@ -155,11 +155,29 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
   // Filter users based on current user's role
   const managers = users.filter(user => user.role === 'team_leader');
   
-  // For team leaders, include both team leaders and sales reps in the sales rep filter
-  // For admin/sales_admin, only show sales reps
-  const salesReps = currentUser.role === 'team_leader' 
-    ? users.filter(user => ['sales_rep', 'team_leader'].includes(user.role))
-    : users.filter(user => user.role === 'sales_rep');
+  // Get sales reps based on selected manager and current user's role
+  const getSalesReps = () => {
+    if (currentUser.role === 'team_leader') {
+      // For team leaders, include both team leaders and sales reps
+      return users.filter(user => ['sales_rep', 'team_leader'].includes(user.role));
+    } else if (['admin', 'sales_admin'].includes(currentUser.role)) {
+      // For admin/sales_admin, filter based on selected manager
+      if (selectedManager) {
+        // Show sales reps under the selected manager + the manager themselves
+        const teamMembers = users.filter(user => 
+          user.role === 'sales_rep' && user.teamLeaderId === selectedManager.id
+        );
+        // Include the selected manager as well
+        return [selectedManager, ...teamMembers];
+      } else {
+        // Show all sales reps when no manager is selected
+        return users.filter(user => user.role === 'sales_rep');
+      }
+    }
+    return users.filter(user => user.role === 'sales_rep');
+  };
+
+  const salesReps = getSalesReps();
 
   // Only show filters for admin, sales_admin, or team_leader
   if (!['admin', 'sales_admin', 'team_leader'].includes(currentUser.role)) {
@@ -180,7 +198,7 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
               onChange={(managerId) => {
                 const manager = managers.find(m => m.id === managerId) || null;
                 setSelectedManager(manager);
-                // Clear sales rep selection when manager changes
+                // Clear sales rep selection when manager changes since the available options will change
                 setSelectedSalesRep(null);
               }}
               options={managers}

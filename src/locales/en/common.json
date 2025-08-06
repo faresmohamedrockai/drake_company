@@ -60,6 +60,18 @@
     "created": "Created",
     "updated": "Updated",
     "createdBy": "Created by",
-    "updatedBy": "Updated by"
+    "updatedBy": "Updated by",
+    "loadingUserData": "Loading user data...",
+    "userUpdatedSuccessfully": "User updated successfully",
+    "userDeletedSuccessfully": "User deleted successfully",
+    "errorUpdatingUser": "Error updating user",
+    "errorDeletingUser": "Error deleting user",
+    "selectTeamLeaderName": "Select team leader name",
+    "updatingLead": "Updating lead...",
+    "leadUpdatedSuccessfully": "Lead updated successfully",
+    "callLogAddedSuccessfully": "Call log added successfully",
+    "visitLogAddedSuccessfully": "Visit log added successfully",
+    "errorAddingCallLog": "Error adding call log",
+    "errorAddingVisitLog": "Error adding visit log"
   }
 } 

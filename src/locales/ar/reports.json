@@ -177,5 +177,18 @@
       "salesMember": "تقرير عضو المبيعات",
       "allSalesMembers": "تقرير جميع أعضاء المبيعات"
     }
+  },
+  "additionalLabels": {
+    "allActivities": "جميع الأنشطة",
+    "callsOnly": "المكالمات فقط",
+    "visitsOnly": "الزيارات فقط",
+    "meetingsOnly": "الاجتماعات فقط",
+    "dealsOnly": "الصفقات فقط",
+    "yearToDate": "منذ بداية العام",
+    "highActivity": "نشاط عالي",
+    "mediumActivity": "نشاط متوسط",
+    "lowActivity": "نشاط منخفض",
+    "conversionRatePercent": "معدل التحويل (%)",
+    "callCompletionPercent": "معدل إكمال المكالمات (%)"
   }
 } 

@@ -622,12 +622,6 @@ const LeadsList: React.FC = React.memo(() => {
             >
               <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
             </button>
-            <button
-              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-              title={t('settings')}
-            >
-              <Settings className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
           </div>
         </div>
       </div>

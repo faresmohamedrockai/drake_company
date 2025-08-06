@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, getMeetings, getUsers, getContracts } from '../../queries/queries';
+import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -109,10 +109,18 @@ interface DateRange {
 }
 
 const Reports: React.FC = () => {
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({ queryKey: ['leads'], queryFn: getLeads });
+  const { data: leads = [], isLoading: leadsLoading } = useQuery({ 
+    queryKey: ['leads'], 
+    queryFn: async () => {
+      const leadsData = await getLeads();
+      return await populateLeadsWithCallsAndVisits(leadsData);
+    }
+  });
   const { data: meetings = [], isLoading: meetingsLoading } = useQuery({ queryKey: ['meetings'], queryFn: getMeetings });
   const { data: users = [], isLoading: usersLoading } = useQuery({ queryKey: ['users'], queryFn: getUsers });
   const { data: contracts = [], isLoading: contractsLoading } = useQuery({ queryKey: ['contracts'], queryFn: getContracts });
+  const { data: allCalls = [] } = useQuery({ queryKey: ['allCalls'], queryFn: getAllCalls });
+  const { data: allVisits = [] } = useQuery({ queryKey: ['allVisits'], queryFn: getAllVisits });
   const { user: currentUser } = useAuth();
   const { t } = useTranslation('reports');
   const { language } = useLanguage();
@@ -823,6 +831,7 @@ const Reports: React.FC = () => {
       notes: string;
     }> = [];
 
+    // First, try to get calls from leads data (nested approach)
     userLeads.forEach(lead => {
       if (lead.calls && Array.isArray(lead.calls)) {
         const callsInRange = lead.calls.filter(call => {
@@ -834,7 +843,7 @@ const Reports: React.FC = () => {
         totalCalls += callsInRange.length;
         
         callsInRange.forEach(call => {
-          const isCompleted = lead.status && lead.status.toLowerCase() !== 'not answered';
+          const isCompleted = call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered';
           if (isCompleted) completedCalls++;
           
           userCalls.push({
@@ -842,12 +851,48 @@ const Reports: React.FC = () => {
             leadName: lead.nameEn || lead.nameAr || 'N/A',
             date: call.date || 'N/A',
             duration: call.duration || 'N/A',
-            outcome: isCompleted ? 'Completed' : 'Not Answered',
+            outcome: call.outcome || 'N/A',
             notes: call.notes || 'N/A'
           });
         });
       }
     });
+    
+    // If no nested calls found, try global API data as fallback
+    if (totalCalls === 0) {
+      const userLeadIds = userLeads.map(lead => lead.id);
+      const userCallsFromAPI = allCalls.filter((call: any) => 
+        userLeadIds.includes(call.leadId || call.lead_id)
+      );
+      
+      userCallsFromAPI.forEach((call: any) => {
+        if (!startDate || !endDate) {
+          totalCalls++;
+        } else {
+          const callDate = call.date ? new Date(call.date) : null;
+          if (callDate && callDate >= startDate && callDate <= endDate) {
+            totalCalls++;
+          } else {
+            return;
+          }
+        }
+        
+        const isCompleted = call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered';
+        if (isCompleted) completedCalls++;
+        
+        const leadName = userLeads.find(lead => lead.id === (call.leadId || call.lead_id))?.nameEn || 
+                        userLeads.find(lead => lead.id === (call.leadId || call.lead_id))?.nameAr || 'N/A';
+        
+        userCalls.push({
+          leadId: call.leadId || call.lead_id || '',
+          leadName: leadName,
+          date: call.date || 'N/A',
+          duration: call.duration || 'N/A',
+          outcome: call.outcome || 'N/A',
+          notes: call.notes || 'N/A'
+        });
+      });
+    }
 
     // Calculate visits within date range
     let totalVisits = 0;
@@ -860,6 +905,7 @@ const Reports: React.FC = () => {
       notes: string;
     }> = [];
 
+    // First, try to get visits from leads data (nested approach)
     userLeads.forEach(lead => {
       if (lead.visits && Array.isArray(lead.visits)) {
         const visitsInRange = lead.visits.filter(visit => {
@@ -871,19 +917,54 @@ const Reports: React.FC = () => {
         totalVisits += visitsInRange.length;
         
         visitsInRange.forEach(visit => {
-          const isCompleted = visit.status === 'Completed';
+          const isCompleted = visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful');
           if (isCompleted) completedVisits++;
           
           userVisits.push({
             leadId: lead.id || '',
             leadName: lead.nameEn || lead.nameAr || 'N/A',
             date: visit.date || 'N/A',
-            status: visit.status || 'Scheduled',
+            status: visit.status || 'N/A',
             notes: visit.notes || 'N/A'
           });
         });
       }
     });
+    
+    // If no nested visits found, try global API data as fallback
+    if (totalVisits === 0) {
+      const userLeadIds = userLeads.map(lead => lead.id);
+      const userVisitsFromAPI = allVisits.filter((visit: any) => 
+        userLeadIds.includes(visit.leadId || visit.lead_id)
+      );
+      
+      userVisitsFromAPI.forEach((visit: any) => {
+        if (!startDate || !endDate) {
+          totalVisits++;
+        } else {
+          const visitDate = visit.date ? new Date(visit.date) : null;
+          if (visitDate && visitDate >= startDate && visitDate <= endDate) {
+            totalVisits++;
+          } else {
+            return;
+          }
+        }
+        
+        const isCompleted = visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful');
+        if (isCompleted) completedVisits++;
+        
+        const leadName = userLeads.find(lead => lead.id === (visit.leadId || visit.lead_id))?.nameEn || 
+                        userLeads.find(lead => lead.id === (visit.leadId || visit.lead_id))?.nameAr || 'N/A';
+        
+        userVisits.push({
+          leadId: visit.leadId || visit.lead_id || '',
+          leadName: leadName,
+          date: visit.date || 'N/A',
+          status: visit.status || 'N/A',
+          notes: visit.notes || 'N/A'
+        });
+      });
+    }
 
     // Calculate follow-ups within date range (simulated data since followUps property doesn't exist in Lead interface)
     let totalFollowUps = 0;
@@ -1273,7 +1354,7 @@ const Reports: React.FC = () => {
                   <option value="last30days">Last 30 Days</option>
                   <option value="last3months">Last 3 Months</option>
                   <option value="last6months">Last 6 Months</option>
-                  <option value="yearToDate">Year to Date</option>
+                  <option value="yearToDate">{t('additionalLabels.yearToDate')}</option>
                   <option value="custom">{t('timeframes.customRange') || 'Custom Range'}</option>
                 </select>
 
@@ -1283,11 +1364,11 @@ const Reports: React.FC = () => {
                   onChange={(e) => setActivityFilter(e.target.value as any)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
                 >
-                  <option value="all">All Activities</option>
-                  <option value="calls">Calls Only</option>
-                  <option value="visits">Visits Only</option>
-                  <option value="meetings">Meetings Only</option>
-                  <option value="deals">Deals Only</option>
+                                  <option value="all">{t('additionalLabels.allActivities')}</option>
+                <option value="calls">{t('additionalLabels.callsOnly')}</option>
+                <option value="visits">{t('additionalLabels.visitsOnly')}</option>
+                <option value="meetings">{t('additionalLabels.meetingsOnly')}</option>
+                <option value="deals">{t('additionalLabels.dealsOnly')}</option>
                 </select>
 
                 {/* Custom Date Range Picker */}
@@ -1396,7 +1477,7 @@ const Reports: React.FC = () => {
                       <option value="sales_rep">Sales Rep</option>
                       <option value="team_leader">Team Leader</option>
                       <option value="sales_admin">Sales Admin</option>
-                      <option value="admin">Admin</option>
+                      <option value="admin">{t('roles.admin')}</option>
                     </select>
                   </div>
 
@@ -1405,9 +1486,9 @@ const Reports: React.FC = () => {
                     <label className="block text-xs font-medium text-gray-700 mb-1">Activity Level</label>
                     <select className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">Any Level</option>
-                      <option value="high">High Activity</option>
-                      <option value="medium">Medium Activity</option>
-                      <option value="low">Low Activity</option>
+                                      <option value="high">{t('additionalLabels.highActivity')}</option>
+                <option value="medium">{t('additionalLabels.mediumActivity')}</option>
+                <option value="low">{t('additionalLabels.lowActivity')}</option>
                     </select>
                   </div>
                 </div>
@@ -2370,8 +2451,8 @@ const Reports: React.FC = () => {
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} />
                   <Tooltip />
-                  <Bar dataKey="conversionRate" fill="#8884d8" name="Conversion Rate (%)" />
-                  <Bar dataKey="callCompletionRate" fill="#82ca9d" name="Call Completion (%)" />
+                  <Bar dataKey="conversionRate" fill="#8884d8" name={t('additionalLabels.conversionRatePercent')} />
+                  <Bar dataKey="callCompletionRate" fill="#82ca9d" name={t('additionalLabels.callCompletionPercent')} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

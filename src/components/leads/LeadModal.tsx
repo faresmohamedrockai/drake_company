@@ -25,7 +25,7 @@ function addSpacesToCamelCase(text: string) {
 
 const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const { user } = useAuth();
-  const { t, i18n } = useTranslation('leads');
+  const { t, i18n } = useTranslation(['leads', 'common']);
   const [activeTab, setActiveTab] = useState('details');
   const [newNote, setNewNote] = useState('');
   const [showCallForm, setShowCallForm] = useState(false);
@@ -96,7 +96,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.dismiss(toastId!);
-      toast.success("Lead updated successfully");
+      toast.success(t('common:leadUpdatedSuccessfully'));
     },
     onError: (error: any) => {
       console.error('Error updating lead:', error);
@@ -116,7 +116,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         notes: ''
       });
       setShowCallForm(false);
-      toast.success("Call log added successfully");
+      toast.success(t('common:callLogAddedSuccessfully'));
     },
     onError: (error: any) => {
       console.error('Error adding call log:', error);
@@ -139,7 +139,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         notes: ''
       });
       setShowVisitForm(false);
-      toast.success("Visit log added successfully");
+      toast.success(t('common:visitLogAddedSuccessfully'));
     },
     onError: (error: any) => {
       console.error('Error adding visit log:', error);
@@ -212,7 +212,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   useEffect(() => {
     if (isUpdatingLead) {
 
-      setToastId(toast.loading("Updating lead..."));
+      setToastId(toast.loading(t('common:updatingLead')));
     }
   }, [isUpdatingLead]);
 
@@ -298,22 +298,22 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] overflow-y-auto relative shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg sm:rounded-xl w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-5xl h-[98vh] sm:max-h-[95vh] overflow-y-auto relative shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex justify-between items-center z-10 rounded-t-xl">
-          <h2 className="text-xl font-semibold text-gray-900">{t('leadDetails')}</h2>
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-6 flex justify-between items-center z-10 rounded-t-lg sm:rounded-t-xl">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-2">{t('leadDetails')}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-2 -m-2 flex-shrink-0"
           >
-            <X className="h-6 w-6" />
+            <X className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
 
         {/* Lead Details */}
-        <div className="p-8 border-b border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="p-4 sm:p-6 lg:p-8 border-b border-gray-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
               <p className="text-sm text-gray-900 font-mono">{currentLead.contact || 'Not specified'}</p>
@@ -357,10 +357,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
           {/* Redesigned Deal Progress Tracker */}
           <div className="mb-8">
-            <label className="block text-sm font-medium text-gray-700 mb-4 text-center w-full">{t('dealProgress')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-3 sm:mb-4 text-center w-full">{t('dealProgress')}</label>
 
-            <div className="relative w-full">
-              <div className="flex items-center justify-center space-x-1 md:space-x-2 overflow-x-auto py-4 px-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="relative w-full bg-gray-50 sm:bg-transparent rounded-lg sm:rounded-none p-3 sm:p-0">
+              <div className="flex items-center justify-start sm:justify-center gap-1 sm:gap-2 md:gap-3 overflow-x-auto py-2 sm:py-4 px-1 sm:px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {isSpecialStatus && currentSpecialStatus ? (
                   // Show single step for special statuses
                   <div className="flex items-center min-w-max">
@@ -370,13 +370,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                       className="flex flex-col items-center relative flex-shrink-0"
                     >
-                      <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm font-bold border-3 transition-all duration-300 bg-orange-500 border-orange-500 text-white shadow-lg">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-sm sm:text-base md:text-lg font-bold border-2 sm:border-3 transition-all duration-300 bg-orange-500 border-orange-500 text-white shadow-lg">
                         !
                       </div>
-                      <div className="mt-2 text-center w-16 md:w-20 text-orange-600">
-                        <div className="text-xs font-medium">{currentSpecialStatus?.label || 'Unknown Status'}</div>
+                      <div className="mt-2 text-center w-16 sm:w-20 md:w-24 text-orange-600">
+                        <div className="text-xs sm:text-sm font-medium leading-tight">{currentSpecialStatus?.label || 'Unknown Status'}</div>
                         {i18n.language === 'ar' && (
-                          <div className="text-xs font-arabic mt-1 opacity-80">
+                          <div className="text-xs sm:text-sm font-arabic mt-1 opacity-80 leading-tight">
                             {(() => {
                               switch (currentSpecialStatus?.value) {
                                 case LeadStatus.NO_ANSWER:
@@ -407,7 +407,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                             className={`flex flex-col items-center relative flex-shrink-0`}
                           >
                             <div
-                              className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm font-bold border-3 transition-all duration-300 shadow-lg
+                              className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-sm sm:text-base md:text-lg font-bold border-2 sm:border-3 transition-all duration-300 shadow-lg
                                 ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
                                   isCompleted ? 'bg-green-500 border-green-500 text-white' :
                                     isActive ? 'bg-blue-600 border-blue-600 text-white shadow-xl' :
@@ -416,16 +416,16 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                             >
                               {index + 1}
                             </div>
-                            <div className={`mt-2 text-center w-16 md:w-20 leading-tight
+                            <div className={`mt-2 text-center w-16 sm:w-20 md:w-24 leading-tight
                               ${isCancelled ? 'text-red-600' :
                                 isCompleted ? 'text-green-600' :
                                   isActive ? 'text-blue-600 font-semibold' :
                                     'text-gray-500'}
                             `}>
                               {i18n.language === 'ar' ? (
-                                // Arabic layout: flex row (RTL)
-                                <div className="flex flex-row items-center justify-center space-x-1 space-x-reverse">
-                                  <div className="text-xs font-arabic font-medium">
+                                // Arabic layout: optimized for mobile
+                                <div className="flex flex-col items-center justify-center">
+                                  <div className="text-xs sm:text-sm font-arabic font-medium leading-tight text-center">
                                     {(() => {
                                       switch (stage.value) {
                                         case LeadStatus.FRESH_LEAD:
@@ -447,10 +447,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                                   </div>
                                 </div>
                               ) : (
-                                // English layout: flex column (LTR)
+                                // English layout: optimized for mobile
                                 <div className="flex flex-col items-center">
-                                  <div className="text-xs font-medium">{stage.label}</div>
-                                  <div className="text-xs font-arabic opacity-70 mt-1">
+                                  <div className="text-xs sm:text-sm font-medium leading-tight text-center">{stage.label}</div>
+                                  <div className="text-xs sm:text-sm font-arabic opacity-70 mt-1 leading-tight text-center">
                                     {(() => {
                                       switch (stage.value) {
                                         case LeadStatus.FRESH_LEAD:
@@ -479,11 +479,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                               initial={{ width: 0 }}
                               animate={{ width: 16 }}
                               transition={{ duration: 0.5, delay: 0.1 * index }}
-                              className={`h-1.5 mx-1 rounded-full transition-all duration-300 flex-shrink-0
+                              className={`h-1.5 sm:h-2 mx-1 sm:mx-2 rounded-full transition-all duration-300 flex-shrink-0
                                 ${isCancelled ? 'bg-red-500' :
                                   index < currentStatusIndex ? 'bg-green-500' : 'bg-gray-200'}
                               `}
-                              style={{ minWidth: 16, maxWidth: 32 }}
+                              style={{ minWidth: 12, maxWidth: 32 }}
                             />
                           )}
                         </React.Fragment>
@@ -552,13 +552,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         </div>
 
         {/* Enhanced Tabs */}
-        <div className="px-6 pt-4">
-          <div className="flex space-x-8 border-b border-gray-200">
+        <div className="px-3 sm:px-6 pt-3 sm:pt-4">
+          <div className="flex gap-2 sm:gap-4 md:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-none">
             {['details', 'calls', 'visits', 'notes'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-4 px-3 text-sm font-medium capitalize transition-all duration-200 relative ${
+                className={`py-3 sm:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${
                   activeTab === tab
                     ? 'text-blue-600 border-b-2 border-blue-600'
                     : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
@@ -579,11 +579,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         </div>
 
         {/* Enhanced Tab Content */}
-        <div className="p-6 pt-8">
+        <div className="p-3 sm:p-6 pt-6 sm:pt-8">
           {activeTab === 'details' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('contactInformation')}</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">{t('contactInformation')}</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">{t('name')}</label>
@@ -961,17 +961,17 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     rows={3}
                   />
                 </div>
-                <div className="flex justify-end space-x-3">
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => setShowCallForm(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 order-2 sm:order-1"
                   >
                     {t('cancel')}
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 order-1 sm:order-2"
                   >
                     {isCreatingCall ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('logCallButton')}
                   </button>

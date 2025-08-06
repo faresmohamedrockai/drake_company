@@ -20,7 +20,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
   // const { updateUser } = useData();
   const { logout, user: authUser } = useAuth();
   const { settings } = useSettings();
-  const { t } = useTranslation('settings');
+  const { t } = useTranslation(['settings', 'common']);
   const { language } = useLanguage();
   const [formData, setFormData] = useState({
     name: user?.name || '',
@@ -33,7 +33,7 @@ const UserProfileModal: React.FC<UserProfileModalProps> = ({ user, onClose }) =>
     mutationFn: (data: { id: string; formData: any }) => updateUser(data.id, data.formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success("User updated successfully");
+              toast.success(t('common:userUpdatedSuccessfully'));
       localStorage.setItem('propai_user', JSON.stringify(formData));
     }
   })

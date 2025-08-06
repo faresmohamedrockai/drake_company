@@ -60,6 +60,18 @@
     "created": "تم الإنشاء",
     "updated": "تم التحديث",
     "createdBy": "أنشئ بواسطة",
-    "updatedBy": "حدث بواسطة"
+    "updatedBy": "حدث بواسطة",
+    "loadingUserData": "جاري تحميل بيانات المستخدم...",
+    "userUpdatedSuccessfully": "تم تحديث المستخدم بنجاح",
+    "userDeletedSuccessfully": "تم حذف المستخدم بنجاح",
+    "errorUpdatingUser": "خطأ في تحديث المستخدم",
+    "errorDeletingUser": "خطأ في حذف المستخدم",
+    "selectTeamLeaderName": "اختر اسم قائد الفريق",
+    "updatingLead": "جاري تحديث العميل...",
+    "leadUpdatedSuccessfully": "تم تحديث العميل بنجاح",
+    "callLogAddedSuccessfully": "تم إضافة سجل المكالمة بنجاح",
+    "visitLogAddedSuccessfully": "تم إضافة سجل الزيارة بنجاح",
+    "errorAddingCallLog": "خطأ في إضافة سجل المكالمة",
+    "errorAddingVisitLog": "خطأ في إضافة سجل الزيارة"
   }
 } 

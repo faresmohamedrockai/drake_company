@@ -12,7 +12,7 @@ import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation
 const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const { user: currentUser } = useAuth();
   const { isRTL, rtlClass, rtlMargin } = useLanguage();
-  const { t } = useTranslation('settings');
+  const { t } = useTranslation(['settings', 'common']);
   const [searchTerm, setSearchTerm] = useState('');
   const [assignToId, setAssignToId] = useState('');
   const [availableUsers, setAvailableUsers] = useState<UserType[]>([]); // عدل النوع حسب مشروعك
@@ -59,12 +59,12 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       setEditingUser(null);
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.dismiss(toastId!);
-      toast.success("User updated successfully");
+      toast.success(t('common:userUpdatedSuccessfully'));
     },
     onError: (error: any) => {
       console.error('Error updating user:', error);
       toast.dismiss(toastId!);
-      toast.error("Error updating user");
+      toast.error(t('common:errorUpdatingUser'));
     }
   })
 
@@ -96,7 +96,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     onError: (error: any) => {
       console.error('Error adding user:', error);
       toast.dismiss(toastId!);
-      toast.error(error.response.data.message[0]);
+      toast.error(error.response.data.message);
     }
   })
   const { mutateAsync: deleteUserMutation, isPending: isDeleting } = useMutation({
@@ -104,7 +104,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.dismiss(toastId!);
-      toast.success("User deleted successfully");
+      toast.success(t('common:userDeletedSuccessfully'));
     }
   })
 
@@ -158,9 +158,9 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   };
 
   const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   useEffect(() => {
@@ -614,7 +614,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                     dir={isRTL ? 'rtl' : 'ltr'}
                     required
                   >
-                    <option value="">{isRTL ? "اختر اسم قائد الفريق" : "Select team leader name"}</option>
+                    <option value="">{t('common:selectTeamLeaderName')}</option>
                     {users
                       .filter(user => user.role === 'team_leader')
                       .map(teamLeader => (

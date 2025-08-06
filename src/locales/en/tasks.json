@@ -203,5 +203,16 @@
     "highPriority": "High Priority",
     "highUrgentPriorityTasks": "High & urgent priority tasks",
     "myTasks": "My Tasks"
+  },
+  "dashboard": {
+    "pending": "Pending",
+    "inProgress": "In Progress", 
+    "completedToday": "Completed Today",
+    "overdue": "Overdue",
+    "upcomingTasks": "Upcoming Tasks",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "daysOverdue": "days overdue",
+    "daysLeft": "days left"
   }
 } 

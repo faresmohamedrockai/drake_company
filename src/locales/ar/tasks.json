@@ -203,5 +203,16 @@
     "highPriority": "أولوية عالية",
     "highUrgentPriorityTasks": "المهام عالية وعاجلة الأولوية",
     "myTasks": "مهامي"
+  },
+  "dashboard": {
+    "pending": "في الانتظار",
+    "inProgress": "قيد التنفيذ",
+    "completedToday": "مكتمل اليوم",
+    "overdue": "متأخر",
+    "upcomingTasks": "المهام القادمة",
+    "today": "اليوم",
+    "tomorrow": "غداً",
+    "daysOverdue": "أيام متأخرة",
+    "daysLeft": "أيام متبقية"
   }
 } 

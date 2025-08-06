@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { User as UserType } from '../../types';
 import UserProfileModal from '../settings/UserProfileModal';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 
 // Remove SidebarProps
 // interface SidebarProps {
@@ -35,7 +35,6 @@ const Sidebar: React.FC = () => {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const toggleLanguage = () => {
     setIsSwitching(true);
@@ -141,9 +140,9 @@ const Sidebar: React.FC = () => {
 
             return (
               <li key={item.id}>
-                <button
+                <Link
+                  to={item.path}
                   onClick={() => {
-                    navigate(item.path);
                     setSidebarOpen(false); // close sidebar on mobile after click
                   }}
                   className={`w-full flex items-center px-6 py-4 text-left rounded-lg transition-colors ${isActive
@@ -153,7 +152,7 @@ const Sidebar: React.FC = () => {
                 >
                   <item.icon className={`h-6 w-6 ${rtlPosition('mr-4', 'ml-4')}`} />
                   <span className="text-base font-medium">{item.label}</span>
-                </button>
+                </Link>
               </li>
             );
           })}
