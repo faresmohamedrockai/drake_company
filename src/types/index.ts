@@ -34,10 +34,30 @@ export enum LeadStatus {
   CANCELLATION = 'cancellation',
   CLOSED_DEAL = "closed_deal",
   NO_ANSWER = 'no_answer',
+  VIP = 'vip',
+  NON_STOP = 'non_stop',
   NOT_INTERSTED_NOW = 'not_intersted_now',
   RESERVATION = 'reservation',
 
 }
+
+
+
+
+export enum Interest {
+  HOT = 'hot',
+  WARM = 'warm',
+  UNDER_DECISION = 'under_decision',
+}
+
+export enum Tier {
+  BRONZE = 'bronze',
+  SILVER = 'silver',
+  GOLD = 'gold',
+  PLATINUM = 'platinum',
+}
+
+
 
 export interface Log {
   id: number,
@@ -58,11 +78,16 @@ export interface Lead {
   id?: string;
   nameEn?: string; // English name
   nameAr?: string; // Arabic name
-  contact: string;
+  contact: string[];
+  meetings?:Meeting[];
   email?: string;
+  familyName?:string
+  firstConection?:string|Date| null ;
   budget: number;
   inventoryInterestId?: string;
   source: string;
+  interest:Interest;
+  tier: Tier;
   status: LeadStatus;
   lastCallDate?: string;
   lastVisitDate?: string;
@@ -70,6 +95,7 @@ export interface Lead {
   ownerId?: string; // Backend uses this field name
   createdAt?: string;
   createdBy?: string;
+  inventoryInterest?:any
   notes?: string[] | null;
   calls?: CallLog[] | null;
   visits?: VisitLog[] | null;

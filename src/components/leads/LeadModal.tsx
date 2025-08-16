@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { X, Phone, Calendar, MessageSquare, Plus, Loader2 } from 'lucide-react';
-import { Lead, CallLog, VisitLog, Property, LeadStatus } from '../../types';
+import { X, Phone, Calendar, MessageSquare, Plus, Loader2, DollarSign, MapPin, Clock } from 'lucide-react';
+import { Lead, CallLog, VisitLog, Property, LeadStatus, Interest, Tier } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCw } from 'lucide-react';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
@@ -51,10 +51,52 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentLead, setCurrentLead] = useState(lead);
   const [isUpdating, setIsUpdating] = useState(false);
+
+
+
   const [notes, setNotes] = useState<string[]>(lead.notes || []);
+
+
+  // فوق داخل الكمبوننت
+  const [showPhoneForm, setShowPhoneForm] = useState(false);
+  const [newPhone, setNewPhone] = useState("");
+
+  // مثال دالة لحذف رقم
+  const handleDeletePhone = (index: number) => {
+    const updatedPhones = currentLead.contact.filter((_, i) => i !== index);
+    // هنا لازم تحدث البيانات في الـ backend كمان
+    updateLead({ ...currentLead, contact: updatedPhones });
+  };
+
+  // مثال دالة لإضافة رقم جديد
+  const handleAddPhone = () => {
+    if (!newPhone.trim()) return;
+    const updatedPhones = [...(currentLead.contact || []), newPhone.trim()];
+    updateLead({ ...currentLead, contact: updatedPhones });
+    setNewPhone("");
+    setShowPhoneForm(false);
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   useEffect(() => {
     setNotes(lead.notes || []);
   }, [lead.notes]);
+
+
+
   const queryClient = useQueryClient();
   const getProperties = async () => {
     const response = await axiosInterceptor.get('/properties');
@@ -176,11 +218,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
   const [editingNoteValue, setEditingNoteValue] = useState('');
 
+
+
   // Main progress stages (excluding special statuses and cancellation)
   const mainStatusStages = [
     { id: 'fresh', label: t('freshLead'), value: LeadStatus.FRESH_LEAD },
     { id: 'follow', label: t('followUp'), value: LeadStatus.FOLLOW_UP },
     { id: 'visit', label: t('scheduledVisit'), value: LeadStatus.SCHEDULED_VISIT },
+    { id: 'vip', label: t('VIP'), value: LeadStatus.VIP },
+    { id: 'non_stop', label: t('nonStop'), value: LeadStatus.NON_STOP },
     { id: 'open', label: t('openDeal'), value: LeadStatus.OPEN_DEAL },
     { id: 'reservation', label: t('reservation'), value: LeadStatus.RESERVATION },
     { id: 'closed', label: t('closedDeal'), value: LeadStatus.CLOSED_DEAL },
@@ -191,6 +237,42 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     { id: 'notAnswered', label: t('noAnswer'), value: LeadStatus.NO_ANSWER },
     { id: 'notInterested', label: t('notInterestedNow'), value: LeadStatus.NOT_INTERSTED_NOW },
   ];
+
+  // const getStatusColor = useMemo(() => (status: string) => {
+  //   switch (status) {
+  //     case LeadStatus.FRESH_LEAD: return 'bg-blue-100 text-blue-800';
+  //     case LeadStatus.FOLLOW_UP: return 'bg-yellow-100 text-yellow-800';
+  //     case LeadStatus.SCHEDULED_VISIT: return 'bg-purple-100 text-purple-800';
+  //     case LeadStatus.OPEN_DEAL: return 'bg-green-100 text-green-800';
+  //     case LeadStatus.VIP: return 'bg-green-100 text-yellow-800';
+  //     case LeadStatus.NON_STOP: return 'bg-green-100 text-green-800';
+  //     case LeadStatus.CANCELLATION: return 'bg-red-100 text-red-800';
+  //     case LeadStatus.NO_ANSWER: return 'bg-orange-100 text-orange-800';
+  //     case LeadStatus.NOT_INTERSTED_NOW: return 'bg-gray-200 text-gray-800';
+  //     case LeadStatus.RESERVATION: return 'bg-pink-100 text-pink-800';
+  //     default: return 'bg-gray-100 text-gray-800';
+  //   }
+  // }, []);
+  // const getStatusColorInterst = useMemo(() => (status: string) => {
+  //   switch (status) {
+  //     case Interest.UNDER_DECISION: return 'bg-blue-100 text-blue-800';
+  //     case Interest.HOT: return 'bg-yellow-100 text-yellow-800';
+  //     case Interest.WARM: return 'bg-purple-100 text-purple-800';
+
+  //     default: return 'bg-gray-100 text-gray-800';
+  //   }
+  // }, []);
+
+  // const getStatusColorTier = useMemo(() => (status: string) => {
+  //   switch (status) {
+  //     case Tier.BRONZE: return 'bg-blue-100 text-blue-800';
+  //     case Tier.GOLD: return 'bg-yellow-100 text-yellow-800';
+  //     case Tier.PLATINUM: return 'bg-purple-100 text-purple-800';
+  //     case Tier.SILVER: return 'bg-green-100 text-green-800';
+
+  //     default: return 'bg-gray-100 text-gray-800';
+  //   }
+  // }, []);
 
   const [toastId, setToastId] = useState<Id | null>(null);
   const isCancelled = currentLead.status === LeadStatus.CANCELLATION;
@@ -203,6 +285,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const currentSpecialStatus = specialStatuses.find(s => s.value === currentLead.status);
 
   const handleStatusUpdate = (newStatus: Lead['status']) => {
+    console.log(newStatus);
+
     if (canEdit) {
       setIsUpdate(true);
       updateLead({ ...currentLead, status: newStatus });
@@ -220,6 +304,47 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   //   setIsUpdate(true);
   // }, [currentLead.status]);
 
+  const getStatusColor = useMemo(() => (status: string) => {
+    switch (status) {
+      case LeadStatus.FRESH_LEAD: return 'bg-blue-100 text-blue-800';
+      case LeadStatus.FOLLOW_UP: return 'bg-yellow-100 text-yellow-800';
+      case LeadStatus.SCHEDULED_VISIT: return 'bg-purple-100 text-purple-800';
+      case LeadStatus.OPEN_DEAL: return 'bg-green-100 text-green-800';
+      case LeadStatus.VIP: return 'bg-green-100 text-yellow-800';
+      case LeadStatus.NON_STOP: return 'bg-green-100 text-green-800';
+      case LeadStatus.CANCELLATION: return 'bg-red-100 text-red-800';
+      case LeadStatus.NO_ANSWER: return 'bg-orange-100 text-orange-800';
+      case LeadStatus.NOT_INTERSTED_NOW: return 'bg-gray-200 text-gray-800';
+      case LeadStatus.RESERVATION: return 'bg-pink-100 text-pink-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }, []);
+
+  const getStatusColorInterst = useMemo(() => (status: string) => {
+    switch (status) {
+      case Interest.UNDER_DECISION: return 'bg-blue-100 text-blue-800';
+      case Interest.HOT: return 'bg-yellow-100 text-yellow-800';
+      case Interest.WARM: return 'bg-purple-100 text-purple-800';
+
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }, []);
+
+  const getStatusColorTier = useMemo(() => (status: string) => {
+    switch (status) {
+      case Tier.BRONZE: return 'bg-blue-100 text-blue-800';
+      case Tier.GOLD: return 'bg-yellow-100 text-yellow-800';
+      case Tier.PLATINUM: return 'bg-purple-100 text-purple-800';
+      case Tier.SILVER: return 'bg-green-100 text-green-800';
+
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  }, []);
+
+
+
+
+
   const handleAddCall = (e: React.FormEvent) => {
     e.preventDefault();
     const newCall = {
@@ -229,6 +354,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     };
     addCallLog(newCall as unknown as CallLog);
   };
+
+
+
+
+
 
   const handleAddVisit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,6 +370,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     addVisitLog(newVisit);
   };
 
+
+
+
+
+
   const handleAddNote = () => {
     if (newNote.trim()) {
       setIsUpdate(true);
@@ -250,6 +385,19 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       setNewNote('');
     }
   };
+
+
+
+
+
+
+
+
+
+
+
+
+
   useEffect(() => {
     if (isUpdate) {
       setIsUpdate(false);
@@ -289,6 +437,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     setIsUpdate(true);
   };
 
+
+
   // Add update button handler
   const handleRefresh = () => {
     setIsUpdating(true);
@@ -313,47 +463,118 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
         {/* Lead Details */}
         <div className="p-4 sm:p-6 lg:p-8 border-b border-gray-200">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('phone')}</label>
-              <p className="text-sm text-gray-900 font-mono">{currentLead.contact || 'Not specified'}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('budget')}</label>
-              <p className="text-sm text-gray-900">
-                {currentLead.budget ? 
-                  new Intl.NumberFormat('en-US', { 
-                    style: 'currency', 
-                    currency: 'EGP',
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                  }).format(currentLead.budget) : 
-                  'Not specified'
-                }
-              </p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{t('interest')}</label>
-              <div className="text-sm text-gray-900">
-                {(() => {
-                  const property = properties?.find(property => property.id === currentLead.inventoryInterestId);
-                  if (!property) return 'Not specified';
-                  
-                  // Display both English and Arabic names if available
-                  const hasBothNames = property.titleEn && property.titleAr;
-                  if (hasBothNames) {
-                    return (
-                      <div className="space-y-1">
-                        <div className="font-medium">{property.titleEn}</div>
-                        <div className="text-gray-600 font-arabic">{property.titleAr}</div>
-                      </div>
-                    );
-                  }
-                  return property.title || property.titleEn || property.titleAr || 'Not specified';
-                })()}
+          <div className='border border-[#A7A9AC] rounded-xl p-4 mb-9'>
+            <div className=' flex justify-between items-center'>
+              <div>
+                <h1 className='text-black font-bold'>{currentLead.nameAr?.toUpperCase()}</h1>
+                <div className='flex flex-row gap-6 text-sm text-[#A7A9AC]'>
+
+                  <p className='flex items-center gap-2'>
+                    <Calendar className='w-4 h-4 text-gray-500' />
+                    First Contact: {lead.firstConection ? new Date(lead.firstConection).toLocaleDateString() : "not found"}
+                  </p>
+                  <p className='flex items-center gap-2'>
+                    <Clock className='w-4 h-4 text-gray-500' />
+                    Last Contact: {
+                      lead.calls && lead.calls.length > 0
+                        ? new Date(lead.calls[lead.calls.length - 1].date).toLocaleDateString()
+                        : "N/A"
+                    }
+                  </p>
+                </div>
               </div>
+
+              <div className=' flex gap-5'>
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`}
+                  title={lead.status}
+                >
+                  {lead.status}
+                </span>
+
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColorInterst(lead.interest)} truncate max-w-full`}
+                  title={lead.interest.toString()}
+                >
+                  {lead.interest}
+                </span>
+
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full truncate max-w-full ${getStatusColorTier(lead.tier)} `}
+                  title={lead.tier.toString()}
+                >
+                  {lead.tier}
+                </span>
+              </div>
+
+
+
+
             </div>
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            {/* Phone */}
+            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
+              {/* أيقونة على الشمال */}
+              <Phone size={24} className="text-blue-500" />
+
+              {/* النصوص على اليمين */}
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-sm">Phone</span>
+                <span className="font-medium text-gray-900">
+                  {currentLead.contact?.length > 0 ? currentLead.contact[0] : "N/A"}
+                </span>
+              </div>
+            </div>
+
+
+
+            {/* Budget */}
+            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
+              <DollarSign size={24} className="text-green-500" />
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-sm">Budget</span>
+                <span className="font-medium text-gray-900 flex gap-1">
+                  EGP{" "}
+                  {currentLead.budget && Number(currentLead.budget) > 0
+                    ? new Intl.NumberFormat("en-US", {
+                      style: "currency",
+                      currency: "EGP",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    }).format(Number(currentLead.budget))
+                    : "0"}
+                </span>
+              </div>
+            </div>
+
+            {/* Project */}
+            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
+              <MapPin size={24} className="text-red-500" />
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-sm">Project</span>
+                <span className="font-medium text-gray-900">
+                  {currentLead.inventoryInterest?.project?.nameEn || "N/A"}
+                </span>
+              </div>
+            </div>
+
+            {/* Meeting */}
+            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
+              <Clock size={24} className="text-purple-500" />
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-sm">Meeting Time</span>
+                <span className="font-medium text-gray-900">
+                  {currentLead.meetings?.[0]?.time || "N/A"}
+                </span>
+              </div>
+            </div>
+
+
+          </div>
+
+
 
           {/* Redesigned Deal Progress Tracker */}
           <div className="mb-8">
@@ -436,6 +657,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                                           return 'زيارة مجدولة';
                                         case LeadStatus.OPEN_DEAL:
                                           return 'صفقة مفتوحة';
+                                        case LeadStatus.VIP:
+                                          return 'عميل مهم ';
+                                        case LeadStatus.NON_STOP:
+                                          return 'عمبل نشط ';
                                         case LeadStatus.RESERVATION:
                                           return 'حجز';
                                         case LeadStatus.CLOSED_DEAL:
@@ -461,6 +686,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                                           return 'زيارة مجدولة';
                                         case LeadStatus.OPEN_DEAL:
                                           return 'صفقة مفتوحة';
+                                        case LeadStatus.VIP:
+                                          return 'عميل مهم ';
+                                        case LeadStatus.NON_STOP:
+                                          return 'عمبل نشط ';
                                         case LeadStatus.RESERVATION:
                                           return 'حجز';
                                         case LeadStatus.CLOSED_DEAL:
@@ -542,6 +771,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
                   <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
                   <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
+                  <option value={LeadStatus.VIP}>{t('VIP')}</option>
+                  <option value={LeadStatus.NON_STOP}>{t('nonStop')}</option>
                   <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
                   <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
                   <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
@@ -554,15 +785,14 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         {/* Enhanced Tabs */}
         <div className="px-3 sm:px-6 pt-3 sm:pt-4">
           <div className="flex gap-2 sm:gap-4 md:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-none">
-            {['details', 'calls', 'visits', 'notes'].map((tab) => (
+            {['details', 'calls', 'visits', 'notes', 'phones'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-3 sm:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${
-                  activeTab === tab
-                    ? 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
-                }`}
+                className={`py-3 sm:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${activeTab === tab
+                  ? 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
+                  }`}
               >
                 {t(tab)}
                 {activeTab === tab && (
@@ -578,125 +808,130 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           </div>
         </div>
 
+
         {/* Enhanced Tab Content */}
         <div className="p-3 sm:p-6 pt-6 sm:pt-8">
           {activeTab === 'details' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+              {/* Contact Information Section */}
               <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">{t('contactInformation')}</h3>
-                <div className="space-y-4">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6 border-b pb-2">Contact Information</h3>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('name')}</label>
-                    <div className="text-sm text-gray-900">
-                      {(() => {
-                        const hasBothNames = currentLead.nameEn && currentLead.nameAr;
-                        if (hasBothNames) {
-                          return (
-                            <div className="space-y-1">
-                              <div className="font-medium">{currentLead.nameEn}</div>
-                              <div className="text-gray-600 font-arabic">{currentLead.nameAr}</div>
-                            </div>
-                          );
-                        }
-                        return currentLead.nameEn || currentLead.nameAr || 'Not specified';
-                      })()}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('phone')}</label>
-                    <p className="text-sm text-gray-900 font-mono">{currentLead.contact || 'Not specified'}</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('email')}</label>
-                    <p className="text-sm text-gray-900">
-                      {currentLead.email ? (
-                        <a 
-                          href={`mailto:${currentLead.email}`}
-                          className="text-blue-600 hover:text-blue-800 underline"
-                        >
-                          {currentLead.email}
-                        </a>
-                      ) : (
-                        'Not specified'
-                      )}
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">First Name</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {currentLead.nameEn || 'Not specified'}
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('source')}</label>
-                    <p className="text-sm text-gray-900">{currentLead.source || 'Not specified'}</p>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Family Name</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {currentLead.familyName || 'Not specified'}
+                    </p>
                   </div>
                 </div>
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('leadDetailsSection')}</h3>
-                <div className="space-y-4">
+
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Numbers</label>
+                  {Array.isArray(currentLead.contact) && currentLead.contact.length > 0 ? (
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {currentLead.contact.join(' • ')}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-500 mt-1">Not specified</p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('status')}</label>
-                    <div className="text-sm">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        currentLead.status === 'scheduled_visit' ? 'bg-blue-100 text-blue-800' :
-                        currentLead.status === 'open_deal' ? 'bg-green-100 text-green-800' :
-                        currentLead.status === 'closed_deal' ? 'bg-purple-100 text-purple-800' :
-                        currentLead.status === 'cancellation' ? 'bg-red-100 text-red-800' :
-                        currentLead.status === 'no_answer' ? 'bg-orange-100 text-orange-800' :
-                        currentLead.status === 'not_intersted_now' ? 'bg-gray-100 text-gray-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {t(currentLead.status) || currentLead.status || 'Not specified'}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('budget')}</label>
-                    <p className="text-sm text-gray-900">
-                      {currentLead.budget ? 
-                        new Intl.NumberFormat('en-US', { 
-                          style: 'currency', 
-                          currency: 'EGP',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0
-                        }).format(currentLead.budget) : 
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">First Connection Date</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {currentLead.firstConection ?
+                        (typeof currentLead.firstConection === 'string' ?
+                          currentLead.firstConection :
+                          currentLead.firstConection.toLocaleDateString()
+                        ) :
                         'Not specified'
                       }
                     </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('interest')}</label>
-                    <div className="text-sm text-gray-900">
-                      {(() => {
-                        const property = properties?.find(property => property.id === currentLead.inventoryInterestId);
-                        if (!property) return 'Not specified';
-                        
-                        // Display both English and Arabic names if available
-                        const hasBothNames = property.titleEn && property.titleAr;
-                        if (hasBothNames) {
-                          return (
-                            <div className="space-y-1">
-                              <div className="font-medium">{property.titleEn}</div>
-                              <div className="text-gray-600 font-arabic">{property.titleAr}</div>
-                            </div>
-                          );
-                        }
-                        return property.title || property.titleEn || property.titleAr || 'Not specified';
-                      })()}
-                    </div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Last Connection Date</label>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {currentLead.contact?.length > 0 ? currentLead.contact[0] : "N/A"}
+                    </p>
                   </div>
-                  {currentLead.owner && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">{t('owner') || 'Owner'}</label>
-                      <p className="text-sm text-gray-900">{currentLead.owner.name || 'Not specified'}</p>
-                    </div>
-                  )}
-                  {currentLead.createdAt && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">{t('createdAt') || 'Created At'}</label>
-                      <p className="text-sm text-gray-900">{currentLead.createdAt ? formatDate(currentLead.createdAt) : 'Not specified'}</p>
-                    </div>
-                  )}
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Source</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">
+                    {currentLead.source || 'Not specified'}
+                  </p>
                 </div>
               </div>
-              
 
+              {/* Lead Details Section */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6 border-b pb-2">Lead Details</h3>
+
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Status</label>
+                      <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`}
+                  title={lead.status}
+                >
+                  {lead.status}
+                </span>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Interest Level</label>
+                  <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColorInterst(lead.interest)} truncate max-w-full`}
+                  title={lead.interest.toString()}
+                >
+                  {lead.interest}
+                </span>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Tier Classification</label>
+                 
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full truncate max-w-full ${getStatusColorTier(lead.tier)} `}
+                  title={lead.tier.toString()}
+                >
+                  {lead.tier}
+                </span>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Budget</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">
+                    {currentLead.budget ?
+                      `EGP ${new Intl.NumberFormat('en-US').format(currentLead.budget)}` :
+                      'Not specified'
+                    }
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">CIL Status</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">
+                    {currentLead.status || 'Not specified'}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned to</label>
+                  <p className="text-sm font-medium text-gray-900 mt-1">
+                    {currentLead.owner?.name || 'Not specified'}
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -732,7 +967,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                               {(() => {
                                 const project = projects?.find(project => project.id === call.projectId);
                                 if (!project) return 'Not specified';
-                                
+
                                 // Display both English and Arabic names if available
                                 const hasBothNames = project.nameEn && project.nameAr;
                                 if (hasBothNames) {
@@ -782,7 +1017,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                             {(() => {
                               const project = projects?.find(project => project.id === visit.project);
                               if (!project) return 'Not specified';
-                              
+
                               // Display both English and Arabic names if available
                               const hasBothNames = project.nameEn && project.nameAr;
                               if (hasBothNames) {
@@ -890,6 +1125,9 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               </div>
             </div>
           )}
+
+
+
         </div>
 
         {/* Call Form Modal */}
@@ -944,7 +1182,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     <option value="">{t('selectProject')}</option>
                     {projects?.map(project => (
                       <option key={project.id} value={project.id}>
-                        {project.nameEn && project.nameAr 
+                        {project.nameEn && project.nameAr
                           ? `${project.nameEn} / ${project.nameAr}`
                           : project.nameEn || project.nameAr || 'Unnamed Project'
                         }
@@ -1007,7 +1245,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     <option value="">{t('selectProject')}</option>
                     {projects?.map(project => (
                       <option key={project.id} value={project.nameEn}>
-                        {project.nameEn && project.nameAr 
+                        {project.nameEn && project.nameAr
                           ? `${project.nameEn} / ${project.nameAr}`
                           : project.nameEn || project.nameAr || 'Unnamed Project'
                         }
@@ -1054,6 +1292,41 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
             </div>
           </div>
         )}
+
+
+        {showPhoneForm && (
+          <div className="flex items-center gap-2">
+            <input
+              type="tel"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              placeholder={t('enterPhoneNumber')}
+              className="border px-3 py-1 rounded-lg w-full"
+            />
+            <button
+              onClick={() => {
+                if (newPhone.trim()) {
+                  // هنا تضيف الرقم الجديد لـ currentLead.contact
+                  setCurrentLead({
+                    ...currentLead,
+                    contact: [...(currentLead.contact || []), newPhone],
+                  });
+                  setNewPhone("");
+                  setShowPhoneForm(false);
+                }
+              }}
+              className="bg-blue-600 text-white px-3 py-1 rounded-lg"
+            >
+              {t('save')}
+            </button>
+          </div>
+        )}
+
+
+
+
+
+
       </div>
     </div>
   );

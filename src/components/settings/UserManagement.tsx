@@ -71,12 +71,12 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const { mutateAsync: addUserMutation, isPending: isAdding } = useMutation({
     mutationFn: async (data: { formData: any }) => {
       const response = await addUser(data.formData);
-      
+
       // If this is a team leader, update their teamId to their own ID
       if (data.formData.role === 'team_leader' && response.user) {
         await updateUser(response.user.id, { teamId: response.user.id });
       }
-      
+
       return response;
     },
     onSuccess: () => {
@@ -95,8 +95,18 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     },
     onError: (error: any) => {
       console.error('Error adding user:', error);
+
+      // شيل أي toast مفتوح
       toast.dismiss(toastId!);
-      toast.error(error.response.data.message);
+
+      // استخراج الرسالة من الرد أو من الخطأ نفسه
+      const message =
+        error?.response?.data?.message[0] ||
+        error?.message ||
+        'حدث خطأ غير متوقع';
+
+      // عرضها في toast
+      setToastId(toast.error(message));
     }
   })
   const { mutateAsync: deleteUserMutation, isPending: isDeleting } = useMutation({
@@ -115,9 +125,17 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
 
 
   const updateUser = async (userId: string, formData: any) => {
-    const response = await axiosInterceptor.patch(`/auth/update-user/${userId}`, formData);
+
+    const filteredData = Object.fromEntries(
+      Object.entries(formData).filter(([_, value]) => value !== "" && value !== null && value !== undefined)
+    );
+
+    console.log(filteredData);
+
+    const response = await axiosInterceptor.patch(`/auth/update-user/${userId}`, filteredData);
     return response.data;
-  }
+  };
+
 
 
   useEffect(() => {
@@ -403,7 +421,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition"
                                   onClick={async () => {
                                     if (!assignToMap[user.id]) {
-                                      toast.error('Please Chose Assgin To User First❌' );
+                                      toast.error('Please Chose Assgin To User First❌');
                                       return;
                                     }
 
@@ -638,6 +656,9 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                 </button>
                 <button
                   type="submit"
+                  onClick={()=>{
+                    
+                  }}
                   className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 ${isRTL ? 'font-arabic' : ''}`}
                 >
                   {editingUser ? t('actions.updateUser') : t('actions.addUser')}
@@ -649,6 +670,6 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       )}
     </div>
   );
-}; 
+};
 
 export default UserManagement;

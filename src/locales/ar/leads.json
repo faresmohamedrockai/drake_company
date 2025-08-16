@@ -39,11 +39,29 @@
     "notInterestedNow": "غير مهتم حالياً",
     "reservation": "حجز"
   },
+"Interest": {
+    "hot": "ساخن",
+    "warm": "دافئ",
+    "under_decision": "قيد القرار"
+  },
+  "Tier": {
+    "bronze": "برونزي",
+    "silver": "فضي",
+    "gold": "ذهبي",
+    "platinum": "بلاتيني"
+  },
+"TierName":"الفئة",
+"IntersName":"الاهتمام",
+
+
+
   "name": "الاسم",
   "nameEn": "الاسم (إنجليزي)",
   "nameAr": "الاسم (عربي)",
+  
   "phone": "الهاتف",
   "budget": "الميزانية",
+  "project":"المشروع",
   "interest": "الاهتمام",
   "source": "المصدر",
   "status": "الحالة",
@@ -115,6 +133,8 @@
   "nameRequired": "الاسم *",
   "nameEnRequired": "الاسم (إنجليزي)",
   "nameArRequired": "الاسم (عربي) *",
+  "nameFamily":"اسم العائلة",
+  "firstConnection":"تاريخ اول تواصل",
   "phoneRequired": "الهاتف *",
   "email": "البريد الإلكتروني",
   "assignedToRequired": "مُسند إلى *",
@@ -140,6 +160,8 @@
   "scheduledVisit": "زيارة مجدولة",
   "openDeal": "صفقة مفتوحة",
   "closedDeal": "صفقة مغلقة",
+  "VIP": "عميل مهم",
+  "nonStop": "عميل نشط",
   "cancellation": "إلغاء",
   "editLead": "تعديل العميل المحتمل",
   "deleteLead": "حذف العميل المحتمل",

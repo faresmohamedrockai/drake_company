@@ -29,6 +29,14 @@
     "coldCall": "Cold Call",
     "other": "Other"
   },
+
+
+
+
+
+
+
+  
   "leadStatusOptions": {
     "freshLead": "Fresh Lead",
     "followUp": "Follow Up",
@@ -39,6 +47,29 @@
     "notInterestedNow": "Not Interested Now",
     "reservation": "Reservation"
   },
+
+
+
+ "Interest": {
+    "hot": "Hot",
+    "warm": "Warm",
+    "under_decision": "Under Decision"
+  },
+  "Tier": {
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum"
+  },
+"TierName":"Tier",
+"IntersName":"Interest",
+
+
+
+
+
+
+
   "name": "Name",
   "nameEn": "Name (English)",
   "nameAr": "Name (Arabic)",
@@ -115,6 +146,8 @@
   "nameRequired": "Name *",
   "nameEnRequired": "Name (English)",
   "nameArRequired": "Name (Arabic) *",
+  "nameFamily":"Family Name",
+"firstConnection":"First Connection Date",
   "phoneRequired": "Phone *",
   "email": "Email",
   "assignedToRequired": "Assigned To *",
@@ -140,6 +173,8 @@
   "scheduledVisit": "Scheduled Visit",
   "openDeal": "Open Deal",
   "closedDeal": "Closed Deal",
+  "VIP": "VIP",
+  "nonStop": "Non Stop",
   "cancellation": "Cancellation",
   "editLead": "Edit Lead",
   "deleteLead": "Delete Lead",

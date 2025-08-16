@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { X, User, Phone, Mail, DollarSign, Building, Globe, Target } from 'lucide-react';
-import { Lead, LeadStatus, Property } from '../../types';
+import { X, User, Phone, Mail, DollarSign, Building, Globe, Target, Calendar } from 'lucide-react';
+import { Interest, Lead, LeadStatus, Property, Tier } from '../../types';
 import { User as UserType } from '../../contexts/AuthContext';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -51,8 +51,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       setFormData({
         nameEn: '',
         nameAr: '',
-        contact: '',
+        familyName: '',
+        contact: [''],
         email: '',
+        interest: Interest.HOT,
+        tier: Tier.BRONZE,
+        firstConection: '',
         budget: 0,
         inventoryInterestId: '',
         source: '',
@@ -68,8 +72,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       setFormData({
         nameEn: '',
         nameAr: '',
-        contact: '',
+        familyName: '',
+        contact: [''],
         email: '',
+        interest: Interest.HOT,
+        tier: Tier.BRONZE,
+        firstConection: '',
         budget: 0,
         inventoryInterestId: '',
         source: '',
@@ -82,18 +90,25 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
 
   const { user } = useAuth();
   const { t, i18n } = useTranslation('leads');
+  const tier = useTranslation('Tier');
+  const interest = useTranslation('Interest');
   const { language } = useLanguage();
   const [formData, setFormData] = useState({
     nameEn: '',
     nameAr: '',
-    contact: '',
+    familyName: '',
+    contact: [''], // ← مصفوفة بدلاً من نص واحد
     email: '',
+    interest: Interest.HOT as Interest,
+    tier: Tier.BRONZE as Tier,
+    firstConection: '',
     budget: 0,
     inventoryInterestId: '',
     source: '',
     status: LeadStatus.FRESH_LEAD as LeadStatus,
     assignedTo: user?.role === 'sales_rep' ? user.id : ''
   });
+
   const [error, setError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -112,11 +127,12 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Phone validation
-    if (!validatePhoneNumber(formData.contact)) {
-      setPhoneError(getPhoneErrorMessage(formData.contact, language));
+    // Phone validation for array of contacts
+    if (!formData.contact.every((num) => validatePhoneNumber(num))) {
+      setPhoneError(getPhoneErrorMessage(language));
       return;
     }
+
 
     // Email validation (only if email is provided)
     if (formData.email && !validateEmail(formData.email)) {
@@ -126,7 +142,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
 
     // Budget validation and conversion
     let budgetValue = 0;
-    
+
     // Always convert budget to number for validation and submission
     if (formData.budget !== null && formData.budget !== undefined) {
       budgetValue = Number(formData.budget);
@@ -156,16 +172,26 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       const leadData = {
         nameEn: formData.nameEn,
         nameAr: formData.nameAr,
-        contact: formData.contact,
+        contact: formData.contact.filter(c => c.trim() !== ''),
+        familyName: formData.familyName,
+        firstConection: formData.firstConection
+          ? new Date(formData.firstConection)
+          : undefined,
+
         email: formData.email,
-        budget: Number(budgetValue), // Ensure this is always a number
+
+        // 👇 التحويل الصحيح
+        interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
+        tier: Tier[formData.tier.toUpperCase() as keyof typeof Tier],
+
+        budget: Number(budgetValue),
         inventoryInterestId: formData.inventoryInterestId,
         source: formData.source,
         status: formData.status as LeadStatus,
         lastCallDate: '------',
         lastVisitDate: '------',
-        assignedToId: formData.assignedTo || user?.id!, // Required by TypeScript interface
-        ownerId: formData.assignedTo || user?.id!, // Backend expects ownerId
+        assignedToId: formData.assignedTo || user?.id!,
+        ownerId: formData.assignedTo || user?.id!,
         createdBy: user?.name || 'Unknown',
         createdAt: new Date().toISOString(),
       };
@@ -257,28 +283,70 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
-
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('phoneRequired')}</label>
+                <label className="block text-sm font-medium text-gray-700">{t('nameFamily')}</label>
                 <div className="relative">
                   <input
-                    type="tel"
-                    value={formData.contact}
-                    onChange={(e) => {
-                      setFormData({ ...formData, contact: e.target.value });
-                      setPhoneError(''); // Clear error when user types
-                    }}
-                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'
-                      }`}
+                    type="text"
+                    value={formData.familyName}
+                    onChange={(e) => setFormData({ ...formData, familyName: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
+                    placeholder="أدخل الاسم العائلة"
                     required
-                    placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
                   />
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
-                {phoneError && (
-                  <p className="text-red-600 text-sm mt-1">{phoneError}</p>
-                )}
               </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('phoneRequired')}
+                </label>
+
+                {formData.contact.map((phone, index) => (
+                  <div key={index} className="relative flex items-center gap-2">
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => {
+                        const updatedContacts = [...formData.contact];
+                        updatedContacts[index] = e.target.value;
+                        setFormData({ ...formData, contact: updatedContacts });
+                      }}
+                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 bg-white text-sm transition-all duration-200 
+          ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'}`}
+                      required
+                      placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
+                    />
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+
+                    {/* زر الحذف */}
+                    {formData.contact.length > 1 && (
+                      <button
+                        type="button"
+                        className="text-red-500 text-sm"
+                        onClick={() => {
+                          const updatedContacts = formData.contact.filter((_, i) => i !== index);
+                          setFormData({ ...formData, contact: updatedContacts });
+                        }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {/* زر الإضافة */}
+                <button
+                  type="button"
+                  className="mt-2 text-blue-500 text-sm"
+                  onClick={() => setFormData({ ...formData, contact: [...formData.contact, ''] })}
+                >
+                  + {language === 'ar' ? 'إضافة رقم' : 'Add Phone'}
+                </button>
+
+                {phoneError && <p className="text-red-600 text-sm mt-1">{phoneError}</p>}
+              </div>
+
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">{t('email')}</label>
@@ -300,6 +368,31 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <p className="text-red-600 text-sm mt-1">{emailError}</p>
                 )}
               </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {t('firstConnection')}
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={formData.firstConection}
+                    onChange={(e) => {
+                      setFormData({ ...formData, firstConection: e.target.value });
+                      setEmailError('');
+                    }}
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent bg-white text-sm transition-all duration-200 ${emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'
+                      }`}
+                    placeholder={language === 'ar' ? 'أدخل أول تاريخ للتواصل' : 'Enter First Connection Date'}
+                  />
+                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+
+
+
+
             </div>
           </div>
 
@@ -316,9 +409,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <select
                     value={formData.assignedTo}
                     onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                    className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none ${
-                      (user?.role as string) === 'sales_rep' ? 'bg-gray-100 cursor-not-allowed' : ''
-                    }`}
+                    className={`w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none ${(user?.role as string) === 'sales_rep' ? 'bg-gray-100 cursor-not-allowed' : ''
+                      }`}
                     required
                     disabled={(user?.role as string) === 'sales_rep'}
                   >
@@ -365,7 +457,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                     value={formData.budget || ''}
                     onChange={e => {
                       const value = e.target.value;
-                      
+
                       if (value === '') {
                         setFormData({ ...formData, budget: 0 });
                         setBudgetError('');
@@ -397,7 +489,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                       return setFormData({ ...formData, inventoryInterestId: e.target.value });
                     }}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
-                    // removed required
+                  // removed required
                   >
                     <option value="">{t('selectPropertyType')}</option>
                     {!properties ? (
@@ -458,6 +550,44 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
                   <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
                   <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
+                </select>
+                <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">{t('TierName')}</label>
+              <div className="relative">
+                <select
+                  value={formData.tier}
+                  onChange={e => setFormData({ ...formData, tier: e.target.value as Tier })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                >
+                  <option value={Tier.BRONZE}>{t('bronze')}</option>
+
+                  <option value={Tier.SILVER}>{t('silver')}</option>
+                  <option value={Tier.PLATINUM}>{t('platinum')}</option>
+                  <option value={Tier.GOLD}>{t('gold')}</option>
+
+
+                </select>
+                <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">{t('IntersName')}</label>
+              <div className="relative">
+                <select
+                  value={formData.interest}
+                  onChange={e => setFormData({ ...formData, interest: e.target.value as Interest })}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                >
+                  <option value={Interest.HOT}>{t('hot')}</option>
+
+                  <option value={Interest.WARM}>{t('warm')}</option>
+                  <option value={Interest.UNDER_DECISION}>{t('under_decision')}</option>
+                  {/* <option value={Interest.GOLD}>{t('gold')}</option> */}
+
+
                 </select>
                 <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>

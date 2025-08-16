@@ -391,28 +391,28 @@ const LeadsList: React.FC = React.memo(() => {
     'bg-yellow-500', 'bg-cyan-500', 'bg-lime-500', 'bg-amber-500'
   ];
 
-  const getUserColor = (userName: string) => {
-    const userIndex = users?.findIndex(user => user.name === userName);
-    return userIndex !== undefined && userIndex >= 0 ? userColors[userIndex % userColors.length] : 'bg-gray-500';
-  };
+  // const getUserColor = (userName: string) => {
+  //   const userIndex = users?.findIndex(user => user.name === userName);
+  //   return userIndex !== undefined && userIndex >= 0 ? userColors[userIndex % userColors.length] : 'bg-gray-500';
+  // };
 
-  const getUserInitials = (userName: string) => {
-    return userName
-      .split(' ')
-      .map(name => name.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+  // const getUserInitials = (userName: string) => {
+  //   return userName
+  //     .split(' ')
+  //     .map(name => name.charAt(0))
+  //     .join('')
+  //     .toUpperCase()
+  //     .slice(0, 2);
+  // };
 
-  // Helper function to get display name based on current language
-  const getDisplayName = (lead: Lead) => {
-    if (i18n.language === 'ar') {
-      return lead.nameAr || lead.nameEn || '';
-    } else {
-      return lead.nameEn || lead.nameAr || '';
-    }
-  };
+  // // Helper function to get display name based on current language
+  // const getDisplayName = (lead: Lead) => {
+  //   if (i18n.language === 'ar') {
+  //     return lead.nameAr || lead.nameEn || '';
+  //   } else {
+  //     return lead.nameEn || lead.nameAr || '';
+  //   }
+  // };
 
   // Helper function to get searchable name (both languages)
   const getSearchableName = (lead: Lead) => {
@@ -443,12 +443,12 @@ const LeadsList: React.FC = React.memo(() => {
       filtered = filtered.filter(lead => {
         const nameEn = lead.nameEn?.toLowerCase() || '';
         const nameAr = lead.nameAr?.toLowerCase() || '';
-        const contact = lead.contact.toLowerCase();
+        // const contact = lead.contact.toLowerCase();
         const source = lead.source.toLowerCase();
         
         return nameEn.includes(searchLower) ||
                nameAr.includes(searchLower) ||
-               contact.includes(searchLower) ||
+              //  contact.includes(searchLower) ||
                source.includes(searchLower);
       });
     }
@@ -462,9 +462,9 @@ const LeadsList: React.FC = React.memo(() => {
       if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) {
         return false;
       }
-      if (filters.contact && !lead.contact.toLowerCase().includes(filters.contact.toLowerCase())) {
-        return false;
-      }
+      // if (filters.contact && !lead.contact.toLowerCase().includes(filters.contact.toLowerCase())) {
+      //   return false;
+      // }
       if (filters.budget && lead.budget.toString() !== filters.budget) {
         return false;
       }
@@ -521,8 +521,8 @@ const LeadsList: React.FC = React.memo(() => {
     activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, user?.id, i18n.language
   ]);
 
-  // Stats calculations
-  const stats = useLeadsStats(leads, filteredLeads, user?.id);
+  // // Stats calculations
+  // const stats = useLeadsStats(leads, filteredLeads, user?.id);
 
   // Event handlers
   const handleLeadClick = useCallback((lead: Lead) => {
