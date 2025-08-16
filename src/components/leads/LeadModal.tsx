@@ -53,7 +53,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
 
-
   const [notes, setNotes] = useState<string[]>(lead.notes || []);
 
 
@@ -63,16 +62,16 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   // مثال دالة لحذف رقم
   const handleDeletePhone = (index: number) => {
-    const updatedPhones = currentLead.contact.filter((_, i) => i !== index);
+    const updatedPhones = currentLead.contacts?.filter((_, i) => i !== index);
     // هنا لازم تحدث البيانات في الـ backend كمان
-    updateLead({ ...currentLead, contact: updatedPhones });
+    updateLead({ ...currentLead, contacts: updatedPhones });
   };
 
   // مثال دالة لإضافة رقم جديد
   const handleAddPhone = () => {
     if (!newPhone.trim()) return;
-    const updatedPhones = [...(currentLead.contact || []), newPhone.trim()];
-    updateLead({ ...currentLead, contact: updatedPhones });
+    const updatedPhones = [...(currentLead.contacts || []), newPhone.trim()];
+    updateLead({ ...currentLead, contacts: updatedPhones });
     setNewPhone("");
     setShowPhoneForm(false);
   };
@@ -217,6 +216,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [isUpdate, setIsUpdate] = useState(false);
   const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
   const [editingNoteValue, setEditingNoteValue] = useState('');
+
 
 
 
@@ -445,11 +445,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     setTimeout(() => setRefreshKey(k => k + 1), 600); // Simulate loading
   };
 
+  console.log(leads);
+
+
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg sm:rounded-xl w-full max-w-sm sm:max-w-2xl md:max-w-4xl lg:max-w-5xl h-[98vh] sm:max-h-[95vh] overflow-y-auto relative shadow-2xl">
+      <div className="bg-white rounded-lg sm:rounded-xl w-full max-w-sm sm:max-w-2xl md:max-w-5xl lg:max-w-6xl h-[98vh] sm:max-h-[95vh] overflow-y-auto relative shadow-2xl">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-6 flex justify-between items-center z-10 rounded-t-lg sm:rounded-t-xl">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-2">{t('leadDetails')}</h2>
@@ -471,7 +475,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
                   <p className='flex items-center gap-2'>
                     <Calendar className='w-4 h-4 text-gray-500' />
-                    First Contact: {lead.firstConection ? new Date(lead.firstConection).toLocaleDateString() : "not found"}
+                    First Contact: {currentLead.firstConection ? currentLead.firstConection : "N/A"}
                   </p>
                   <p className='flex items-center gap-2'>
                     <Clock className='w-4 h-4 text-gray-500' />
@@ -523,7 +527,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <div className="flex flex-col">
                 <span className="text-gray-500 text-sm">Phone</span>
                 <span className="font-medium text-gray-900">
-                  {currentLead.contact?.length > 0 ? currentLead.contact[0] : "N/A"}
+                  {currentLead.contact ? currentLead.contact : "N/A"}
                 </span>
               </div>
             </div>
@@ -834,9 +838,9 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Numbers</label>
-                  {Array.isArray(currentLead.contact) && currentLead.contact.length > 0 ? (
+                  {Array.isArray(currentLead.contacts) && currentLead.contacts.length > 0 ? (
                     <p className="text-sm font-medium text-gray-900 mt-1">
-                      {currentLead.contact.join(' • ')}
+                      {currentLead.contacts.join(' • ')}
                     </p>
                   ) : (
                     <p className="text-sm text-gray-500 mt-1">Not specified</p>
@@ -847,19 +851,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   <div>
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">First Connection Date</label>
                     <p className="text-sm font-medium text-gray-900 mt-1">
-                      {currentLead.firstConection ?
-                        (typeof currentLead.firstConection === 'string' ?
-                          currentLead.firstConection :
-                          currentLead.firstConection.toLocaleDateString()
-                        ) :
-                        'Not specified'
-                      }
+                      {currentLead.firstConection ? currentLead.firstConection : 'Not specified'}
                     </p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Last Connection Date</label>
                     <p className="text-sm font-medium text-gray-900 mt-1">
-                      {currentLead.contact?.length > 0 ? currentLead.contact[0] : "N/A"}
+                      {currentLead?.calls?.[0]?.date ? currentLead?.calls?.[0]?.date : 'Not specified'}
                     </p>
                   </div>
                 </div>
@@ -1309,7 +1307,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   // هنا تضيف الرقم الجديد لـ currentLead.contact
                   setCurrentLead({
                     ...currentLead,
-                    contact: [...(currentLead.contact || []), newPhone],
+                    contacts: [...(currentLead.contacts || []), newPhone],
                   });
                   setNewPhone("");
                   setShowPhoneForm(false);
@@ -1321,12 +1319,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
             </button>
           </div>
         )}
-
-
-
-
-
-
       </div>
     </div>
   );

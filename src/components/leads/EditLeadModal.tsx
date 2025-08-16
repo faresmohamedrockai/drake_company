@@ -58,7 +58,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     nameAr: '',
     firstConection: '',
     familyName: '',
-    contact: [''],
+    contact: '',
+    contacts: [],
     email: '',
     interest: Interest.HOT,
     tier: Tier.BRONZE,
@@ -94,7 +95,18 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
         nameEn: lead.nameEn || '',
         nameAr: lead.nameAr || '',
         contact: lead.contact || '',
-        firstConection: lead.firstConection || '',
+        contacts: lead.contacts && lead.contacts.length > 0 ? lead.contacts : [],
+        firstConection: (() => {
+          try {
+            if (lead.firstConection) {
+              const date = new Date(lead.firstConection);
+              return isNaN(date.getTime()) ? '' : lead.firstConection;
+            }
+            return '';
+          } catch (error) {
+            return '';
+          }
+        })(),
         familyName: lead.familyName || '',
         email: lead.email || '',
         interest: lead.interest || Interest.HOT,
@@ -124,8 +136,13 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       return;
     }
 
-    // Phone validation for array of contacts
-    if (!formData.contact.every((num) => validatePhoneNumber(num))) {
+    // Phone validation for primary contact and array of contacts
+    if (!validatePhoneNumber(formData.contact)) {
+      setPhoneError(getPhoneErrorMessage(language));
+      return;
+    }
+    
+    if (!formData.contacts?.every((num) => validatePhoneNumber(num))) {
       setPhoneError(getPhoneErrorMessage(language));
       return;
     }
@@ -171,10 +188,18 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       id: lead.id,
       nameEn: formData.nameEn,
       nameAr: formData.nameAr,
-      contact: formData.contact, // now array of phones
+      contact: formData.contact,
+      contacts: formData.contacts || [],
       email: formData.email,
       firstConection: formData.firstConection
-        ? formData.firstConection
+        ? (() => {
+            try {
+              const date = new Date(formData.firstConection);
+              return isNaN(date.getTime()) ? undefined : date;
+            } catch (error) {
+              return undefined;
+            }
+          })()
         : undefined,
       // 👇 التحويل الصحيح
       interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
@@ -316,45 +341,69 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('phoneRequired')}
                   </label>
+                  
 
-                  {formData.contact.map((phone, index) => (
+                  {/* Primary Contact */}
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="tel"
+                      value={formData.contact}
+                      onChange={(e) => {
+                        setFormData({ ...formData, contact: e.target.value });
+                        setPhoneError('');
+                      }}
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
+                        }`}
+                      required
+                      placeholder={language === 'ar' ? 'أدخل رقم الهاتف الرئيسي' : 'Enter primary phone number'}
+                    />
+                    <span className="text-xs text-gray-500 whitespace-nowrap">
+                      {language === 'ar' ? 'رئيسي' : 'Primary'}
+                    </span>
+                  </div>
+
+                  {/* Additional Contacts */}
+                  {formData.contacts?.map((phone, index) => (
                     <div key={index} className="flex items-center gap-2 mb-2">
                       <input
                         type="tel"
                         value={phone}
                         onChange={(e) => {
-                          const updatedContacts = [...formData.contact];
+                          const updatedContacts = [...(formData.contacts || [''])];
                           updatedContacts[index] = e.target.value;
-                          setFormData({ ...formData, contact: updatedContacts });
+                          setFormData({ ...formData, contacts: updatedContacts });
                           setPhoneError('');
                         }}
                         className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
                           }`}
-                        required
-                        placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
+                        placeholder={language === 'ar' ? 'أدخل رقم هاتف إضافي' : 'Enter additional phone number'}
                       />
 
-                      {formData.contact.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updatedContacts = formData.contact.filter((_, i) => i !== index);
-                            setFormData({ ...formData, contact: updatedContacts });
-                          }}
-                          className="text-red-500 text-lg"
-                        >
-                          ✕
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updatedContacts = formData.contacts?.filter((_, i) => i !== index);
+                          setFormData({ ...formData, contacts: updatedContacts });
+                        }}
+                        className="text-red-500 text-lg"
+                      >
+                        ✕
+                      </button>
                     </div>
                   ))}
 
                   <button
                     type="button"
-                    onClick={() => setFormData({ ...formData, contact: [...formData.contact, ''] })}
+                    onClick={() => {
+                      const currentContacts = formData.contacts || [];
+                      setFormData({ 
+                        ...formData, 
+                        contacts: [...currentContacts, ''] 
+                      });
+                    }}
                     className="text-blue-500 text-sm"
                   >
-                    + {language === 'ar' ? 'إضافة رقم' : 'Add phone'}
+                    + {language === 'ar' ? 'إضافة رقم إضافي' : 'Add additional phone'}
                   </button>
 
                   {phoneError && <p className="text-red-600 text-sm mt-1">{phoneError}</p>}
@@ -555,16 +604,35 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                   <div className="relative">
                     <input
                       type="date"
-                      value={
-                        formData.firstConection
-                          ? new Date(formData.firstConection).toISOString().split("T")[0]
-                          : ""
-                      }
+                      value={formData.firstConection ? new Date(formData.firstConection).toISOString().split('T')[0] : ''}
                       onChange={(e) => {
-                        setFormData({
-                          ...formData,
-                          firstConection: new Date(e.target.value), // ✅ تخزين القيمة كـ Date
-                        });
+                        try {
+                          const dateValue = e.target.value;
+                          if (dateValue) {
+                            const date = new Date(dateValue);
+                            if (!isNaN(date.getTime())) {
+                              setFormData({
+                                ...formData,
+                                firstConection: date.toISOString().split('T')[0],
+                              });
+                            } else {
+                              setFormData({
+                                ...formData,
+                                firstConection: '',
+                              });
+                            }
+                          } else {
+                            setFormData({
+                              ...formData,
+                              firstConection: '',
+                            });
+                          }
+                        } catch (error) {
+                          setFormData({
+                            ...formData,
+                            firstConection: '',
+                          });
+                        }
                         setEmailError("");
                       }}
                       className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent bg-gray-50 text-sm transition-all duration-200 ${emailError

@@ -17,7 +17,7 @@
   "duplicateLeads": "Duplicate Leads",
   "freshLeads": "Fresh Leads",
   "coldCalls": "Cold Calls",
-  "searchLeads": "Search leads...",
+  "searchLeads": "Search by name, family name, phone, or source...",
   "filterLeads": "Filter",
   "addNewLead": "Add New Lead",
   "viewLead": "View Lead",
@@ -63,6 +63,7 @@
   },
 "TierName":"Tier",
 "IntersName":"Interest",
+"interestProperty":"Property",
 
 
 

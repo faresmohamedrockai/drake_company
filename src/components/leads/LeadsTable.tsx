@@ -50,10 +50,20 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
 
 
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
-  const totalPages = Math.ceil(leads.length / rowsPerPage);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // Sort leads from newest to oldest based on createdAt
+  const sortedLeads = useMemo(() => {
+    return [...leads].sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA; // Newest first
+    });
+  }, [leads]);
+  
+  const totalPages = Math.ceil(sortedLeads.length / rowsPerPage);
   // البيانات اللي هتتعرض
-  const paginatedLeads = leads.slice(
+  const paginatedLeads = sortedLeads.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
@@ -166,6 +176,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     onSelectAll();
   };
 
+  const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const newRowsPerPage = parseInt(event.target.value);
+    setRowsPerPage(newRowsPerPage);
+    setCurrentPage(1); // Reset to first page when changing rows per page
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="overflow-x-auto">
@@ -198,7 +214,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
               </th>
 
               <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 hidden lg:table-cell">
-                {t('IntersName')}
+                {t('interestProperty')}
               </th>
               <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
                 {t('project')}
@@ -262,15 +278,15 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                   <td className="px-2 sm:px-3 md:px-6 py-4 hidden sm:table-cell">
                     <span
                       className="text-xs sm:text-sm text-gray-900 truncate block"
-                      title={lead.contact.join(', ')}
+                      title={lead.contact}
                     >
-                      {lead.contact[0]}
+                      {lead.contact}
                     </span>
                   </td>
 
                   <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
                     <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toString()}>
-                      {lead.budget}
+                      {typeof lead.budget === 'number' ? lead.budget.toLocaleString() : Number(lead.budget).toLocaleString()}
                     </span>
                   </td>
                   <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
@@ -298,7 +314,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                     </span>
                   </td>
                   <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
-                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toString()}>
+                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toLocaleString()}>
                       {projectName(lead)}
                     </span>
                   </td>
@@ -414,7 +430,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                 </tr>
               ))
             )}
-            {leads?.length === 0 && !isLoading && (
+            {sortedLeads?.length === 0 && !isLoading && (
               <tr>
                 <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
                   {searchTerm ? t('noLeadsFound') : t('noLeadsAvailable')}
@@ -429,11 +445,31 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
 
 
       </div>
-      <div className="flex justify-between items-center px-4 py-3">
-        {/* النص Page X of Y */}
-        <span className="text-sm text-gray-500">
-          Page {currentPage} of {totalPages}
-        </span>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 space-y-3 sm:space-y-0">
+        {/* Rows per page selector and page info */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-500">Show:</span>
+            <select
+              value={rowsPerPage}
+              onChange={handleRowsPerPageChange}
+              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={30}>30</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="text-sm text-gray-500">entries</span>
+          </div>
+          <span className="text-sm text-gray-500 hidden sm:block">
+            Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, sortedLeads.length)} of {sortedLeads.length} leads
+          </span>
+          <span className="text-sm text-gray-500">
+            Page {currentPage} of {totalPages}
+          </span>
+        </div>
 
         {/* Pagination */}
         <div className="flex items-center space-x-1">

@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { 
-  Search, Plus, Eye, Calendar as CalendarIcon, Edit, Trash2, X, 
-  Minus, Phone, Check, Star, MessageSquare, AlertTriangle, 
+import {
+  Search, Plus, Eye, Calendar as CalendarIcon, Edit, Trash2, X,
+  Minus, Phone, Check, Star, MessageSquare, AlertTriangle,
   ThumbsUp, ThumbsDown, Clock, HelpCircle, User as UserIcon,
   Filter, Download, RefreshCw, Settings, Upload, Info
 } from 'lucide-react';
@@ -59,7 +59,7 @@ const LeadsList: React.FC = React.memo(() => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
   const [toastId, setToastId] = useState<Id | null>(null);
-  
+
   // Import functionality state
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
@@ -130,25 +130,25 @@ const LeadsList: React.FC = React.memo(() => {
     mutationFn: (leadId: string) => deleteLead(leadId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast.update(toastId as Id, { 
-        render: t('leadDeleted'), 
-        type: 'success', 
-        isLoading: false, 
-        autoClose: 3000 
+      toast.update(toastId as Id, {
+        render: t('leadDeleted'),
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000
       });
     },
     onError: (error: any) => {
-      toast.update(toastId as Id, { 
-        render: error.response?.data?.message || t('errorDeletingLead'), 
-        type: 'error', 
-        isLoading: false, 
-        autoClose: 3000 
+      toast.update(toastId as Id, {
+        render: error.response?.data?.message || t('errorDeletingLead'),
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000
       });
     }
   });
 
   const { mutateAsync: bulkUpdateLeadsMutation, isPending: isBulkUpdating } = useMutation({
-    mutationFn: ({ leadIds, updateData }: { leadIds: string[], updateData: Partial<Lead> }) => 
+    mutationFn: ({ leadIds, updateData }: { leadIds: string[], updateData: Partial<Lead> }) =>
       bulkUpdateLeads(leadIds, updateData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -213,10 +213,10 @@ const LeadsList: React.FC = React.memo(() => {
     try {
       const data = await readExcelFile(file);
       const leads = processExcelData(data);
-      
+
       let successCount = 0;
       let errorCount = 0;
-      
+
       for (let i = 0; i < leads.length; i++) {
         try {
           await createLeadMutation(leads[i]);
@@ -225,12 +225,12 @@ const LeadsList: React.FC = React.memo(() => {
           errorCount++;
           console.error('Error importing lead:', error);
         }
-        
+
         // Update progress
         const progress = Math.round(((i + 1) / leads.length) * 100);
         setImportProgress(progress);
       }
-      
+
       // Show results
       if (successCount > 0) {
         toast.success(`Successfully imported ${successCount} leads${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
@@ -238,7 +238,7 @@ const LeadsList: React.FC = React.memo(() => {
       if (errorCount > 0) {
         toast.error(`Failed to import ${errorCount} leads`);
       }
-      
+
     } catch (error) {
       toast.error('Error processing Excel file');
       console.error('Excel import error:', error);
@@ -252,7 +252,7 @@ const LeadsList: React.FC = React.memo(() => {
   const readExcelFile = (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
@@ -260,11 +260,11 @@ const LeadsList: React.FC = React.memo(() => {
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-          
+
           // Remove header row and convert to objects
           const headers = jsonData[0] as string[];
           const rows = jsonData.slice(1) as any[][];
-          
+
           const result = rows.map(row => {
             const obj: any = {};
             headers.forEach((header, index) => {
@@ -272,13 +272,13 @@ const LeadsList: React.FC = React.memo(() => {
             });
             return obj;
           });
-          
+
           resolve(result);
         } catch (error) {
           reject(error);
         }
       };
-      
+
       reader.onerror = () => reject(new Error('Failed to read file'));
       reader.readAsArrayBuffer(file);
     });
@@ -288,72 +288,73 @@ const LeadsList: React.FC = React.memo(() => {
     const processedData = data
       .filter(row => {
         // Check for phone number in various possible column names
-        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] || 
-                           row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
-                           row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
-                           row['PhoneNumber'] || row['Phone_Number'] ||
-                           row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
-                           row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
-                           row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
-                           row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'];
+        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
+          row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+          row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+          row['PhoneNumber'] || row['Phone_Number'] ||
+          row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+          row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+          row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+          row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'];
         return phoneNumber && phoneNumber.toString().trim() !== '';
       })
       .map(row => {
         // Get phone number from various possible column names
-        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] || 
-                           row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
-                           row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
-                           row['PhoneNumber'] || row['Phone_Number'] ||
-                           row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
-                           row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
-                           row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
-                           row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'] || '';
-        
+        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
+          row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+          row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+          row['PhoneNumber'] || row['Phone_Number'] ||
+          row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+          row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+          row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+          row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'] || '';
+
         // Get Arabic name from various possible column names
-        const arabicName = row['Arabic Name'] || row['nameAr'] || row['Name (Arabic)'] || 
-                          row['الاسم العربي'] || row['اسم عربي'] || row['الاسم'] ||
-                          row['arabic_name'] || row['arabicName'] || row['ARABIC_NAME'] ||
-                          row['ArabicName'] || row['Arabic_Name'] ||
-                          row['Arabic Name'] || row['Name (Arabic)'] || row['الاسم العربي'] ||
-                          row['اسم عربي'] || row['الاسم'] || row['arabic_name'] ||
-                          row['arabicName'] || row['ARABIC_NAME'] || row['ArabicName'] ||
-                          row['Arabic_Name'] || '';
-        
+        const arabicName = row['Arabic Name'] || row['nameAr'] || row['Name (Arabic)'] ||
+          row['الاسم العربي'] || row['اسم عربي'] || row['الاسم'] ||
+          row['arabic_name'] || row['arabicName'] || row['ARABIC_NAME'] ||
+          row['ArabicName'] || row['Arabic_Name'] ||
+          row['Arabic Name'] || row['Name (Arabic)'] || row['الاسم العربي'] ||
+          row['اسم عربي'] || row['الاسم'] || row['arabic_name'] ||
+          row['arabicName'] || row['ARABIC_NAME'] || row['ArabicName'] ||
+          row['Arabic_Name'] || '';
+
         // Get English name from various possible column names
-        const englishName = row['English Name'] || row['nameEn'] || row['Name (English)'] || 
-                           row['الاسم الإنجليزي'] || row['اسم إنجليزي'] || row['الاسم الانجليزي'] ||
-                           row['english_name'] || row['englishName'] || row['ENGLISH_NAME'] ||
-                           row['EnglishName'] || row['English_Name'] ||
-                           row['English Name'] || row['Name (English)'] || row['الاسم الإنجليزي'] ||
-                           row['اسم إنجليزي'] || row['الاسم الانجليزي'] || row['english_name'] ||
-                           row['englishName'] || row['ENGLISH_NAME'] || row['EnglishName'] ||
-                           row['English_Name'] || '';
-        
+        const englishName = row['English Name'] || row['nameEn'] || row['Name (English)'] ||
+          row['الاسم الإنجليزي'] || row['اسم إنجليزي'] || row['الاسم الانجليزي'] ||
+          row['english_name'] || row['englishName'] || row['ENGLISH_NAME'] ||
+          row['EnglishName'] || row['English_Name'] ||
+          row['English Name'] || row['Name (English)'] || row['الاسم الإنجليزي'] ||
+          row['اسم إنجليزي'] || row['الاسم الانجليزي'] || row['english_name'] ||
+          row['englishName'] || row['ENGLISH_NAME'] || row['EnglishName'] ||
+          row['English_Name'] || '';
+
         // Get email from various possible column names
-        const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] || 
-                     row['email_address'] || row['emailAddress'] || row['EMAIL'] ||
-                     row['EmailAddress'] || row['Email_Address'] || '';
-        
+        const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] ||
+          row['email_address'] || row['emailAddress'] || row['EMAIL'] ||
+          row['EmailAddress'] || row['Email_Address'] || '';
+
         // Get budget from various possible column names
-        const budget = row['Budget'] || row['budget'] || row['الميزانية'] || 
-                      row['budget_amount'] || row['budgetAmount'] || row['BUDGET'] ||
-                      row['BudgetAmount'] || row['Budget_Amount'] || 0;
-        
+        const budget = row['Budget'] || row['budget'] || row['الميزانية'] ||
+          row['budget_amount'] || row['budgetAmount'] || row['BUDGET'] ||
+          row['BudgetAmount'] || row['Budget_Amount'] || 0;
+
         // Get source from various possible column names
-        const source = row['Source'] || row['source'] || row['المصدر'] || 
-                      row['lead_source'] || row['leadSource'] || row['SOURCE'] ||
-                      row['LeadSource'] || row['Lead_Source'] || 'Data Sheet';
-        
+        const source = row['Source'] || row['source'] || row['المصدر'] ||
+          row['lead_source'] || row['leadSource'] || row['SOURCE'] ||
+          row['LeadSource'] || row['Lead_Source'] || 'Data Sheet';
+
         // Clean phone number (remove spaces, dashes, etc.)
         const cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)]/g, '');
-        
+
         // Parse budget as number
         const parsedBudget = typeof budget === 'string' ? parseFloat(budget.replace(/[^\d.]/g, '')) || 0 : Number(budget) || 0;
-        
+
         return {
           nameAr: arabicName.toString().trim(),
           nameEn: englishName.toString().trim(),
           contact: cleanPhone,
+          contacts: [cleanPhone],
           email: email.toString().trim(),
           source: source.toString().trim(),
           status: LeadStatus.FOLLOW_UP, // Default status as requested
@@ -367,8 +368,9 @@ const LeadsList: React.FC = React.memo(() => {
       .filter(lead => lead.contact && lead.contact.length >= 10); // Filter out invalid phone numbers
 
     // Remove duplicates based on phone number
-    const uniqueLeads = processedData.filter((lead, index, self) => 
-      index === self.findIndex(l => l.contact === lead.contact)
+    const uniqueLeads = processedData.filter((lead, index, self) =>
+      index === self.findIndex(l => l.contact === lead.contact) ||
+      index === self.findIndex(l => l.contacts?.includes(lead.contact))
     );
 
     // Check for existing leads in database
@@ -431,8 +433,8 @@ const LeadsList: React.FC = React.memo(() => {
       const teamMembers = users
         .filter(u => u.role === 'sales_rep' && u.teamLeaderId === selectedManager.id)
         .map(u => u.id);
-      filtered = filtered.filter(lead => 
-        lead.owner?.id === selectedManager.id || 
+      filtered = filtered.filter(lead =>
+        lead.owner?.id === selectedManager.id ||
         teamMembers.includes(lead.owner?.id!)
       );
     }
@@ -443,20 +445,22 @@ const LeadsList: React.FC = React.memo(() => {
       filtered = filtered.filter(lead => {
         const nameEn = lead.nameEn?.toLowerCase() || '';
         const nameAr = lead.nameAr?.toLowerCase() || '';
-        // const contact = lead.contact.toLowerCase();
+        const contact = lead.contact?.toLowerCase() || '';
+        const familyName = lead.familyName?.toLowerCase() || '';
         const source = lead.source.toLowerCase();
-        
+
         return nameEn.includes(searchLower) ||
-               nameAr.includes(searchLower) ||
-              //  contact.includes(searchLower) ||
-               source.includes(searchLower);
+          nameAr.includes(searchLower) ||
+          contact.includes(searchLower) ||
+          familyName.includes(searchLower) ||
+          source.includes(searchLower);
       });
     }
 
     // Apply column filters
     filtered = filtered.filter(lead => {
-      const displayName = i18n.language === 'ar' ? 
-        (lead.nameAr || lead.nameEn || '') : 
+      const displayName = i18n.language === 'ar' ?
+        (lead.nameAr || lead.nameEn || '') :
         (lead.nameEn || lead.nameAr || '');
 
       if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) {
@@ -477,9 +481,9 @@ const LeadsList: React.FC = React.memo(() => {
       if (filters.status && lead.status.toLowerCase() !== filters.status.toLowerCase()) {
         return false;
       }
-      if (filters.assignedTo && 
-          lead.assignedToId !== filters.assignedTo && 
-          lead.owner?.id !== filters.assignedTo) {
+      if (filters.assignedTo &&
+        lead.assignedToId !== filters.assignedTo &&
+        lead.owner?.id !== filters.assignedTo) {
         return false;
       }
       return true;
@@ -495,8 +499,8 @@ const LeadsList: React.FC = React.memo(() => {
         filtered = filtered.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT);
       } else if (activeStatusCard === 'duplicate') {
         filtered = filtered.filter((lead, idx, arr) =>
-          arr.findIndex(l => 
-            (l.contact && l.contact === lead.contact) || 
+          arr.findIndex(l =>
+            (l.contact && l.contact === lead.contact) ||
             (l.email && l.email === lead.email)
           ) !== idx
         );
@@ -506,18 +510,18 @@ const LeadsList: React.FC = React.memo(() => {
         filtered = filtered.filter(lead => lead.status === activeStatusCard);
       }
     } else if (activeCallOutcomeCard) {
-      filtered = filtered.filter(lead => 
+      filtered = filtered.filter(lead =>
         (lead.calls || []).some(call => call.outcome === activeCallOutcomeCard)
       );
     } else if (activeVisitStatusCard) {
-      filtered = filtered.filter(lead => 
+      filtered = filtered.filter(lead =>
         (lead.visits || []).some(visit => visit.status === activeVisitStatusCard)
       );
     }
 
     return filtered;
   }, [
-    leads, users, selectedSalesRep, selectedManager, searchTerm, filters, 
+    leads, users, selectedSalesRep, selectedManager, searchTerm, filters,
     activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, user?.id, i18n.language
   ]);
 

@@ -52,7 +52,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         nameEn: '',
         nameAr: '',
         familyName: '',
-        contact: [''],
+        contacts: [''],
         email: '',
         interest: Interest.HOT,
         tier: Tier.BRONZE,
@@ -73,7 +73,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         nameEn: '',
         nameAr: '',
         familyName: '',
-        contact: [''],
+        contacts: [''],
         email: '',
         interest: Interest.HOT,
         tier: Tier.BRONZE,
@@ -97,7 +97,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     nameEn: '',
     nameAr: '',
     familyName: '',
-    contact: [''], // ← مصفوفة بدلاً من نص واحد
+    contacts: [''],
     email: '',
     interest: Interest.HOT as Interest,
     tier: Tier.BRONZE as Tier,
@@ -128,7 +128,15 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     }
 
     // Phone validation for array of contacts
-    if (!formData.contact.every((num) => validatePhoneNumber(num))) {
+    // Check if at least one phone number is provided
+    if (!formData.contacts || formData.contacts.length === 0 || !formData.contacts[0] || formData.contacts[0].trim() === '') {
+      setPhoneError(language === 'ar' ? 'رقم الهاتف الأول مطلوب' : 'First phone number is required');
+      return;
+    }
+    
+    // Validate all provided phone numbers
+    const validContacts = formData.contacts.filter(contact => contact.trim() !== '');
+    if (!validContacts.every((num) => validatePhoneNumber(num))) {
       setPhoneError(getPhoneErrorMessage(language));
       return;
     }
@@ -169,13 +177,27 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         ? (formData.nameAr || formData.nameEn)
         : (formData.nameEn || formData.nameAr);
 
+      // Get the first phone number as the primary contact
+      const primaryContact = formData.contacts && formData.contacts.length > 0 ? formData.contacts[0] : '';
+      
+      // Filter out empty phone numbers from contacts array
+      const validContacts = formData.contacts ? formData.contacts.filter(contact => contact.trim() !== '') : [];
+
       const leadData = {
         nameEn: formData.nameEn,
         nameAr: formData.nameAr,
-        contact: formData.contact.filter(c => c.trim() !== ''),
+        contact: primaryContact,
+        contacts: validContacts,
         familyName: formData.familyName,
         firstConection: formData.firstConection
-          ? new Date(formData.firstConection)
+          ? (() => {
+              try {
+                const date = new Date(formData.firstConection);
+                return isNaN(date.getTime()) ? undefined : date;
+              } catch (error) {
+                return undefined;
+              }
+            })()
           : undefined,
 
         email: formData.email,
@@ -301,32 +323,47 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   {t('phoneRequired')}
                 </label>
 
-                {formData.contact.map((phone, index) => (
+                {formData.contacts.map((phone, index) => (
                   <div key={index} className="relative flex items-center gap-2">
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => {
-                        const updatedContacts = [...formData.contact];
-                        updatedContacts[index] = e.target.value;
-                        setFormData({ ...formData, contact: updatedContacts });
-                      }}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 bg-white text-sm transition-all duration-200 
-          ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'}`}
-                      required
-                      placeholder={language === 'ar' ? 'أدخل رقم الهاتف' : 'Enter phone number'}
-                    />
-                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <div className="flex-1 relative">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => {
+                          const updatedContacts = [...(formData.contacts || [])] as string[];
+                          updatedContacts[index] = e.target.value;
+                          setFormData({ ...formData, contacts: updatedContacts });
+                        }}
+                        className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 bg-white text-sm transition-all duration-200 
+            ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'}`}
+                        required={index === 0}
+                        placeholder={index === 0 
+                          ? (language === 'ar' ? 'أدخل رقم الهاتف الرئيسي' : 'Enter primary phone number')
+                          : (language === 'ar' ? 'أدخل رقم هاتف إضافي' : 'Enter additional phone number')
+                        }
+                      />
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      
+                      {/* Primary contact indicator */}
+                      {index === 0 && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            {language === 'ar' ? 'رئيسي' : 'Primary'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-                    {/* زر الحذف */}
-                    {formData.contact.length > 1 && (
+                    {/* Delete button - only show for non-primary contacts */}
+                    {index > 0 && (
                       <button
                         type="button"
-                        className="text-red-500 text-sm"
+                        className="text-red-500 hover:text-red-700 text-sm p-2 rounded-full hover:bg-red-50 transition-colors"
                         onClick={() => {
-                          const updatedContacts = formData.contact.filter((_, i) => i !== index);
-                          setFormData({ ...formData, contact: updatedContacts });
+                          const updatedContacts = formData.contacts.filter((_, i) => i !== index);
+                          setFormData({ ...formData, contacts: updatedContacts });
                         }}
+                        title={language === 'ar' ? 'حذف رقم الهاتف' : 'Remove phone number'}
                       >
                         ✕
                       </button>
@@ -334,13 +371,14 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   </div>
                 ))}
 
-                {/* زر الإضافة */}
+                {/* Add phone button */}
                 <button
                   type="button"
-                  className="mt-2 text-blue-500 text-sm"
-                  onClick={() => setFormData({ ...formData, contact: [...formData.contact, ''] })}
+                  className="mt-2 text-blue-500 hover:text-blue-700 text-sm flex items-center gap-1 transition-colors"
+                  onClick={() => setFormData({ ...formData, contacts: [...(formData.contacts || []), ''] })}
                 >
-                  + {language === 'ar' ? 'إضافة رقم' : 'Add Phone'}
+                  <span>+</span>
+                  <span>{language === 'ar' ? 'إضافة رقم هاتف إضافي' : 'Add Additional Phone'}</span>
                 </button>
 
                 {phoneError && <p className="text-red-600 text-sm mt-1">{phoneError}</p>}

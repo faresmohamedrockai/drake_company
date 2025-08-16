@@ -78,11 +78,12 @@ export interface Lead {
   id?: string;
   nameEn?: string; // English name
   nameAr?: string; // Arabic name
-  contact: string[];
+  contact: string;
+  contacts?: string[];
   meetings?:Meeting[];
   email?: string;
   familyName?:string
-  firstConection?:string|Date| null ;
+  firstConection?:string ;
   budget: number;
   inventoryInterestId?: string;
   source: string;
