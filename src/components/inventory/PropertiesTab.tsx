@@ -525,17 +525,13 @@ const PropertiesTab: React.FC = () => {
     }
 
     // Access control: Team Leader can only for their team, Sales Rep only for their own
-    let found = leads?.find(l => l.contact === reportPhone);
+    let found = leads?.find(l => l.contact[0] === reportPhone);
 
     if (!found) {
       setReportError('No client found with this number. Please check and try again.');
       return;
     }
     if (user?.role === 'sales_rep' && found.assignedToId !== user.id) {
-      setReportError('You do not have permission to generate a report for this client.');
-      return;
-    }
-            if (user?.role === 'team_leader' && found.assignedToId !== user.id && !(user.teamLeaderId && found.assignedToId.includes(user.teamLeaderId))) {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
