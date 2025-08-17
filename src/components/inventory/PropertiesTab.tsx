@@ -16,6 +16,7 @@ import { Zone } from './ZonesTab';
 import { Developer } from '../../types';
 import { Lead } from '../../types';
 import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
+import { PhoneNumber } from '../ui/PhoneNumber';
 
 // Fix default marker icon for leaflet in React
 if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
@@ -1327,7 +1328,7 @@ const PropertiesTab: React.FC = () => {
                         </h3>
                         <div className="grid grid-cols-2 gap-2 text-sm">
                           {(reportLead.nameEn || reportLead.nameAr) && <div><span className="font-medium">{t('name')}:</span> {language === 'ar' && reportLead.nameAr ? reportLead.nameAr : (reportLead.nameEn || '')}</div>}
-                          {reportLead.contact && <div><span className="font-medium">{t('phone')}:</span> {reportLead.contact}</div>}
+                          {reportLead.contact && <div><span className="font-medium">{t('phone')}:</span> <PhoneNumber phone={reportLead.contact} className="inline" /></div>}
                           {reportLead.budget && <div><span className="font-medium">{t('budget')}:</span> {reportLead.budget}</div>}
                           {reportLead.status && <div><span className="font-medium">{t('status')}:</span> {reportLead.status}</div>}
                           {reportLead.assignedToId && <div><span className="font-medium">{t('assignedRep')}:</span> {reportLead.assignedToId}</div>}

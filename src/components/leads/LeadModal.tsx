@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project } from '../inventory/ProjectsTab';
 import { Id, toast } from 'react-toastify';
 import { formatDate } from '../../utils/formatters';
+import { PhoneNumber } from '../ui/PhoneNumber';
 
 
 interface LeadModalProps {
@@ -526,9 +527,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               {/* النصوص على اليمين */}
               <div className="flex flex-col">
                 <span className="text-gray-500 text-sm">Phone</span>
-                <span className="font-medium text-gray-900">
-                  {currentLead.contact ? currentLead.contact : "N/A"}
-                </span>
+                <div className="font-medium text-gray-900">
+                  {currentLead.contact ? (
+                    <PhoneNumber phone={currentLead.contact} />
+                  ) : (
+                    "N/A"
+                  )}
+                </div>
               </div>
             </div>
 

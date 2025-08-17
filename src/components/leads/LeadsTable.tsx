@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Interest, Lead, LeadStatus, Property, Tier, User } from '../../types';
+import { PhoneNumber } from '../ui/PhoneNumber';
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -276,12 +277,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                     </button>
                   </td>
                   <td className="px-2 sm:px-3 md:px-6 py-4 hidden sm:table-cell">
-                    <span
-                      className="text-xs sm:text-sm text-gray-900 truncate block"
-                      title={lead.contact}
-                    >
-                      {lead.contact}
-                    </span>
+                    <PhoneNumber 
+                      phone={lead.contact}
+                      className="text-xs sm:text-sm"
+                    />
                   </td>
 
                   <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
