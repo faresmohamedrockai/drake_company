@@ -221,387 +221,381 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   if (!isOpen || !lead) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 lg:p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto transition-all duration-300">
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{t('editLead')}</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="h-5 w-5 sm:h-6 sm:w-6" />
-          </button>
-        </div>
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-sm">
-            {error}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+      <div className="bg-white rounded-lg sm:rounded-xl lg:rounded-2xl shadow-2xl w-full max-w-4xl max-h-[95vh] overflow-y-auto transition-all duration-300 mx-2 sm:mx-4">
+        {/* Header */}
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 rounded-t-lg sm:rounded-t-xl lg:rounded-t-2xl">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900">{t('editLead')}</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors p-1 sm:p-2"
+            >
+              <X className="h-5 w-5 sm:h-6 sm:w-6" />
+            </button>
           </div>
-        )}
+        </div>
 
+        {/* Content */}
+        <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          {error && (
+            <div className="mb-4 p-3 sm:p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+              {error}
+            </div>
+          )}
 
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            {/* Form Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              {user?.role === "sales_rep" ? (
+                <>
+                  {/* Name English */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('nameEn')}</label>
+                    <input
+                      type="text"
+                      value={formData.nameEn}
+                      onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      placeholder="Enter name in English (optional)"
+                    />
+                  </div>
 
+                  {/* Name Arabic */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('nameArRequired')}</label>
+                    <input
+                      type="text"
+                      value={formData.nameAr}
+                      onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      placeholder="أدخل الاسم بالعربية"
+                      required
+                    />
+                  </div>
 
-
-
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-
-          {
-            user?.role === "sales_rep" ? (<>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('nameEn')}</label>
-                <input
-                  type="text"
-                  value={formData.nameEn}
-                  onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                  placeholder="Enter name in English (optional)"
-                />
-              </div>
-
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('nameArRequired')}</label>
-                <input
-                  type="text"
-                  value={formData.nameAr}
-                  onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                  placeholder="أدخل الاسم بالعربية"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('nameFamily')}</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={formData.familyName}
-                    onChange={(e) => setFormData({ ...formData, familyName: e.target.value })}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
-                    placeholder="أدخل الاسم العائلة"
-                    required
-                  />
-                  {/* <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /> */}
-                </div>
-              </div>
-              <div className="col-span-1">
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterest')} ({language === 'ar' ? 'اختياري' : 'optional'})</label>
-                <select
-                  value={formData.inventoryInterestId}
-                  onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                >
-                  <option value="">{t('selectPropertyType')}</option>
-                  {properties?.map(property => (
-                    <option key={property.id} value={property.id}>{property.title}</option>
-                  ))}
-                </select>
-              </div>
-
-
-            </>) : (
-              <>
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('nameEn')}</label>
-                  <input
-                    type="text"
-                    value={formData.nameEn}
-                    onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                    placeholder="Enter name in English (optional)"
-                  />
-                </div>
-
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('nameArRequired')}</label>
-                  <input
-                    type="text"
-                    value={formData.nameAr}
-                    onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                    placeholder="أدخل الاسم بالعربية"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">{t('nameFamily')}</label>
-                  <div className="relative">
+                  {/* Family Name */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('nameFamily')}</label>
                     <input
                       type="text"
                       value={formData.familyName}
                       onChange={(e) => setFormData({ ...formData, familyName: e.target.value })}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-sm transition-all duration-200"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
                       placeholder="أدخل الاسم العائلة"
                       required
                     />
-                    {/* <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /> */}
                   </div>
-                </div>
 
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('phoneRequired')}
-                  </label>
-                  
-
-                  {/* Primary Contact */}
-                  <div className="flex items-center gap-2 mb-2">
+                  {/* Inventory Interest */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('inventoryInterest')} ({language === 'ar' ? 'اختياري' : 'optional'})</label>
+                    <select
+                      value={formData.inventoryInterestId}
+                      onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                    >
+                      <option value="">{t('selectPropertyType')}</option>
+                      {properties?.map(property => (
+                        <option key={property.id} value={property.id}>{property.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Name English */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('nameEn')}</label>
                     <input
-                      type="tel"
-                      value={formData.contact}
-                      onChange={(e) => {
-                        setFormData({ ...formData, contact: e.target.value });
-                        setPhoneError('');
-                      }}
-                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                        }`}
-                      required
-                      placeholder={language === 'ar' ? 'أدخل رقم الهاتف الرئيسي' : 'Enter primary phone number'}
+                      type="text"
+                      value={formData.nameEn}
+                      onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      placeholder="Enter name in English (optional)"
                     />
-                    <span className="text-xs text-gray-500 whitespace-nowrap">
-                      {language === 'ar' ? 'رئيسي' : 'Primary'}
-                    </span>
                   </div>
 
-                  {/* Additional Contacts */}
-                  {formData.contacts?.map((phone, index) => (
-                    <div key={index} className="flex items-center gap-2 mb-2">
+                  {/* Name Arabic */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('nameArRequired')}</label>
+                    <input
+                      type="text"
+                      value={formData.nameAr}
+                      onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      placeholder="أدخل الاسم بالعربية"
+                      required
+                    />
+                  </div>
+
+                  {/* Family Name */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('nameFamily')}</label>
+                    <input
+                      type="text"
+                      value={formData.familyName}
+                      onChange={(e) => setFormData({ ...formData, familyName: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      placeholder="أدخل الاسم العائلة"
+                      required
+                    />
+                  </div>
+
+                  {/* Phone Numbers - Full Width */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('phoneRequired')}
+                    </label>
+                    
+                    {/* Primary Contact */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-3">
                       <input
                         type="tel"
-                        value={phone}
+                        value={formData.contact}
                         onChange={(e) => {
-                          const updatedContacts = [...(formData.contacts || [''])];
-                          updatedContacts[index] = e.target.value;
-                          setFormData({ ...formData, contacts: updatedContacts });
+                          setFormData({ ...formData, contact: e.target.value });
                           setPhoneError('');
                         }}
-                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                          }`}
-                        placeholder={language === 'ar' ? 'أدخل رقم هاتف إضافي' : 'Enter additional phone number'}
+                        className={`flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm transition-colors ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                        required
+                        placeholder={language === 'ar' ? 'أدخل رقم الهاتف الرئيسي' : 'Enter primary phone number'}
                       />
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updatedContacts = formData.contacts?.filter((_, i) => i !== index);
-                          setFormData({ ...formData, contacts: updatedContacts });
-                        }}
-                        className="text-red-500 text-lg"
-                      >
-                        ✕
-                      </button>
+                      <span className="text-xs text-gray-500 whitespace-nowrap px-2 py-1 bg-gray-100 rounded">
+                        {language === 'ar' ? 'رئيسي' : 'Primary'}
+                      </span>
                     </div>
-                  ))}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const currentContacts = formData.contacts || [];
-                      setFormData({ 
-                        ...formData, 
-                        contacts: [...currentContacts, ''] 
-                      });
-                    }}
-                    className="text-blue-500 text-sm"
-                  >
-                    + {language === 'ar' ? 'إضافة رقم إضافي' : 'Add additional phone'}
-                  </button>
-
-                  {phoneError && <p className="text-red-600 text-sm mt-1">{phoneError}</p>}
-                </div>
-
-
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('email')}</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => {
-                      setFormData({ ...formData, email: e.target.value });
-                      setEmailError(''); // Clear error when user types
-                    }}
-                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'
-                      }`}
-                    placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
-                  />
-                  {emailError && (
-                    <p className="text-red-600 text-sm mt-1">{emailError}</p>
-                  )}
-                </div>
-
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('assignedToRequired')}</label>
-                  <select
-                    value={formData.assignedToId || ''}
-                    onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
-                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm ${(user?.role as string) === 'sales_rep' ? 'bg-gray-100 cursor-not-allowed' : ''
-                      }`}
-                    required
-                    disabled={(user?.role as string) === 'sales_rep'}
-                  >
-                    <option value="">{t('selectUser')}</option>
-                    {(() => {
-                      // Role-based user filtering for assignment
-                      let assignableUsers = users;
-
-                      if ((user?.role as string) === 'sales_rep') {
-                        // Sales Reps can only assign to themselves
-                        assignableUsers = users?.filter(u => u.name === user?.name);
-                      } else if (user?.role === 'team_leader') {
-                        // Team Leaders can assign to their team members and themselves
-                        assignableUsers = users?.filter(u =>
-                          u.name === user.name ||
-                          (u.role === 'sales_rep' && u.teamLeaderId === user.id) ||
-                          (u.teamId === user.teamId && u.id !== user.id)
-                        );
-                      } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
-                        // Sales Admin and Admin can assign to anyone
-                        assignableUsers = users?.filter(u => u.role !== 'admin' || user?.role === 'admin' || user?.role === 'sales_admin');
-                      }
-
-                      return assignableUsers?.map(user => (
-                        <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
-                      ));
-                    })()}
-                  </select>
-                  {(user?.role as string) === 'sales_rep' && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {language === 'ar' ? 'لا يمكنك تغيير تعيين العميل' : 'You cannot change lead assignment'}
-                    </p>
-                  )}
-                </div>
-
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('budget')}</label>
-                  <input
-                    type="number"
-                    value={formData.budget || ''}
-                    onChange={e => {
-                      const value = e.target.value;
-
-                      if (value === '') {
-                        setFormData({ ...formData, budget: 0 });
-                        setBudgetError('');
-                      } else {
-                        const numValue = Number(value);
-                        if (!isNaN(numValue) && numValue >= 0) {
-                          setFormData({ ...formData, budget: numValue });
-                          setBudgetError('');
-                        } else if (numValue < 0) {
-                          setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
-                        }
-                      }
-                    }}
-                    className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm ${budgetError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
-                    placeholder={language === 'ar' ? 'أدخل الميزانية (اختياري)' : 'Enter budget (optional)'}
-                    min="0"
-                  />
-                  {budgetError && (
-                    <p className="text-red-600 text-sm mt-1">{budgetError}</p>
-                  )}
-                </div>
-
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterest')} ({language === 'ar' ? 'اختياري' : 'optional'})</label>
-                  <select
-                    value={formData.inventoryInterestId}
-                    onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                  >
-                    <option value="">{t('selectPropertyType')}</option>
-                    {properties?.map(property => (
-                      <option key={property.id} value={property.id}>{property.title}</option>
+                    {/* Additional Contacts */}
+                    {formData.contacts?.map((phone, index) => (
+                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-3">
+                        <input
+                          type="tel"
+                          value={phone}
+                          onChange={(e) => {
+                            const updatedContacts = [...(formData.contacts || [''])];
+                            updatedContacts[index] = e.target.value;
+                            setFormData({ ...formData, contacts: updatedContacts });
+                            setPhoneError('');
+                          }}
+                          className={`flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm transition-colors ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                          placeholder={language === 'ar' ? 'أدخل رقم هاتف إضافي' : 'Enter additional phone number'}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updatedContacts = formData.contacts?.filter((_, i) => i !== index);
+                            setFormData({ ...formData, contacts: updatedContacts });
+                          }}
+                          className="text-red-500 hover:text-red-700 text-lg px-2 py-1 rounded transition-colors"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     ))}
-                  </select>
-                </div>
 
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('sourceRequired')}</label>
-                  <select
-                    value={formData.source}
-                    onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                    required
-                  >
-                    <option value="">{t('selectSource')}</option>
-                    <option value="Facebook">{t('facebook')}</option>
-                    <option value="Instagram">{t('instagram')}</option>
-                    <option value="Website">{t('website')}</option>
-                    <option value="Referral">{t('referral')}</option>
-                    <option value="Cold Call">{t('coldCall')}</option>
-                    <option value="Walk-in">{t('walkIn')}</option>
-                    <option value="Advertisement">{t('advertisement')}</option>
-                  </select>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentContacts = formData.contacts || [];
+                        setFormData({ 
+                          ...formData, 
+                          contacts: [...currentContacts, ''] 
+                        });
+                      }}
+                      className="text-blue-500 hover:text-blue-700 text-sm font-medium transition-colors"
+                    >
+                      + {language === 'ar' ? 'إضافة رقم إضافي' : 'Add additional phone'}
+                    </button>
 
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('statusRequired')}</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                    required
-                  >
-                    <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
-                    <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
-                    <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
-                    <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
-                    <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
-                    <option value={LeadStatus.VIP}>{t('VIP')}</option>
-                    <option value={LeadStatus.NON_STOP}>{t('nonStop')}</option>
-                    <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
-                    <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
-                    <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
-                    <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
-                  </select>
-                </div>
+                    {phoneError && <p className="text-red-600 text-sm mt-2">{phoneError}</p>}
+                  </div>
 
+                  {/* Email */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('email')}</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        setEmailError('');
+                      }}
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm transition-colors ${emailError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                      placeholder={language === 'ar' ? 'أدخل البريد الإلكتروني' : 'Enter email address'}
+                    />
+                    {emailError && (
+                      <p className="text-red-600 text-sm mt-2">{emailError}</p>
+                    )}
+                  </div>
 
+                  {/* Assigned To */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('assignedToRequired')}</label>
+                    <select
+                      value={formData.assignedToId || ''}
+                      onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors ${(user?.role as string) === 'sales_rep' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                      required
+                      disabled={(user?.role as string) === 'sales_rep'}
+                    >
+                      <option value="">{t('selectUser')}</option>
+                      {(() => {
+                        // Role-based user filtering for assignment
+                        let assignableUsers = users;
 
+                        if ((user?.role as string) === 'sales_rep') {
+                          // Sales Reps can only assign to themselves
+                          assignableUsers = users?.filter(u => u.name === user?.name);
+                        } else if (user?.role === 'team_leader') {
+                          // Team Leaders can assign to their team members and themselves
+                          assignableUsers = users?.filter(u =>
+                            u.name === user.name ||
+                            (u.role === 'sales_rep' && u.teamLeaderId === user.id) ||
+                            (u.teamId === user.teamId && u.id !== user.id)
+                          );
+                        } else if (user?.role === 'sales_admin' || user?.role === 'admin') {
+                          // Sales Admin and Admin can assign to anyone
+                          assignableUsers = users?.filter(u => u.role !== 'admin' || user?.role === 'admin' || user?.role === 'sales_admin');
+                        }
 
+                        return assignableUsers?.map(user => (
+                          <option key={user.id} value={user.id}>{user.name} ({user.role})</option>
+                        ));
+                      })()}
+                    </select>
+                    {(user?.role as string) === 'sales_rep' && (
+                      <p className="text-sm text-gray-500 mt-2">
+                        {language === 'ar' ? 'لا يمكنك تغيير تعيين العميل' : 'You cannot change lead assignment'}
+                      </p>
+                    )}
+                  </div>
 
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('IntersName')}</label>
-                  <select
-                    value={formData.interest}
-                    onChange={(e) => setFormData({ ...formData, interest: e.target.value as any })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                    required
-                  >
-                    <option value={Interest.HOT}>{t('hot')}</option>
-                    <option value={Interest.WARM}>{t('warm')}</option>
-                    <option value={LeadStatus.NON_STOP}>{t('under_decision')}</option>
-             
-                  </select>
-                </div>
+                  {/* Budget */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('budget')}</label>
+                    <input
+                      type="number"
+                      value={formData.budget || ''}
+                      onChange={e => {
+                        const value = e.target.value;
 
+                        if (value === '') {
+                          setFormData({ ...formData, budget: 0 });
+                          setBudgetError('');
+                        } else {
+                          const numValue = Number(value);
+                          if (!isNaN(numValue) && numValue >= 0) {
+                            setFormData({ ...formData, budget: numValue });
+                            setBudgetError('');
+                          } else if (numValue < 0) {
+                            setBudgetError(language === 'ar' ? 'الميزانية يجب ألا تكون سالبة' : 'Budget must not be negative');
+                          }
+                        }
+                      }}
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm transition-colors ${budgetError ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 focus:ring-blue-500'}`}
+                      placeholder={language === 'ar' ? 'أدخل الميزانية (اختياري)' : 'Enter budget (optional)'}
+                      min="0"
+                    />
+                    {budgetError && (
+                      <p className="text-red-600 text-sm mt-2">{budgetError}</p>
+                    )}
+                  </div>
 
+                  {/* Inventory Interest */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('inventoryInterest')} ({language === 'ar' ? 'اختياري' : 'optional'})</label>
+                    <select
+                      value={formData.inventoryInterestId}
+                      onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                    >
+                      <option value="">{t('selectPropertyType')}</option>
+                      {properties?.map(property => (
+                        <option key={property.id} value={property.id}>{property.title}</option>
+                      ))}
+                    </select>
+                  </div>
 
+                  {/* Source */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('sourceRequired')}</label>
+                    <select
+                      value={formData.source}
+                      onChange={(e) => setFormData({ ...formData, source: e.target.value })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      required
+                    >
+                      <option value="">{t('selectSource')}</option>
+                      <option value="Facebook">{t('facebook')}</option>
+                      <option value="Instagram">{t('instagram')}</option>
+                      <option value="Website">{t('website')}</option>
+                      <option value="Referral">{t('referral')}</option>
+                      <option value="Cold Call">{t('coldCall')}</option>
+                      <option value="Walk-in">{t('walkIn')}</option>
+                      <option value="Advertisement">{t('advertisement')}</option>
+                    </select>
+                  </div>
 
+                  {/* Status */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('statusRequired')}</label>
+                    <select
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      required
+                    >
+                      <option value={LeadStatus.FRESH_LEAD}>{t('freshLead')}</option>
+                      <option value={LeadStatus.FOLLOW_UP}>{t('followUp')}</option>
+                      <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
+                      <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
+                      <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
+                      <option value={LeadStatus.VIP}>{t('VIP')}</option>
+                      <option value={LeadStatus.NON_STOP}>{t('nonStop')}</option>
+                      <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
+                      <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
+                      <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
+                      <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
+                    </select>
+                  </div>
 
+                  {/* Interest */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('IntersName')}</label>
+                    <select
+                      value={formData.interest}
+                      onChange={(e) => setFormData({ ...formData, interest: e.target.value as any })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      required
+                    >
+                      <option value={Interest.HOT}>{t('hot')}</option>
+                      <option value={Interest.WARM}>{t('warm')}</option>
+                      <option value={LeadStatus.NON_STOP}>{t('under_decision')}</option>
+                    </select>
+                  </div>
 
+                  {/* Tier */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('TierName')}</label>
+                    <select
+                      value={formData.tier}
+                      onChange={(e) => setFormData({ ...formData, tier: e.target.value as any })}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm transition-colors"
+                      required
+                    >
+                      <option value={Tier.BRONZE}>{t('bronze')}</option>
+                      <option value={Tier.SILVER}>{t('silver')}</option>
+                      <option value={Tier.PLATINUM}>{t('platinum')}</option>
+                      <option value={Tier.GOLD}>{t('gold')}</option>
+                    </select>
+                  </div>
 
-                <div className="col-span-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('TierName')}</label>
-                  <select
-                    value={formData.tier}
-                    onChange={(e) => setFormData({ ...formData, tier: e.target.value as any })}
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
-                    required
-                  >
-                    <option value={Tier.BRONZE}>{t('bronze')}</option>
-                    <option value={Tier.SILVER}>{t('silver')}</option>
-                    <option value={Tier.PLATINUM}>{t('platinum')}</option>
-                    <option value={Tier.GOLD}>{t('gold')}</option>
-                   
-                  </select>
-                </div>
-
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    {t('firstConnection')}
-                  </label>
-                  <div className="relative">
+                  {/* First Connection Date */}
+                  <div className="md:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {t('firstConnection')}
+                    </label>
                     <input
                       type="date"
                       value={formData.firstConection ? new Date(formData.firstConection).toISOString().split('T')[0] : ''}
@@ -635,66 +629,39 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                         }
                         setEmailError("");
                       }}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent bg-gray-50 text-sm transition-all duration-200 ${emailError
-                          ? "border-red-300 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
-                        }`}
+                      className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg focus:outline-none focus:ring-2 bg-gray-50 text-sm transition-colors ${emailError ? "border-red-300 focus:ring-red-500" : "border-gray-300 focus:ring-blue-500"}`}
                     />
-                    {/* Icon لو محتاج */}
-                    {/* <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /> */}
                   </div>
-                </div>
+                </>
+              )}
+            </div>
 
-
-              </>
-            )
-          }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-          <div className="col-span-2 flex gap-3 mt-4">
-            <button
-              type="submit"
-              className="flex-1 bg-blue-600 text-white py-2.5 sm:py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-              disabled={isPending}
-            >
-              {isPending ? <div className="flex items-center justify-center gap-2">
-                <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div>
-              </div> : t('updateLead')}
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-300 text-gray-700 py-2.5 sm:py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium"
-            >
-              {t('cancel')}
-            </button>
-          </div>
-        </form>
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6 border-t border-gray-200">
+              <button
+                type="submit"
+                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div>
+                    <span>{t('updating')}</span>
+                  </div>
+                ) : (
+                  t('updateLead')
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-400 transition-colors font-medium text-sm sm:text-base"
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

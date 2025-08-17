@@ -98,7 +98,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     return lastMeeting.date;
   });
 
-  console.log(meetings);
 
   // console.log(meettings);
 
@@ -201,7 +200,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
               <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 sm:w-24">
                 {t('name')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 hidden sm:table-cell">
+              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 sm:table-cell">
                 {t('phone')}
               </th>
               <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
@@ -276,7 +275,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       {getDisplayName(lead)}
                     </button>
                   </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden sm:table-cell">
+                  <td className="px-2 sm:px-3 md:px-6 py-4 sm:table-cell">
                     <PhoneNumber 
                       phone={lead.contact}
                       className="text-xs sm:text-sm"
