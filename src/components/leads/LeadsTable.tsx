@@ -97,7 +97,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     return lastMeeting.date;
   });
 
-  console.log(meetings);
+  // console.log(meetings);
 
   // console.log(meettings);
 
@@ -122,9 +122,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
 
   const projectName = useMemo(() => (lead: Lead) => {
     if (i18n.language === 'ar') {
-      return lead.inventoryInterest?.project.nameAr || lead.inventoryInterest?.project.nameEn || 'لا يوجد';
+      return lead.projectInterest?.nameAr || lead.projectInterest?.nameEn || lead?.otherProject || 'لا يوجد';
     } else {
-      return lead.inventoryInterest?.project.nameEn || lead.inventoryInterest?.project.nameAr || 'Not Found ';
+      return lead.projectInterest?.nameEn || lead.projectInterest?.nameAr ||lead?.otherProject || 'Not Found ';
     }
   }, [i18n.language]);
 

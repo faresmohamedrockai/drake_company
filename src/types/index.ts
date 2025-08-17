@@ -78,6 +78,7 @@ export interface Lead {
   id?: string;
   nameEn?: string; // English name
   nameAr?: string; // Arabic name
+  otherProject?: string; 
   contact: string;
   contacts?: string[];
   meetings?:Meeting[];
@@ -86,6 +87,7 @@ export interface Lead {
   firstConection?:string ;
   budget: number;
   inventoryInterestId?: string;
+  projectInterestId?: string;
   source: string;
   interest:Interest;
   tier: Tier;
@@ -97,6 +99,7 @@ export interface Lead {
   createdAt?: string;
   createdBy?: string;
   inventoryInterest?:any
+  projectInterest?:any
   notes?: string[] | null;
   calls?: CallLog[] | null;
   visits?: VisitLog[] | null;
@@ -171,6 +174,7 @@ export interface Property {
 //   nameEn?: string; // English name
 //   nameAr?: string; // Arabic name
 //   developer: string;
+//   otherProject?:string;
 //   zone: string;
 //   type: string;
 //   paymentPlans: {

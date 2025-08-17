@@ -24,6 +24,7 @@ export interface PaymentPlan {
 export interface Project {
   id?: string;
   nameEn: string;
+  otherProject?:string;
   nameAr: string;
   developer: string;
   developerId: string;

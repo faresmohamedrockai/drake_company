@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react';
+import { X, Building } from 'lucide-react';
 import { Lead, LeadStatus, Property, User, Tier, Interest } from '../../types';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,6 +32,20 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     queryFn: getProperties,
     staleTime: 1000 * 60 * 5,
   });
+
+
+
+  const { data: projects, isLoading: isLoadingProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProjects()
+  });
+
+  const getProjects = async () => {
+    const response = await axiosInterceptor.get('/projects');
+    return response.data.data as Project[];
+  };
+
   const { data: users } = useQuery<User[]>({
     queryKey: ['users'],
     queryFn: getUsers,
@@ -57,6 +71,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     nameEn: '',
     nameAr: '',
     firstConection: '',
+    otherProject: '',
     familyName: '',
     contact: '',
     contacts: [],
@@ -65,6 +80,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     tier: Tier.BRONZE,
     budget: 0,
     inventoryInterestId: '',
+    projectInterestId: '',
     source: '',
     status: 'fresh_lead' as LeadStatus,
     assignedToId: ''
@@ -94,6 +110,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       setFormData({
         nameEn: lead.nameEn || '',
         nameAr: lead.nameAr || '',
+        otherProject: lead.otherProject || '',
+
         contact: lead.contact || '',
         contacts: lead.contacts && lead.contacts.length > 0 ? lead.contacts : [],
         firstConection: (() => {
@@ -113,6 +131,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
         tier: lead.tier || Tier.BRONZE,
         budget: lead.budget || 0,
         inventoryInterestId: lead.inventoryInterestId || '',
+        projectInterestId: lead.projectInterestId || '',
         source: lead.source || 'website',
         status: lead.status || 'fresh_lead',
         assignedToId: ownerIdValue
@@ -120,6 +139,12 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       setError('');
     }
   }, [lead]);
+  // Utility function to remove empty values
+  const removeEmpty = (obj: Record<string, any>) => {
+    return Object.fromEntries(
+      Object.entries(obj).filter(([_, v]) => v !== null && v !== undefined && v !== '')
+    );
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,7 +166,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       setPhoneError(getPhoneErrorMessage(language));
       return;
     }
-    
+
     if (!formData.contacts?.every((num) => validatePhoneNumber(num))) {
       setPhoneError(getPhoneErrorMessage(language));
       return;
@@ -188,18 +213,19 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       id: lead.id,
       nameEn: formData.nameEn,
       nameAr: formData.nameAr,
+      otherProject: formData.otherProject,
       contact: formData.contact,
       contacts: formData.contacts || [],
       email: formData.email,
       firstConection: formData.firstConection
         ? (() => {
-            try {
-              const date = new Date(formData.firstConection);
-              return isNaN(date.getTime()) ? undefined : date;
-            } catch (error) {
-              return undefined;
-            }
-          })()
+          try {
+            const date = new Date(formData.firstConection);
+            return isNaN(date.getTime()) ? undefined : date;
+          } catch (error) {
+            return undefined;
+          }
+        })()
         : undefined,
       // 👇 التحويل الصحيح
       interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
@@ -207,13 +233,17 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       familyName: formData.familyName,
       budget: Number(budgetValue),
       inventoryInterestId: formData.inventoryInterestId,
+      projectInterestId: formData.projectInterestId,
       source: formData.source,
       status: formData.status as LeadStatus,
       assignedToId: formData.assignedToId,
       ownerId: formData.assignedToId,
     };
+    const cleanedData = removeEmpty(leadData);
 
-    updateLead(leadData);
+    // console.log(cleanedData);
+
+    updateLead(cleanedData);
 
 
   };
@@ -298,6 +328,45 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
               </div>
 
 
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">{t('projectInterest')}</label>
+                <div className="relative">
+                  <select
+                    value={formData.projectInterestId}
+                    onChange={e => setFormData({ ...formData, projectInterestId: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                  >
+                    <option value="">{t('selectProject')}</option>
+                    {!projects ? (
+                      <option value="" disabled>{isLoadingProjects ? t('loadingProjects') : t('noProjects')}</option>
+                    ) : (
+                      projects.map((project: Project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.nameAr}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+              {/* حقل Other Project */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Other Project</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.otherProject || ''}
+                    onChange={e => setFormData({ ...formData, otherProject: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
+                    placeholder="Enter other project"
+                  />
+                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
+
             </>) : (
               <>
                 <div className="col-span-1">
@@ -331,7 +400,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                       onChange={(e) => setFormData({ ...formData, familyName: e.target.value })}
                       className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50 text-sm transition-all duration-200"
                       placeholder="أدخل الاسم العائلة"
-                      required
+                    // required
                     />
                     {/* <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" /> */}
                   </div>
@@ -341,7 +410,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     {t('phoneRequired')}
                   </label>
-                  
+
 
                   {/* Primary Contact */}
                   <div className="flex items-center gap-2 mb-2">
@@ -396,9 +465,9 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                     type="button"
                     onClick={() => {
                       const currentContacts = formData.contacts || [];
-                      setFormData({ 
-                        ...formData, 
-                        contacts: [...currentContacts, ''] 
+                      setFormData({
+                        ...formData,
+                        contacts: [...currentContacts, '']
                       });
                     }}
                     className="text-blue-500 text-sm"
@@ -463,6 +532,9 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                       ));
                     })()}
                   </select>
+
+
+
                   {(user?.role as string) === 'sales_rep' && (
                     <p className="text-sm text-gray-500 mt-1">
                       {language === 'ar' ? 'لا يمكنك تغيير تعيين العميل' : 'You cannot change lead assignment'}
@@ -513,6 +585,48 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                     ))}
                   </select>
                 </div>
+
+
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">{t('projectInterest')}</label>
+                  <div className="relative">
+                    <select
+                      value={formData.projectInterestId}
+                      onChange={e => setFormData({ ...formData, projectInterestId: e.target.value })}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                    >
+                      <option value="">{t('selectProject')}</option>
+                      {!projects ? (
+                        <option value="" disabled>{isLoadingProjects ? t('loadingProjects') : t('noProjects')}</option>
+                      ) : (
+                        projects.map((project: Project) => (
+                          <option key={project.id} value={project.id}>
+                            {project.nameAr}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+                {/* حقل Other Project */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">Other Project</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={formData.otherProject || ''}
+                      onChange={e => setFormData({ ...formData, otherProject: e.target.value })}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
+                      placeholder="Enter other project"
+                    />
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                </div>
+
+
+
 
                 <div className="col-span-1">
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('sourceRequired')}</label>
@@ -570,7 +684,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                     <option value={Interest.HOT}>{t('hot')}</option>
                     <option value={Interest.WARM}>{t('warm')}</option>
                     <option value={LeadStatus.NON_STOP}>{t('under_decision')}</option>
-             
+
                   </select>
                 </div>
 
@@ -592,7 +706,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                     <option value={Tier.SILVER}>{t('silver')}</option>
                     <option value={Tier.PLATINUM}>{t('platinum')}</option>
                     <option value={Tier.GOLD}>{t('gold')}</option>
-                   
+
                   </select>
                 </div>
 
@@ -636,8 +750,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                         setEmailError("");
                       }}
                       className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent bg-gray-50 text-sm transition-all duration-200 ${emailError
-                          ? "border-red-300 focus:ring-red-500"
-                          : "border-gray-300 focus:ring-blue-500"
+                        ? "border-red-300 focus:ring-red-500"
+                        : "border-gray-300 focus:ring-blue-500"
                         }`}
                     />
                     {/* Icon لو محتاج */}

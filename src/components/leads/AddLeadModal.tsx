@@ -11,7 +11,7 @@ import { toast } from 'react-toastify';
 import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
 import { validateEmail, getEmailErrorMessage } from '../../utils/emailValidation';
 import { useLanguage } from '../../contexts/LanguageContext';
-
+import { Project } from '../inventory/ProjectsTab';
 interface AddLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -39,6 +39,29 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     const response = await axiosInterceptor.get('/properties');
     return response.data.properties as Property[];
   }
+
+
+
+
+  const { data: projects, isLoading: isLoadingProjects } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: () => getProjects()
+  });
+
+  const getProjects = async () => {
+    const response = await axiosInterceptor.get('/projects');
+    return response.data.data as Project[];
+  };
+
+
+
+
+
+
+
+
+
   const addLead = async (lead: Lead) => {
     const response = await axiosInterceptor.post('/leads/create', lead);
     return response.data.data.lead;
@@ -52,6 +75,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         nameEn: '',
         nameAr: '',
         familyName: '',
+        otherProject: '',
         contacts: [''],
         email: '',
         interest: Interest.HOT,
@@ -59,6 +83,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         firstConection: '',
         budget: 0,
         inventoryInterestId: '',
+        projectInterestId: '',
         source: '',
         status: LeadStatus.FRESH_LEAD,
         assignedTo: user?.role === 'sales_rep' ? user.id : ''
@@ -73,6 +98,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         nameEn: '',
         nameAr: '',
         familyName: '',
+        otherProject: '',
         contacts: [''],
         email: '',
         interest: Interest.HOT,
@@ -80,6 +106,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         firstConection: '',
         budget: 0,
         inventoryInterestId: '',
+        projectInterestId: '',
         source: '',
         status: LeadStatus.FRESH_LEAD,
         assignedTo: user?.role === 'sales_rep' ? user.id : ''
@@ -97,6 +124,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     nameEn: '',
     nameAr: '',
     familyName: '',
+    otherProject: '',
     contacts: [''],
     email: '',
     interest: Interest.HOT as Interest,
@@ -104,6 +132,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     firstConection: '',
     budget: 0,
     inventoryInterestId: '',
+    projectInterestId: '',
     source: '',
     status: LeadStatus.FRESH_LEAD as LeadStatus,
     assignedTo: user?.role === 'sales_rep' ? user.id : ''
@@ -133,7 +162,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       setPhoneError(language === 'ar' ? 'رقم الهاتف الأول مطلوب' : 'First phone number is required');
       return;
     }
-    
+
     // Validate all provided phone numbers
     const validContacts = formData.contacts.filter(contact => contact.trim() !== '');
     if (!validContacts.every((num) => validatePhoneNumber(num))) {
@@ -179,25 +208,26 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
 
       // Get the first phone number as the primary contact
       const primaryContact = formData.contacts && formData.contacts.length > 0 ? formData.contacts[0] : '';
-      
+
       // Filter out empty phone numbers from contacts array
       const validContacts = formData.contacts ? formData.contacts.filter(contact => contact.trim() !== '') : [];
 
       const leadData = {
         nameEn: formData.nameEn,
         nameAr: formData.nameAr,
+        otherProject: formData.otherProject,
         contact: primaryContact,
         contacts: validContacts,
         familyName: formData.familyName,
         firstConection: formData.firstConection
           ? (() => {
-              try {
-                const date = new Date(formData.firstConection);
-                return isNaN(date.getTime()) ? undefined : date;
-              } catch (error) {
-                return undefined;
-              }
-            })()
+            try {
+              const date = new Date(formData.firstConection);
+              return isNaN(date.getTime()) ? undefined : date;
+            } catch (error) {
+              return undefined;
+            }
+          })()
           : undefined,
 
         email: formData.email,
@@ -208,6 +238,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
 
         budget: Number(budgetValue),
         inventoryInterestId: formData.inventoryInterestId,
+        projectInterestId: formData.projectInterestId,
         source: formData.source,
         status: formData.status as LeadStatus,
         lastCallDate: '------',
@@ -217,6 +248,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
         createdBy: user?.name || 'Unknown',
         createdAt: new Date().toISOString(),
       };
+
+      console.log(leadData);
 
       addLeadMutation(leadData);
 
@@ -337,13 +370,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                         className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 bg-white text-sm transition-all duration-200 
             ${phoneError ? 'border-red-300 focus:ring-red-500' : 'border-gray-200 focus:ring-blue-500'}`}
                         required={index === 0}
-                        placeholder={index === 0 
+                        placeholder={index === 0
                           ? (language === 'ar' ? 'أدخل رقم الهاتف الرئيسي' : 'Enter primary phone number')
                           : (language === 'ar' ? 'أدخل رقم هاتف إضافي' : 'Enter additional phone number')
                         }
                       />
                       <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      
+
                       {/* Primary contact indicator */}
                       {index === 0 && (
                         <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
@@ -517,29 +550,75 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               </div>
 
 
+
+
+
+
+
+
+
+
+
+              <div className="col-span-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('inventoryInterest')} ({language === 'ar' ? 'اختياري' : 'optional'})</label>
+                <select
+                  value={formData.inventoryInterestId}
+                  onChange={(e) => setFormData({ ...formData, inventoryInterestId: e.target.value })}
+                  className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 text-sm"
+                >
+                  <option value="">{t('selectPropertyType')}</option>
+                  {properties?.map(property => (
+                    <option key={property.id} value={property.id}>{property.title}</option>
+                  ))}
+                </select>
+              </div>
+
+
+
+
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">{t('inventoryInterest')}</label>
+                <label className="block text-sm font-medium text-gray-700">{t('projectInterest')}</label>
                 <div className="relative">
                   <select
-                    value={formData.inventoryInterestId}
-                    onChange={e => {
-                      return setFormData({ ...formData, inventoryInterestId: e.target.value });
-                    }}
+                    value={formData.projectInterestId}
+                    onChange={e => setFormData({ ...formData, projectInterestId: e.target.value })}
                     className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
-                  // removed required
                   >
-                    <option value="">{t('selectPropertyType')}</option>
-                    {!properties ? (
-                      <option value="" disabled>{isLoadingProperties ? 'Loading properties...' : 'No properties available'}</option>
+                    <option value="">{t('selectProject')}</option>
+                    {!projects ? (
+                      <option value="" disabled>{isLoadingProjects ? t('loadingProjects') : t('noProjects')}</option>
                     ) : (
-                      properties.map((item: Property) => (
-                        <option key={item.id} value={item.id}>{item.title}</option>
+                      projects.map((project: Project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.nameAr}
+                        </option>
                       ))
                     )}
                   </select>
                   <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
+
+
+
+
+
+              {/* حقل Other Project */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Other Project</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.otherProject || ''}
+                    onChange={e => setFormData({ ...formData, otherProject: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200"
+                    placeholder="Enter other project"
+
+                  />
+                  <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                </div>
+              </div>
+
 
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">{t('leadSourceRequired')}</label>

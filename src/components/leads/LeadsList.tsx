@@ -580,11 +580,11 @@ const LeadsList: React.FC = React.memo(() => {
   }, [searchTerm, activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, selectedManager, selectedSalesRep, clearSelection]);
 
   // Show loading toast for delete operation
-  React.useEffect(() => {
-    if (isDeletingLead) {
-      setToastId(toast.loading(t('deletingLead')));
-    }
-  }, [isDeletingLead, t]);
+  // React.useEffect(() => {
+  //   if (isDeletingLead) {
+  //     setToastId(toast.loading(t('deletingLead')));
+  //   }
+  // }, [isDeletingLead, t]);
 
   // Error handling
   if (leadsError) {
