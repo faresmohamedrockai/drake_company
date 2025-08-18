@@ -489,10 +489,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       });
 
       // حدّث الـ state المحلي
-      setFormData((prev) => ({
-        ...prev,
-        description: descriptionForm.text,
-      }));
+      setCurrentLead({ ...currentLead, description: descriptionForm.text });
 
       // قفل المودال
       setShowDescriptionForm(false);
