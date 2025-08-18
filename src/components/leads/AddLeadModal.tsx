@@ -74,9 +74,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       setFormData({
         nameEn: '',
         nameAr: '',
+        description: '',
         familyName: '',
         otherProject: '',
         contacts: [''],
+        cil: false,
         email: '',
         interest: Interest.HOT,
         tier: Tier.BRONZE,
@@ -97,9 +99,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       setFormData({
         nameEn: '',
         nameAr: '',
+        description: '',
         familyName: '',
         otherProject: '',
         contacts: [''],
+        cil: false,
         email: '',
         interest: Interest.HOT,
         tier: Tier.BRONZE,
@@ -123,9 +127,11 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     nameEn: '',
     nameAr: '',
+    description: '',
     familyName: '',
     otherProject: '',
     contacts: [''],
+    cil: false,
     email: '',
     interest: Interest.HOT as Interest,
     tier: Tier.BRONZE as Tier,
@@ -215,7 +221,9 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       const leadData = {
         nameEn: formData.nameEn,
         nameAr: formData.nameAr,
+        description: formData.description,
         otherProject: formData.otherProject,
+        cil: formData.cil,
         contact: primaryContact,
         contacts: validContacts,
         familyName: formData.familyName,
@@ -460,6 +468,18 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
               </div>
 
 
+              <div className="space-y-2 col-span-full w-full">
+  <label className="block text-sm font-medium text-gray-700">
+    {t('Lead Description')}
+  </label>
+  <textarea
+    value={formData.description || ""}
+    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 resize-none"
+    placeholder="Enter Description For Lead ......"
+    rows={6}
+  />
+</div>
 
 
 
@@ -708,7 +728,44 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                 <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
             </div>
+
+
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                {t("CIL")}
+              </label>
+
+              <div
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    cil: !formData.cil, // قلب القيمة (true/false)
+                  })
+                }
+                className={`relative w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors
+      ${formData.cil ? "bg-white" : "bg-white"} border border-gray-300`}
+              >
+                <span
+                  className={`w-4 h-4 rounded-full shadow-md transform transition-transform 
+        ${formData.cil ? "translate-x-6 bg-blue-500" : "translate-x-0 bg-black"}`}
+                />
+              </div>
+
+              <p className="text-xs text-gray-500">
+                {formData.cil ? t("clear") : t("not_clear")}
+              </p>
+            </div>
+
+
+
           </div>
+
+
+
+
+
+
+
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4 pt-6">

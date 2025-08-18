@@ -78,6 +78,7 @@ export interface Lead {
   id?: string;
   nameEn?: string; // English name
   nameAr?: string; // Arabic name
+  description?: string; // Arabic name
   otherProject?: string; 
   contact: string;
   contacts?: string[];
@@ -91,6 +92,7 @@ export interface Lead {
   source: string;
   interest:Interest;
   tier: Tier;
+  cil?:boolean
   status: LeadStatus;
   lastCallDate?: string;
   lastVisitDate?: string;

@@ -30,6 +30,9 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [newNote, setNewNote] = useState('');
   const [showCallForm, setShowCallForm] = useState(false);
   const [showVisitForm, setShowVisitForm] = useState(false);
+  const [showDescriptionForm, setShowDescriptionForm] = useState(false);
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
+
   const [callForm, setCallForm] = useState({
     date: new Date().toISOString().split('T')[0],
     outcome: '',
@@ -48,6 +51,11 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     objections: '',
     notes: ''
   } as VisitLog);
+
+
+  const [descriptionForm, setDescriptionForm] = useState({
+    text: lead?.description || "",
+  });
   const [refreshKey, setRefreshKey] = useState(0);
   const [currentLead, setCurrentLead] = useState(lead);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -426,6 +434,27 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     }
   };
 
+
+
+
+
+  // const handleSaveDescription = async () => {
+  //   if (!selectedLead) return;
+
+  //   setIsSavingDescription(true);
+  //   try {
+  //     await onUpdateLead(selectedLead.id, { description: editedDescription });
+  //     setIsEditingDescription(false);
+  //   } catch (error) {
+  //     console.error("Error saving description:", error);
+  //   } finally {
+  //     setIsSavingDescription(false);
+  //   }
+  // };
+
+
+
+
   const handleCancelEditNote = () => {
     setEditingNoteIndex(null);
     setEditingNoteValue('');
@@ -447,6 +476,31 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   console.log(leads);
 
+  const handleSaveDescription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingDescription(true);
+
+    try {
+      // ابعت الوصف للـ backend (update lead)
+      await updateLead({
+        ...lead,
+        description: descriptionForm.text,
+      });
+
+      // حدّث الـ state المحلي
+      setFormData((prev) => ({
+        ...prev,
+        description: descriptionForm.text,
+      }));
+
+      // قفل المودال
+      setShowDescriptionForm(false);
+    } catch (error) {
+      console.error("Failed to save description:", error);
+    } finally {
+      setIsSavingDescription(false);
+    }
+  };
 
 
   if (!isOpen) return null;
@@ -509,6 +563,14 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 >
                   {lead.tier}
                 </span>
+                <span
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full truncate max-w-full bg-[#23272F1A] text-black `}
+                  title={lead.cil ? "true" : "false"}
+                >
+                  CIL: {lead.cil ? t("clear").toUpperCase() : t("not_clear").toUpperCase()}
+
+                </span>
+
               </div>
 
 
@@ -789,7 +851,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         {/* Enhanced Tabs */}
         <div className="px-3 sm:px-6 pt-3 sm:pt-4">
           <div className="flex gap-2 sm:gap-4 md:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-none">
-            {['details', 'calls', 'visits', 'notes', 'phones'].map((tab) => (
+            {['details', 'Description', 'calls', 'visits', 'notes', 'phones'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -877,33 +939,33 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Status</label>
-                      <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`}
-                  title={lead.status}
-                >
-                  {lead.status}
-                </span>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`}
+                      title={lead.status}
+                    >
+                      {lead.status}
+                    </span>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Interest Level</label>
-                  <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColorInterst(lead.interest)} truncate max-w-full`}
-                  title={lead.interest.toString()}
-                >
-                  {lead.interest}
-                </span>
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColorInterst(lead.interest)} truncate max-w-full`}
+                      title={lead.interest.toString()}
+                    >
+                      {lead.interest}
+                    </span>
                   </div>
                 </div>
 
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Tier Classification</label>
-                 
-                <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full truncate max-w-full ${getStatusColorTier(lead.tier)} `}
-                  title={lead.tier.toString()}
-                >
-                  {lead.tier}
-                </span>
+
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full truncate max-w-full ${getStatusColorTier(lead.tier)} `}
+                    title={lead.tier.toString()}
+                  >
+                    {lead.tier}
+                  </span>
                 </div>
 
                 <div className="mb-4">
@@ -918,9 +980,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">CIL Status</label>
-                  <p className="text-sm font-medium text-gray-900 mt-1">
-                    {currentLead.status || 'Not specified'}
-                  </p>
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full truncate max-w-full bg-[#23272F1A] text-black `}
+                    title={lead.cil ? "true" : "false"}
+                  >
+                    {lead.cil ? t("clear").toUpperCase() : t("not_clear").toUpperCase()}
+
+                  </span>
                 </div>
 
                 <div className="mb-4">
@@ -932,6 +998,38 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               </div>
             </div>
           )}
+
+          {activeTab === 'Description' && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {t('leadDescription')}
+                </h3>
+                {/* <button
+                  onClick={() => setShowDescriptionForm(true)} // تفتح فورم التعديل/الإضافة
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center shadow-md hover:shadow-lg"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('addDescription')}
+                </button> */}
+              </div>
+
+              <div className="space-y-6">
+                {lead.description && lead.description.trim() !== "" ? (
+                  <div className="bg-gray-50 p-4 rounded-lg">
+                    <p className="text-sm text-gray-700 whitespace-pre-line">
+                      {lead.description}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-4">
+                    {t('noDescription') || 'No description added'}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
 
           {activeTab === 'calls' && (
             <div>
@@ -1216,6 +1314,51 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
             </div>
           </div>
         )}
+
+        {/* {showDescriptionForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('addDescription')}</h3>
+              <form onSubmit={handleSaveDescription} className="space-y-4">
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{t('leadDescription')}</label>
+                  <textarea
+                    value={descriptionForm.text}
+                    onChange={(e) => setDescriptionForm({ ...descriptionForm, text: e.target.value })}
+                    placeholder={t('enterLeadDescription')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={5}
+                    required
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowDescriptionForm(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800 order-2 sm:order-1"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 order-1 sm:order-2"
+                  >
+                    {isSavingDescription ? (
+                      <div
+                        className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin"
+                        role="status"
+                      ></div>
+                    ) : (
+                      t('saveDescription')
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )} */}
 
         {/* Visit Form Modal */}
         {showVisitForm && (
