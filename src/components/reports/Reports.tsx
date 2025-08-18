@@ -33,9 +33,10 @@ import {
   MapPin
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { LeadStatus, User } from '../../types';
+import { LeadStatus, User, Lead, Meeting, Contract } from '../../types';
 import { exportTeamLeaderReport, exportSalesReport, exportUserPerformanceReport, exportSalesMemberReport, exportAllSalesMembersReport, TeamLeaderReport, SalesReportData, SalesMemberReport } from '../../utils/excelExport';
 import { toast } from 'react-toastify';
+import { PhoneNumber } from '../ui/PhoneNumber';
 
 interface UserPerformance {
   id: string;
@@ -2289,7 +2290,13 @@ const Reports: React.FC = () => {
                               <div className="font-medium text-gray-900">
                                 {lead.nameEn || lead.nameAr || 'N/A'}
                               </div>
-                              <div className="text-sm text-gray-500">{lead.contact} • {lead.email || 'No email'}</div>
+                              <div className="text-sm text-gray-500">
+                                {lead.contact ? (
+                                  <PhoneNumber phone={lead.contact} className="inline" />
+                                ) : (
+                                  'No phone'
+                                )} • {lead.email || 'No email'}
+                              </div>
                               <div className="text-xs text-gray-400 mt-1">
                                 Budget: {lead.budget.toLocaleString()} EGP • Source: {lead.source}
                               </div>

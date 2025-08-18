@@ -11,6 +11,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project } from '../inventory/ProjectsTab';
 import { Id, toast } from 'react-toastify';
 import { formatDate } from '../../utils/formatters';
+import { PhoneNumber } from '../ui/PhoneNumber';
 
 
 interface LeadModalProps {
@@ -506,43 +507,42 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-lg sm:rounded-xl w-full max-w-sm sm:max-w-2xl md:max-w-5xl lg:max-w-6xl h-[98vh] sm:max-h-[95vh] overflow-y-auto relative shadow-2xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-1 sm:p-2 md:p-4">
+      <div className="bg-white rounded-lg sm:rounded-xl w-full max-w-[95vw] sm:max-w-2xl md:max-w-4xl lg:max-w-6xl h-[98vh] sm:h-[95vh] overflow-y-auto relative shadow-2xl">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-6 flex justify-between items-center z-10 rounded-t-lg sm:rounded-t-xl">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 truncate pr-2">{t('leadDetails')}</h2>
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 md:p-6 flex justify-between items-center z-10 rounded-t-lg sm:rounded-t-xl">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 truncate pr-2">{t('leadDetails')}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors p-2 -m-2 flex-shrink-0"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 sm:p-2 -m-1 sm:-m-2 flex-shrink-0"
           >
-            <X className="h-5 w-5 sm:h-6 sm:w-6" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
           </button>
         </div>
 
         {/* Lead Details */}
-        <div className="p-4 sm:p-6 lg:p-8 border-b border-gray-200">
-          <div className='border border-[#A7A9AC] rounded-xl p-4 mb-9'>
-            <div className=' flex justify-between items-center'>
-              <div>
-                <h1 className='text-black font-bold'>{currentLead.nameAr?.toUpperCase()}</h1>
-                <div className='flex flex-row gap-6 text-sm text-[#A7A9AC]'>
-
-                  <p className='flex items-center gap-2'>
-                    <Calendar className='w-4 h-4 text-gray-500' />
-                    First Contact: {currentLead.firstConection ? currentLead.firstConection : "N/A"}
+        <div className="p-3 sm:p-4 md:p-6 lg:p-8 border-b border-gray-200">
+          <div className='border border-[#A7A9AC] rounded-xl p-3 sm:p-4 mb-6 sm:mb-9'>
+            <div className='flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4'>
+              <div className="flex-1 min-w-0">
+                <h1 className='text-black font-bold text-lg sm:text-xl md:text-2xl break-words'>{currentLead.nameAr?.toUpperCase()}</h1>
+                <div className='flex flex-col sm:flex-row gap-2 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-[#A7A9AC] mt-2'>
+                  <p className='flex items-center gap-2 flex-wrap'>
+                    <Calendar className='w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0' />
+                    <span className="break-words">First Contact: {currentLead.firstConection ? currentLead.firstConection : "N/A"}</span>
                   </p>
-                  <p className='flex items-center gap-2'>
-                    <Clock className='w-4 h-4 text-gray-500' />
-                    Last Contact: {
+                  <p className='flex items-center gap-2 flex-wrap'>
+                    <Clock className='w-3 h-3 sm:w-4 sm:h-4 text-gray-500 flex-shrink-0' />
+                    <span className="break-words">Last Contact: {
                       lead.calls && lead.calls.length > 0
                         ? new Date(lead.calls[lead.calls.length - 1].date).toLocaleDateString()
                         : "N/A"
-                    }
+                    }</span>
                   </p>
                 </div>
               </div>
 
-              <div className=' flex gap-5'>
+              <div className='flex flex-wrap gap-2 sm:gap-3 lg:gap-5 justify-start sm:justify-end'>
                 <span
                   className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`}
                   title={lead.status}
@@ -581,27 +581,26 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
             {/* Phone */}
-            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
-              {/* أيقونة على الشمال */}
-              <Phone size={24} className="text-blue-500" />
-
-              {/* النصوص على اليمين */}
-              <div className="flex flex-col">
-                <span className="text-gray-500 text-sm">Phone</span>
-                <span className="font-medium text-gray-900">
-                  {currentLead.contact ? currentLead.contact : "N/A"}
-                </span>
+            <div className="flex flex-row items-center p-3 sm:p-4 border rounded-xl bg-gray-50 gap-3 sm:gap-4">
+              <Phone size={20} className="text-blue-500 flex-shrink-0 sm:w-6 sm:h-6" />
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-gray-500 text-xs sm:text-sm">Phone</span>
+                <div className="font-medium text-gray-900 text-sm sm:text-base break-words">
+                  {currentLead.contact ? (
+                    <PhoneNumber phone={currentLead.contact} />
+                  ) : (
+                    "N/A"
+                  )}
+                </div>
               </div>
             </div>
 
-
-
             {/* Budget */}
-            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
-              <DollarSign size={24} className="text-green-500" />
-              <div className="flex flex-col">
-                <span className="text-gray-500 text-sm">Budget</span>
-                <span className="font-medium text-gray-900 flex gap-1">
+            <div className="flex flex-row items-center p-3 sm:p-4 border rounded-xl bg-gray-50 gap-3 sm:gap-4">
+              <DollarSign size={20} className="text-green-500 flex-shrink-0 sm:w-6 sm:h-6" />
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-gray-500 text-xs sm:text-sm">Budget</span>
+                <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
                   EGP{" "}
                   {currentLead.budget && Number(currentLead.budget) > 0
                     ? new Intl.NumberFormat("en-US", {
@@ -616,37 +615,35 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
             </div>
 
             {/* Project */}
-            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
-              <MapPin size={24} className="text-red-500" />
-              <div className="flex flex-col">
-                <span className="text-gray-500 text-sm">Project</span>
-                <span className="font-medium text-gray-900">
+            <div className="flex flex-row items-center p-3 sm:p-4 border rounded-xl bg-gray-50 gap-3 sm:gap-4">
+              <MapPin size={20} className="text-red-500 flex-shrink-0 sm:w-6 sm:h-6" />
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-gray-500 text-xs sm:text-sm">Project</span>
+                <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
                   {currentLead.inventoryInterest?.project?.nameEn || "N/A"}
                 </span>
               </div>
             </div>
 
             {/* Meeting */}
-            <div className="flex flex-row items-center p-4 border rounded-xl bg-gray-50 gap-4">
-              <Clock size={24} className="text-purple-500" />
-              <div className="flex flex-col">
-                <span className="text-gray-500 text-sm">Meeting Time</span>
-                <span className="font-medium text-gray-900">
+            <div className="flex flex-row items-center p-3 sm:p-4 border rounded-xl bg-gray-50 gap-3 sm:gap-4">
+              <Clock size={20} className="text-purple-500 flex-shrink-0 sm:w-6 sm:h-6" />
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-gray-500 text-xs sm:text-sm">Meeting Time</span>
+                <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
                   {currentLead.meetings?.[0]?.time || "N/A"}
                 </span>
               </div>
             </div>
-
-
           </div>
 
 
 
           {/* Redesigned Deal Progress Tracker */}
-          <div className="mb-8">
+          <div className="mb-6 sm:mb-8">
             <label className="block text-sm font-medium text-gray-700 mb-3 sm:mb-4 text-center w-full">{t('dealProgress')}</label>
 
-            <div className="relative w-full bg-gray-50 sm:bg-transparent rounded-lg sm:rounded-none p-3 sm:p-0">
+            <div className="relative w-full bg-gray-50 sm:bg-transparent rounded-lg sm:rounded-none p-2 sm:p-3 md:p-0">
               <div className="flex items-center justify-start sm:justify-center gap-1 sm:gap-2 md:gap-3 overflow-x-auto py-2 sm:py-4 px-1 sm:px-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {isSpecialStatus && currentSpecialStatus ? (
                   // Show single step for special statuses
@@ -657,10 +654,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                       className="flex flex-col items-center relative flex-shrink-0"
                     >
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-sm sm:text-base md:text-lg font-bold border-2 sm:border-3 transition-all duration-300 bg-orange-500 border-orange-500 text-white shadow-lg">
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center text-xs sm:text-sm md:text-base lg:text-lg font-bold border-2 sm:border-3 transition-all duration-300 bg-orange-500 border-orange-500 text-white shadow-lg">
                         !
                       </div>
-                      <div className="mt-2 text-center w-16 sm:w-20 md:w-24 text-orange-600">
+                      <div className="mt-1 sm:mt-2 text-center w-12 sm:w-16 md:w-20 lg:w-24 text-orange-600">
                         <div className="text-xs sm:text-sm font-medium leading-tight">{currentSpecialStatus?.label || 'Unknown Status'}</div>
                         {i18n.language === 'ar' && (
                           <div className="text-xs sm:text-sm font-arabic mt-1 opacity-80 leading-tight">
@@ -694,7 +691,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                             className={`flex flex-col items-center relative flex-shrink-0`}
                           >
                             <div
-                              className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-sm sm:text-base md:text-lg font-bold border-2 sm:border-3 transition-all duration-300 shadow-lg
+                              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 lg:w-14 lg:h-14 rounded-full flex items-center justify-center text-xs sm:text-sm md:text-base lg:text-lg font-bold border-2 sm:border-3 transition-all duration-300 shadow-lg
                                 ${isCancelled ? 'bg-red-500 border-red-500 text-white' :
                                   isCompleted ? 'bg-green-500 border-green-500 text-white' :
                                     isActive ? 'bg-blue-600 border-blue-600 text-white shadow-xl' :
@@ -703,7 +700,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                             >
                               {index + 1}
                             </div>
-                            <div className={`mt-2 text-center w-16 sm:w-20 md:w-24 leading-tight
+                            <div className={`mt-1 sm:mt-2 text-center w-12 sm:w-16 md:w-20 lg:w-24 leading-tight
                               ${isCancelled ? 'text-red-600' :
                                 isCompleted ? 'text-green-600' :
                                   isActive ? 'text-blue-600 font-semibold' :
@@ -798,30 +795,30 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
           </div>
 
           {/* Enhanced Quick Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-1 w-full sm:w-auto">
               <button
                 onClick={() => setShowCallForm(true)}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg"
+                className="bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-blue-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg text-sm sm:text-base"
               >
-                <Phone className="h-5 w-5 mr-2" />
+                <Phone className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 <span className="font-medium">{t('logCall')}</span>
               </button>
               <button
                 onClick={() => setShowVisitForm(true)}
-                className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg"
+                className="bg-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-green-700 transition-all duration-200 flex items-center justify-center shadow-md hover:shadow-lg text-sm sm:text-base"
               >
-                <Calendar className="h-5 w-5 mr-2" />
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
                 <span className="font-medium">{t('scheduleVisit')}</span>
               </button>
             </div>
             {canEdit && (
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 w-full sm:w-auto">
                 <select
                   value={currentLead.status}
                   onChange={(e) => handleStatusUpdate(e.target.value as Lead['status'])}
                   disabled={isUpdatingLead}
-                  className={`px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 shadow-sm
+                  className={`w-full sm:w-auto px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 shadow-sm text-sm sm:text-base
                     ${isUpdatingLead ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'hover:border-gray-400'}
                     ${currentLead.status === 'reservation'
                       ? 'text-blue-600 bg-blue-50 border-blue-300'
@@ -849,13 +846,13 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         </div>
 
         {/* Enhanced Tabs */}
-        <div className="px-3 sm:px-6 pt-3 sm:pt-4">
-          <div className="flex gap-2 sm:gap-4 md:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-none">
+        <div className="px-2 sm:px-3 md:px-6 pt-2 sm:pt-3 md:pt-4">
+          <div className="flex gap-1 sm:gap-2 md:gap-4 lg:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-none">
             {['details', 'Description', 'calls', 'visits', 'notes', 'phones'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-3 sm:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${activeTab === tab
+                className={`py-2 sm:py-3 md:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${activeTab === tab
                   ? 'text-blue-600 border-b-2 border-blue-600'
                   : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
                   }`}
@@ -876,14 +873,14 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
 
         {/* Enhanced Tab Content */}
-        <div className="p-3 sm:p-6 pt-6 sm:pt-8">
+        <div className="p-2 sm:p-3 md:p-6 pt-4 sm:pt-6 md:pt-8">
           {activeTab === 'details' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
               {/* Contact Information Section */}
               <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6 border-b pb-2">Contact Information</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4 md:mb-6 border-b pb-2">Contact Information</h3>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">First Name</label>
                     <p className="text-sm font-medium text-gray-900 mt-1">
@@ -1145,21 +1142,21 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
           {activeTab === 'notes' && (
             <div>
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('notes')}</h3>
-                <div className="mb-6">
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">{t('notes')}</h3>
+                <div className="mb-4 sm:mb-6">
                   <textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     placeholder={t('addNotePlaceholder')}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
                     rows={3}
                   />
                   <button
                     onClick={handleAddNote}
-                    className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    className="mt-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
                   >
-                    {isUpdatingLead ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('addNote')}
+                    {isUpdatingLead ? <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('addNote')}
                   </button>
                 </div>
               </div>
@@ -1228,17 +1225,17 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
         {/* Call Form Modal */}
         {showCallForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('logCall')}</h3>
-              <form onSubmit={handleAddCall} className="space-y-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-sm sm:max-w-md">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('logCall')}</h3>
+              <form onSubmit={handleAddCall} className="space-y-3 sm:space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('date')}</label>
                   <input
                     type="date"
                     value={callForm.date}
                     onChange={(e) => setCallForm({ ...callForm, date: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     required
                   />
                 </div>
@@ -1247,7 +1244,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   <select
                     value={callForm.outcome}
                     onChange={(e) => setCallForm({ ...callForm, outcome: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     required
                   >
                     <option value="">{t('selectOutcome')}</option>
@@ -1291,7 +1288,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   <textarea
                     value={callForm.notes}
                     onChange={(e) => setCallForm({ ...callForm, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                     rows={3}
                   />
                 </div>
@@ -1362,10 +1359,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
         {/* Visit Form Modal */}
         {showVisitForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('logVisit')}</h3>
-              <form onSubmit={handleAddVisit} className="space-y-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-sm sm:max-w-md">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">{t('logVisit')}</h3>
+              <form onSubmit={handleAddVisit} className="space-y-3 sm:space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('date')}</label>
                   <input
@@ -1414,19 +1411,19 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     rows={3}
                   />
                 </div>
-                <div className="flex justify-end space-x-3">
+                <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => setShowVisitForm(false)}
-                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                    className="px-3 sm:px-4 py-2 text-gray-600 hover:text-gray-800 order-2 sm:order-1 text-sm sm:text-base"
                   >
                     {t('cancel')}
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                    className="px-3 sm:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 order-1 sm:order-2 text-sm sm:text-base"
                   >
-                    {isCreatingVisit ? <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('logVisitButton')}
+                    {isCreatingVisit ? <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('logVisitButton')}
                   </button>
                 </div>
               </form>

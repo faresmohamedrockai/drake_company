@@ -1,7 +1,12 @@
 // Phone number validation utility
 export const PHONE_REGEX = /^[+]?[\d\s\-\(\)]{10,}$/;
 
-export const validatePhoneNumber = (phone: string): boolean => {
+export const validatePhoneNumber = (phone: string | null | undefined): boolean => {
+  // Handle null/undefined values
+  if (!phone) {
+    return false;
+  }
+  
   // Remove all non-digit characters for length check
   const digitsOnly = phone.replace(/\D/g, '');
   
@@ -14,7 +19,12 @@ export const validatePhoneNumber = (phone: string): boolean => {
   return PHONE_REGEX.test(phone);
 };
 
-export const formatPhoneNumber = (phone: string): string => {
+export const formatPhoneNumber = (phone: string | null | undefined): string => {
+  // Handle null/undefined values
+  if (!phone) {
+    return '';
+  }
+  
   // Remove all non-digit characters
   const digitsOnly = phone.replace(/\D/g, '');
   
@@ -37,7 +47,14 @@ export const formatPhoneNumber = (phone: string): string => {
   return phone;
 };
 
-export const getPhoneErrorMessage = (phone: string, language: string = 'en'): string => {
+export const getPhoneErrorMessage = (phone: string | null | undefined, language: string = 'en'): string => {
+  // Handle null/undefined values
+  if (!phone) {
+    return language === 'ar' 
+      ? 'رقم الهاتف مطلوب'
+      : 'Phone number is required';
+  }
+  
   const digitsOnly = phone.replace(/\D/g, '');
   
   if (digitsOnly.length < 10) {
