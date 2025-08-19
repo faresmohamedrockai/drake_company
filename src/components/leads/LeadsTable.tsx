@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState,useEffect } from 'react';
 import { Eye, Edit, Trash2 } from 'lucide-react';
 import { Interest, Lead, LeadStatus, Property, Tier, User } from '../../types';
 import { PhoneNumber } from '../ui/PhoneNumber';
@@ -88,15 +88,15 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     return pages;
   };
 
-  const project = leads.map((lead) => lead.inventoryInterest?.project.nameAr)
+  // const project = leads.map((lead) => lead.inventoryInterest?.project.nameAr)
 
-  const meetings = leads.map((lead) => {
-    if (!lead.meetings || lead.meetings.length === 0) {
-      return null; // لو مفيش اجتماعات
-    }
-    const lastMeeting = lead.meetings[lead.meetings.length - 1]; // آخر اجتماع
-    return lastMeeting.date;
-  });
+  // const meetings = leads.map((lead) => {
+  //   if (!lead.meetings || lead.meetings.length === 0) {
+  //     return null; // لو مفيش اجتماعات
+  //   }
+  //   const lastMeeting = lead.meetings[lead.meetings.length - 1]; // آخر اجتماع
+  //   return lastMeeting.date;
+  // });
 
 
   // console.log(meettings);
@@ -111,6 +111,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
       .toUpperCase()
       .slice(0, 2);
   }, []);
+
+
+
 
   const getDisplayName = useMemo(() => (lead: Lead) => {
     if (i18n.language === 'ar') {
@@ -181,6 +184,19 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     setRowsPerPage(newRowsPerPage);
     setCurrentPage(1); // Reset to first page when changing rows per page
   };
+// import { useEffect } from "react";
+
+// ...
+
+useEffect(() => {
+  if (totalPages <= 1 && currentPage !== 1) {
+    setCurrentPage(1);
+  }
+  // كمان لو عدد الصفحات قل وبقي أقل من الصفحة الحالية يرجعك لأول صفحة
+  if (currentPage > totalPages) {
+    setCurrentPage(1);
+  }
+}, [totalPages, currentPage, setCurrentPage]);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">

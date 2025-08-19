@@ -141,12 +141,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getProjects()
   });
+
+
+
   const { mutate: updateLead, isPending: isUpdatingLead } = useMutation({
     mutationFn: (lead: Lead) => axiosInterceptor.patch(`/leads/${lead.id}`, lead),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.dismiss(toastId!);
-      toast.success(t('common:leadUpdatedSuccessfully'));
+      toast.success(t('common:lead Updated Successfully'));
     },
     onError: (error: any) => {
       console.error('Error updating lead:', error);
@@ -154,6 +157,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       toast.error(error.response.data.message || "Error updating lead");
     }
   });
+
+
+
+
+
+
   const { mutate: addCallLog, isPending: isCreatingCall } = useMutation({
     mutationFn: (call: CallLog) => axiosInterceptor.post(`/calls/create/${currentLead.id}`, call),
     onSuccess: () => {
@@ -235,7 +244,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     { id: 'follow', label: t('followUp'), value: LeadStatus.FOLLOW_UP },
     { id: 'visit', label: t('scheduledVisit'), value: LeadStatus.SCHEDULED_VISIT },
     { id: 'vip', label: t('VIP'), value: LeadStatus.VIP },
-    { id: 'non_stop', label: t('nonStop'), value: LeadStatus.NON_STOP },
+    // { id: 'non_stop', label: t('nonStop'), value: LeadStatus.NON_STOP },
     { id: 'open', label: t('openDeal'), value: LeadStatus.OPEN_DEAL },
     { id: 'reservation', label: t('reservation'), value: LeadStatus.RESERVATION },
     { id: 'closed', label: t('closedDeal'), value: LeadStatus.CLOSED_DEAL },
@@ -293,15 +302,35 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   // Get current special status
   const currentSpecialStatus = specialStatuses.find(s => s.value === currentLead.status);
 
-  const handleStatusUpdate = (newStatus: Lead['status']) => {
-    console.log(newStatus);
+const handleStatusUpdate = (newStatus: Lead['status']) => {
+  if (!canEdit) return;
+  setIsUpdate(true);
 
-    if (canEdit) {
-      setIsUpdate(true);
-      updateLead({ ...currentLead, status: newStatus });
-      setCurrentLead({ ...currentLead, status: newStatus }); // Update local state immediately
-    }
+  const formattedLead: Partial<Lead> = {
+    id: currentLead.id, // لو backend محتاج ID
+    status: newStatus,
   };
+
+  // لو حابب تبعت firstConection
+  if (currentLead.firstConection) {
+    const firstDate =
+      typeof currentLead.firstConection === 'string'
+        ? new Date(currentLead.firstConection)
+        : currentLead.firstConection;
+
+    // نتأكد إنه صحيح
+    if (!isNaN(firstDate.getTime())) {
+      (formattedLead as any).firstConection = firstDate;
+    }
+  }
+
+  updateLead(formattedLead as Lead);
+  setCurrentLead((prev) => ({ ...prev, status: newStatus }));
+};
+
+
+
+
   useEffect(() => {
     if (isUpdatingLead) {
 
@@ -617,7 +646,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-gray-500 text-xs sm:text-sm">Project</span>
                 <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
-                  {currentLead.inventoryInterest?.project?.nameEn || "N/A"}
+                  {currentLead.project?.nameEn || currentLead.otherProject || "N/A"}
                 </span>
               </div>
             </div>
@@ -718,9 +747,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                                         case LeadStatus.OPEN_DEAL:
                                           return 'صفقة مفتوحة';
                                         case LeadStatus.VIP:
-                                          return 'عميل مهم ';
-                                        case LeadStatus.NON_STOP:
-                                          return 'عمبل نشط ';
+                                          return '(عميل نشط) عميل مهم ';
+                                       
                                         case LeadStatus.RESERVATION:
                                           return 'حجز';
                                         case LeadStatus.CLOSED_DEAL:
@@ -747,9 +775,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                                         case LeadStatus.OPEN_DEAL:
                                           return 'صفقة مفتوحة';
                                         case LeadStatus.VIP:
-                                          return 'عميل مهم ';
-                                        case LeadStatus.NON_STOP:
-                                          return 'عمبل نشط ';
+                                          return 'عميل مهم (عميل نشط)';
+                                        
                                         case LeadStatus.RESERVATION:
                                           return 'حجز';
                                         case LeadStatus.CLOSED_DEAL:
@@ -831,8 +858,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
                   <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
                   <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
-                  <option value={LeadStatus.VIP}>{t('VIP')}</option>
-                  <option value={LeadStatus.NON_STOP}>{t('nonStop')}</option>
+                  <option value={LeadStatus.VIP}>{t('VIP (Non Stop)')}</option>
+                
                   <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
                   <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
                   <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
@@ -893,7 +920,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 </div>
 
                 <div className="mb-4">
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Numbers</label>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Additional Phone Numbers</label>
                   {Array.isArray(currentLead.contacts) && currentLead.contacts.length > 0 ? (
                     <p className="text-sm font-medium text-gray-900 mt-1">
                       {currentLead.contacts.join(' • ')}

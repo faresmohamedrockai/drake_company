@@ -80,12 +80,12 @@ export interface Lead {
   nameAr?: string; // Arabic name
   description?: string; // Arabic name
   otherProject?: string; 
-  contact: string;
+  contact?: string;
   contacts?: string[];
   meetings?:Meeting[];
   email?: string;
   familyName?:string
-  firstConection?:string ;
+  firstConection?:string|Date ;
   budget: number;
   inventoryInterestId?: string;
   projectInterestId?: string;
@@ -102,6 +102,7 @@ export interface Lead {
   createdBy?: string;
   inventoryInterest?:any
   projectInterest?:any
+  project?:any | null;
   notes?: string[] | null;
   calls?: CallLog[] | null;
   visits?: VisitLog[] | null;

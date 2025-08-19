@@ -1,12 +1,15 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { Lead, LeadStatus, Property, User } from '../../types';
+import { Project } from '../inventory/ProjectsTab';
 
 interface Filters {
   name: string;
   contact: string;
   budget: string;
   inventoryInterestId: string;
+  projectInterestId: string;
+  otherProject: string;
   source: string;
   status: string;
   assignedTo: string;
@@ -21,6 +24,7 @@ interface FilterModalProps {
   onClearFilters: () => void;
   leads: Lead[];
   properties: Property[];
+  projects: Project[];
   users: User[];
   t: (key: string) => string;
 }
@@ -33,6 +37,7 @@ export const FilterModal: React.FC<FilterModalProps> = React.memo(({
   onClearFilters,
   leads,
   properties,
+  projects,
   users,
   t
 }) => {
@@ -77,10 +82,13 @@ export const FilterModal: React.FC<FilterModalProps> = React.memo(({
             aria-label={t('budget')}
           >
             <option value="">{t('allBudgets')}</option>
-            {leads?.map((lead: Lead) => (
-              <option key={lead.id} value={lead.budget}>{lead.budget}</option>
+            {[...new Set(leads?.map((lead: Lead) => lead.budget))].map((budget, idx) => (
+              <option key={idx} value={budget}>
+                {budget}
+              </option>
             ))}
           </select>
+
           <select
             value={filters.inventoryInterestId}
             onChange={e => handleFilterChange('inventoryInterestId', e.target.value)}
@@ -92,6 +100,41 @@ export const FilterModal: React.FC<FilterModalProps> = React.memo(({
               <option key={property.id} value={property.id}>{property.titleEn}</option>
             ))}
           </select>
+
+
+
+
+
+
+          <select
+            value={filters.projectInterestId}
+            onChange={e => handleFilterChange('projectInterestId', e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
+            aria-label={t('interest')}
+          >
+            <option value="">{t('All Projects')}</option>
+            {projects?.map((projects: Project) => (
+              <option key={projects.id} value={projects.id}>{projects.nameAr}</option>
+            ))}
+          </select>
+
+          <select
+            value={filters.otherProject}
+            onChange={e => handleFilterChange('otherProject', e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm w-full"
+            aria-label={t('otherProject')}
+          >
+            <option value="">{t('All Other Projects')}</option>
+            {[...new Set(leads?.map((lead: Lead) => lead.otherProject).filter(Boolean))].map((op, idx) => (
+              <option key={idx} value={op}>
+                {op}
+              </option>
+            ))}
+          </select>
+
+
+
+
           <select
             value={filters.source}
             onChange={e => handleFilterChange('source', e.target.value)}
@@ -118,6 +161,7 @@ export const FilterModal: React.FC<FilterModalProps> = React.memo(({
             <option value={LeadStatus.SCHEDULED_VISIT}>{t('scheduledVisit')}</option>
             <option value={LeadStatus.OPEN_DEAL}>{t('openDeal')}</option>
             <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
+            <option value={LeadStatus.VIP}>{t('VIP (Non Stop)')}</option>
             <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
             <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
             <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>

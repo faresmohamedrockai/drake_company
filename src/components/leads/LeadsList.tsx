@@ -30,7 +30,7 @@ import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 // Types and utilities
 import { Lead, LeadStatus, Property, User } from '../../types';
 import type { PaymentPlan, Project } from '../inventory/ProjectsTab';
-import { deleteLead, getLeads, getProperties, getUsers, bulkUpdateLeads, createLead } from '../../queries/queries';
+import { deleteLead, getLeads, getProperties, getUsers, bulkUpdateLeads, createLead, getProjects } from '../../queries/queries';
 import { useLeadsFilters } from '../../hooks/useLeadsFilters';
 import { useLeadsSelection } from '../../hooks/useLeadsSelection';
 import { useLeadsStats } from '../../hooks/useLeadsStats';
@@ -114,6 +114,12 @@ const LeadsList: React.FC = React.memo(() => {
     queryKey: ['properties'],
     staleTime: 1000 * 60 * 5,
     queryFn: getProperties,
+    retry: 3
+  });
+  const { data: projects = [] } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: getProjects,
     retry: 3
   });
 
@@ -393,6 +399,7 @@ const LeadsList: React.FC = React.memo(() => {
     'bg-yellow-500', 'bg-cyan-500', 'bg-lime-500', 'bg-amber-500'
   ];
 
+
   // const getUserColor = (userName: string) => {
   //   const userIndex = users?.findIndex(user => user.name === userName);
   //   return userIndex !== undefined && userIndex >= 0 ? userColors[userIndex % userColors.length] : 'bg-gray-500';
@@ -417,27 +424,77 @@ const LeadsList: React.FC = React.memo(() => {
   // };
 
   // Helper function to get searchable name (both languages)
-  const getSearchableName = (lead: Lead) => {
-    const names = [lead.nameEn, lead.nameAr].filter(Boolean);
-    return names.join(' ').toLowerCase();
-  };
+
+  
+
+
+
+
+const filteredLeadsManager = useMemo(() => {
+  let filtered = leads;
+
+  if (selectedManager && selectedSalesRep) {
+    // حالة اختيار الاتنين: نجيب الـ Sales Rep بس (الأولوية للـ Sales Rep)
+    filtered = filtered.filter(
+      (lead) => lead.owner?.id === selectedSalesRep.id
+    );
+  } else if (selectedSalesRep) {
+    // حالة اختيار Sales Rep بس
+    filtered = filtered.filter(
+      (lead) => lead.owner?.id === selectedSalesRep.id
+    );
+  } else if (selectedManager) {
+    // حالة اختيار Manager بس
+    const teamMembers = users
+      .filter(
+        (u) => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id
+      )
+      .map((u) => u.id);
+
+    filtered = filtered.filter(
+      (lead) =>
+        lead.owner?.id === selectedManager.id || // Leads المدير نفسه
+        teamMembers.includes(lead.owner?.id!)    // Leads التيم بتاعه
+    );
+  }
+
+  return filtered;
+}, [leads, selectedManager, selectedSalesRep, users]);
+
 
   // Computed values
   const filteredLeads = useMemo(() => {
     let filtered = leads;
 
-    // Apply user role filtering
-    if (selectedSalesRep) {
-      filtered = filtered.filter(lead => lead.owner?.id === selectedSalesRep.id);
+
+
+    if (selectedManager && selectedSalesRep) {
+      // حالة اختيار الاتنين: نجيب المدير + الـ Sales Rep
+      filtered = filtered.filter(
+        (lead) =>
+          
+          lead.owner?.id === selectedSalesRep.id   // Leads بتاعة الـ Sales Rep
+      );
+    } else if (selectedSalesRep) {
+      // حالة اختيار Sales Rep بس
+      filtered = filtered.filter(
+        (lead) => lead.owner?.id === selectedSalesRep.id
+      );
     } else if (selectedManager) {
+      // حالة اختيار Manager بس
       const teamMembers = users
-        .filter(u => u.role === 'sales_rep' && u.teamLeaderId === selectedManager.id)
-        .map(u => u.id);
-      filtered = filtered.filter(lead =>
-        lead.owner?.id === selectedManager.id ||
-        teamMembers.includes(lead.owner?.id!)
+        .filter(
+          (u) => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id
+        )
+        .map((u) => u.id);
+
+      filtered = filtered.filter(
+        (lead) =>
+          lead.owner?.id === selectedManager.id // Leads المدير نفسه
+     || teamMembers.includes(lead.owner?.id!)    // Leads السيلز اللي تحت إيده
       );
     }
+
 
     // Apply search filtering
     if (searchTerm.trim()) {
@@ -445,7 +502,7 @@ const LeadsList: React.FC = React.memo(() => {
       filtered = filtered.filter(lead => {
         const nameEn = lead.nameEn?.toLowerCase() || '';
         const nameAr = lead.nameAr?.toLowerCase() || '';
-        const contact = lead.contact?.toLowerCase() || '';
+        const contact = lead.contact?.trim() || '';
         const familyName = lead.familyName?.toLowerCase() || '';
         const source = lead.source.toLowerCase();
 
@@ -466,13 +523,19 @@ const LeadsList: React.FC = React.memo(() => {
       if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) {
         return false;
       }
-      // if (filters.contact && !lead.contact.toLowerCase().includes(filters.contact.toLowerCase())) {
-      //   return false;
-      // }
+      if (filters.contact && !lead.contact.toLowerCase().includes(filters.contact.toLowerCase())) {
+        return false;
+      }
       if (filters.budget && lead.budget.toString() !== filters.budget) {
         return false;
       }
       if (filters.inventoryInterestId && lead.inventoryInterestId !== filters.inventoryInterestId) {
+        return false;
+      }
+      if (filters.projectInterestId && lead.projectInterestId !== filters.projectInterestId) {
+        return false;
+      }
+      if (filters.otherProject && lead.otherProject !== filters.otherProject) {
         return false;
       }
       if (filters.source && lead.source.toLowerCase() !== filters.source.toLowerCase()) {
@@ -524,9 +587,6 @@ const LeadsList: React.FC = React.memo(() => {
     leads, users, selectedSalesRep, selectedManager, searchTerm, filters,
     activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, user?.id, i18n.language
   ]);
-
-  // // Stats calculations
-  // const stats = useLeadsStats(leads, filteredLeads, user?.id);
 
   // Event handlers
   const handleLeadClick = useCallback((lead: Lead) => {
@@ -587,6 +647,23 @@ const LeadsList: React.FC = React.memo(() => {
   // }, [isDeletingLead, t]);
 
   // Error handling
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   if (leadsError) {
     return (
       <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -661,7 +738,7 @@ const LeadsList: React.FC = React.memo(() => {
       {/* Lead Status Cards */}
       <div className="mb-4 sm:mb-6">
         <StatusCards
-          leads={leads}
+          leads={filteredLeadsManager}
           user={user as any}
           activeCard={activeStatusCard}
           onCardClick={(key) => {
@@ -753,9 +830,11 @@ const LeadsList: React.FC = React.memo(() => {
         onClose={() => setShowFilterModal(false)}
         filters={filters}
         onFiltersChange={setFilters}
+
         onClearFilters={clearAllFilters}
         leads={leads}
         properties={properties}
+        projects={projects}
         users={users}
         t={t}
       />
