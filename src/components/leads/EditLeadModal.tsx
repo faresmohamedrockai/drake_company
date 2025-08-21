@@ -146,13 +146,13 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   }, [lead]);
   // Utility function to remove empty values
   function removeEmpty(obj: Record<string, any>) {
-  return Object.fromEntries(
-    Object.entries(obj).filter(([k, v]) => {
-      if (k === "projectInterestId") return true; // 👈 سيبه حتى لو null
-      return v !== undefined && v !== null && v !== '';
-    })
-  );
-}
+    return Object.fromEntries(
+      Object.entries(obj).filter(([k, v]) => {
+        if (k === "projectInterestId") return true; // 👈 سيبه حتى لو null
+        return v !== undefined && v !== null && v !== '';
+      })
+    );
+  }
 
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -217,33 +217,33 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     const combinedName = i18n.language === 'ar'
       ? (formData.nameAr || formData.nameEn)
       : (formData.nameEn || formData.nameAr);
-const leadData = {
-  id: lead.id,
-  nameEn: formData.nameEn,
-  nameAr: formData.nameAr,
-  gender: formData.gender,
-  description: formData.description,
-  otherProject: formData.otherProject,
-  cil: formData.cil,
-  contact: formData.contact,
-  contacts: formData.contacts || [],
-  email: formData.email,
-  firstConection: formData.firstConection,
+    const leadData = {
+      id: lead.id,
+      nameEn: formData.nameEn,
+      nameAr: formData.nameAr,
+      gender: formData.gender,
+      description: formData.description,
+      otherProject: formData.otherProject,
+      cil: formData.cil,
+      contact: formData.contact,
+      contacts: formData.contacts || [],
+      email: formData.email,
+      firstConection: formData.firstConection,
 
-  interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
-  tier: Tier[formData.tier.toUpperCase() as keyof typeof Tier],
-  familyName: formData.familyName,
-  budget: Number(budgetValue),
-  inventoryInterestId: formData.inventoryInterestId,
+      interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
+      tier: Tier[formData.tier.toUpperCase() as keyof typeof Tier],
+      familyName: formData.familyName,
+      budget: Number(budgetValue),
+      inventoryInterestId: formData.inventoryInterestId,
 
-  // 👇 هنا الشرط
-  projectInterestId: formData.projectInterestId || null,
+      // 👇 هنا الشرط
+      projectInterestId: formData.projectInterestId || null,
 
-  source: formData.source,
-  status: formData.status as LeadStatus,
-  assignedToId: formData.assignedToId,
-  ownerId: formData.assignedToId,
-};
+      source: formData.source,
+      status: formData.status as LeadStatus,
+      assignedToId: formData.assignedToId,
+      ownerId: formData.assignedToId,
+    };
 
 
 
@@ -453,25 +453,6 @@ const leadData = {
                       </span>
                     </div>
 
-
-
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700">{t("gender")}</label>
-                      <div className="relative">
-                        <select
-                          value={formData.gender}
-                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
-                        >
-                          <option value="">{t("selectGender")}</option>
-                          <option value="male">{t("male")}</option>
-                          <option value="female">{t("female")}</option>
-                        </select>
-
-
-
-                      </div>
-                    </div>
                     {/* Additional Contacts */}
                     {formData.contacts?.map((phone, index) => (
                       <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-3">
@@ -516,6 +497,21 @@ const leadData = {
 
                     {phoneError && <p className="text-red-600 text-sm mt-2">{phoneError}</p>}
                   </div>
+
+                  <div className="md:col-span-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">{t("gender")}</label>
+                      <div className="relative">
+                        <select
+                          value={formData.gender}
+                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                        >
+                          <option value="">{t("selectGender")}</option>
+                          <option value="male">{t("male")}</option>
+                          <option value="female">{t("female")}</option>
+                        </select>
+                      </div>
+                    </div>
 
                   {/* Email */}
                   <div className="md:col-span-1">

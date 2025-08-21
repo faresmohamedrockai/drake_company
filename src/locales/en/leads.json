@@ -265,5 +265,9 @@
   "filterByManager": "Filter by Manager",
   "filterBySalesRep": "Filter by Sales Rep",
   "selectManager": "Select Manager",
-  "selectSalesRep": "Select Sales Rep"
+  "selectSalesRep": "Select Sales Rep",
+  "gender": "Gender",
+  "selectGender": "Select Gender",
+  "male": "Male",
+  "female": "Female"
 } 
