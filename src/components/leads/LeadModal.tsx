@@ -650,7 +650,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-gray-500 text-xs sm:text-sm">Project</span>
                 <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
-                  {currentLead.project?.nameEn || currentLead.otherProject || "N/A"}
+                  {currentLead.projectInterest?.nameEn ||currentLead.projectInterest?.nameAr ||  currentLead.otherProject || "N/A"}
                 </span>
               </div>
             </div>

@@ -145,11 +145,15 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     }
   }, [lead]);
   // Utility function to remove empty values
-  const removeEmpty = (obj: Record<string, any>) => {
-    return Object.fromEntries(
-      Object.entries(obj).filter(([_, v]) => v !== null && v !== undefined && v !== '')
-    );
-  };
+  function removeEmpty(obj: Record<string, any>) {
+  return Object.fromEntries(
+    Object.entries(obj).filter(([k, v]) => {
+      if (k === "projectInterestId") return true; // 👈 سيبه حتى لو null
+      return v !== undefined && v !== null && v !== '';
+    })
+  );
+}
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,35 +217,39 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     const combinedName = i18n.language === 'ar'
       ? (formData.nameAr || formData.nameEn)
       : (formData.nameEn || formData.nameAr);
+const leadData = {
+  id: lead.id,
+  nameEn: formData.nameEn,
+  nameAr: formData.nameAr,
+  gender: formData.gender,
+  description: formData.description,
+  otherProject: formData.otherProject,
+  cil: formData.cil,
+  contact: formData.contact,
+  contacts: formData.contacts || [],
+  email: formData.email,
+  firstConection: formData.firstConection,
 
-    const leadData = {
-      id: lead.id,
-      nameEn: formData.nameEn,
-      nameAr: formData.nameAr,
-      gender: formData.gender,
-      description: formData.description,
-      otherProject: formData.otherProject,
-      cil: formData.cil,
-      contact: formData.contact,
-      contacts: formData.contacts || [],
-      email: formData.email,
-      firstConection: formData.firstConection,
+  interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
+  tier: Tier[formData.tier.toUpperCase() as keyof typeof Tier],
+  familyName: formData.familyName,
+  budget: Number(budgetValue),
+  inventoryInterestId: formData.inventoryInterestId,
 
-      // 👇 التحويل الصحيح
-      interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
-      tier: Tier[formData.tier.toUpperCase() as keyof typeof Tier],
-      familyName: formData.familyName,
-      budget: Number(budgetValue),
-      inventoryInterestId: formData.inventoryInterestId,
-      projectInterestId: formData.projectInterestId,
-      source: formData.source,
-      status: formData.status as LeadStatus,
-      assignedToId: formData.assignedToId,
-      ownerId: formData.assignedToId,
-    };
+  // 👇 هنا الشرط
+  projectInterestId: formData.projectInterestId || null,
+
+  source: formData.source,
+  status: formData.status as LeadStatus,
+  assignedToId: formData.assignedToId,
+  ownerId: formData.assignedToId,
+};
+
+
+
     const cleanedData = removeEmpty(leadData);
 
-    // console.log(cleanedData);
+    console.log(cleanedData);
 
     updateLead(cleanedData as Lead);
 

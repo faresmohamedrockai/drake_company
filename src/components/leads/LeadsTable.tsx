@@ -123,13 +123,24 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     }
   }, [i18n.language]);
 
-  const projectName = useMemo(() => (lead: Lead) => {
-    if (i18n.language === 'ar') {
-      return lead.projectInterest?.nameAr || lead.projectInterest?.nameEn || lead?.otherProject || 'لا يوجد';
-    } else {
-      return lead.projectInterest?.nameEn || lead.projectInterest?.nameAr ||lead?.otherProject || 'Not Found ';
-    }
-  }, [i18n.language]);
+ const projectName = (lead: Lead) => {
+  if (i18n.language === 'ar') {
+    return (
+      lead.projectInterest?.nameAr ||
+      lead.projectInterest?.nameEn ||
+      lead?.otherProject ||
+      'لا يوجد'
+    );
+  } else {
+    return (
+      lead.projectInterest?.nameEn ||
+      lead.projectInterest?.nameAr ||
+      lead?.otherProject ||
+      'Not Found'
+    );
+  }
+};
+
 
 
 
