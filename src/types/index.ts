@@ -78,6 +78,7 @@ export interface Lead {
   id?: string;
   nameEn?: string; // English name
   nameAr?: string; // Arabic name
+  gender?: string; // Arabic name
   description?: string; // Arabic name
   otherProject?: string; 
   contact?: string;

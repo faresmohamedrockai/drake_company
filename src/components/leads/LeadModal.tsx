@@ -37,6 +37,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [callForm, setCallForm] = useState({
     date: new Date().toISOString().split('T')[0],
     outcome: '',
+    followUpTime: '',
+    followUpDate: '',
     duration: '',
     project: '',
     notes: ''
@@ -170,6 +172,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       setCallForm({
         date: new Date().toISOString().split('T')[0],
         outcome: '',
+        followUpTime: '',
+        followUpDate: '',
         duration: '',
         project: '',
         notes: ''
@@ -302,31 +306,31 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   // Get current special status
   const currentSpecialStatus = specialStatuses.find(s => s.value === currentLead.status);
 
-const handleStatusUpdate = (newStatus: Lead['status']) => {
-  if (!canEdit) return;
-  setIsUpdate(true);
+  const handleStatusUpdate = (newStatus: Lead['status']) => {
+    if (!canEdit) return;
+    setIsUpdate(true);
 
-  const formattedLead: Partial<Lead> = {
-    id: currentLead.id, // لو backend محتاج ID
-    status: newStatus,
-  };
+    const formattedLead: Partial<Lead> = {
+      id: currentLead.id, // لو backend محتاج ID
+      status: newStatus,
+    };
 
-  // لو حابب تبعت firstConection
-  if (currentLead.firstConection) {
-    const firstDate =
-      typeof currentLead.firstConection === 'string'
-        ? new Date(currentLead.firstConection)
-        : currentLead.firstConection;
+    // لو حابب تبعت firstConection
+    if (currentLead.firstConection) {
+      const firstDate =
+        typeof currentLead.firstConection === 'string'
+          ? new Date(currentLead.firstConection)
+          : currentLead.firstConection;
 
-    // نتأكد إنه صحيح
-    if (!isNaN(firstDate.getTime())) {
-      (formattedLead as any).firstConection = firstDate;
+      // نتأكد إنه صحيح
+      if (!isNaN(firstDate.getTime())) {
+        (formattedLead as any).firstConection = firstDate;
+      }
     }
-  }
 
-  updateLead(formattedLead as Lead);
-  setCurrentLead((prev) => ({ ...prev, status: newStatus }));
-};
+    updateLead(formattedLead as Lead);
+    setCurrentLead((prev) => ({ ...prev, status: newStatus }));
+  };
 
 
 
@@ -748,7 +752,7 @@ const handleStatusUpdate = (newStatus: Lead['status']) => {
                                           return 'صفقة مفتوحة';
                                         case LeadStatus.VIP:
                                           return '(عميل نشط) عميل مهم ';
-                                       
+
                                         case LeadStatus.RESERVATION:
                                           return 'حجز';
                                         case LeadStatus.CLOSED_DEAL:
@@ -776,7 +780,7 @@ const handleStatusUpdate = (newStatus: Lead['status']) => {
                                           return 'صفقة مفتوحة';
                                         case LeadStatus.VIP:
                                           return 'عميل مهم (عميل نشط)';
-                                        
+
                                         case LeadStatus.RESERVATION:
                                           return 'حجز';
                                         case LeadStatus.CLOSED_DEAL:
@@ -859,7 +863,7 @@ const handleStatusUpdate = (newStatus: Lead['status']) => {
                   <option value={LeadStatus.RESERVATION}>{t('reservation')}</option>
                   <option value={LeadStatus.CLOSED_DEAL}>{t('closedDeal')}</option>
                   <option value={LeadStatus.VIP}>{t('VIP (Non Stop)')}</option>
-                
+
                   <option value={LeadStatus.CANCELLATION}>{t('cancellation')}</option>
                   <option value={LeadStatus.NO_ANSWER}>{t('noAnswer')}</option>
                   <option value={LeadStatus.NOT_INTERSTED_NOW}>{t('notInterestedNow')}</option>
@@ -949,6 +953,12 @@ const handleStatusUpdate = (newStatus: Lead['status']) => {
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Source</label>
                   <p className="text-sm font-medium text-gray-900 mt-1">
                     {currentLead.source || 'Not specified'}
+                  </p>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</label>
+                  <p className="text-bold font-medium text-gray-900 mt-1">
+                    {currentLead.gender || 'Not specified'}
                   </p>
                 </div>
               </div>
@@ -1278,6 +1288,33 @@ const handleStatusUpdate = (newStatus: Lead['status']) => {
                     <option value="Meeting Scheduled">{t('meetingScheduled')}</option>
                   </select>
                 </div>
+
+                {/* يظهر فقط لو outcome = "Follow Up Required" */}
+                {callForm.outcome === 'Follow Up Required' && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('Follow Up Date')}</label>
+                      <input
+                        type="date"
+                        value={callForm.followUpDate || ''}
+                        onChange={(e) => setCallForm({ ...callForm, followUpDate: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                     required
+                     />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{t('Follow Up Time Reminder')}</label>
+                      <input
+                        type="time"
+                        value={callForm.followUpTime || ''}
+                        onChange={(e) => setCallForm({ ...callForm, followUpTime: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
+                     required
+                     />
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('duration')}</label>
                   <input

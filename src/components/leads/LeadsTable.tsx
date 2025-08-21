@@ -431,6 +431,8 @@ useEffect(() => {
                       >
                         <Edit className="h-4 w-4" />
                       </button>
+                    
+                      
                       <button
                         onClick={() => onDeleteLead(lead)}
                         className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"

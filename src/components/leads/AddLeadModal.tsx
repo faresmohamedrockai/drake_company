@@ -74,12 +74,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       setFormData({
         nameEn: '',
         nameAr: '',
+        gender: '',
         description: '',
         contact: '',
         familyName: '',
         otherProject: '',
         contacts: [''],
-        cil: false,
+        cil: true,
         email: '',
         interest: Interest.HOT,
         tier: Tier.BRONZE,
@@ -100,12 +101,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       setFormData({
         nameEn: '',
         nameAr: '',
+        gender: '',
         description: '',
         contact: '',
         familyName: '',
         otherProject: '',
         contacts: [''],
-        cil: false,
+        cil: true,
         email: '',
         interest: Interest.HOT,
         tier: Tier.BRONZE,
@@ -129,12 +131,13 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     nameEn: '',
     nameAr: '',
+    gender: '',
     description: '',
     contact: '',
     familyName: '',
     otherProject: '',
     contacts: [''],
-    cil: false,
+    cil: true,
     email: '',
     interest: Interest.HOT as Interest,
     tier: Tier.BRONZE as Tier,
@@ -236,41 +239,41 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       const primaryContact = formData.contact && formData.contact.trim()
       // Filter out empty phone numbers from contacts array
       const validContacts = formData.contacts ? formData.contacts.filter(contact => contact.trim() !== '') : [];
+const leadDataRaw = {
+  nameEn: formData.nameEn,
+  nameAr: formData.nameAr,
+  gender: formData.gender,
+  description: formData.description,
+  otherProject: formData.otherProject,
+  cil: formData.cil,
+  contact: primaryContact,
+  contacts: validContacts,
+  familyName: formData.familyName,
+  firstConection: formData.firstConection,
+  email: formData.email,
+  interest: Interest[formData.interest?.toUpperCase() as keyof typeof Interest],
+  tier: Tier[formData.tier?.toUpperCase() as keyof typeof Tier],
+  budget: Number(budgetValue),
+  inventoryInterestId: formData.inventoryInterestId,
+  projectInterestId: formData.projectInterestId,
+  source: formData.source,
+  status: formData.status as LeadStatus,
+  lastCallDate: '------',
+  lastVisitDate: '------',
+  assignedToId: formData.assignedTo || user?.id!,
+  ownerId: formData.assignedTo || user?.id!,
+  createdBy: user?.name || 'Unknown',
+  createdAt: new Date().toISOString(),
+};
 
-      const leadData = {
-        nameEn: formData.nameEn,
-        nameAr: formData.nameAr,
-        description: formData.description,
-        otherProject: formData.otherProject,
-        cil: formData.cil,
-        contact: primaryContact,
-        contacts: validContacts,
-        familyName: formData.familyName,
-        firstConection: formData.firstConection,
-          
+// فلترة القيم الفاضية
+const leadData = Object.fromEntries(
+  Object.entries(leadDataRaw).filter(([_, value]) => value !== null && value !== undefined && value !== '')
+);
 
-        email: formData.email,
+console.log(leadData);
+addLeadMutation(leadData);
 
-        // 👇 التحويل الصحيح
-        interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
-        tier: Tier[formData.tier.toUpperCase() as keyof typeof Tier],
-
-        budget: Number(budgetValue),
-        inventoryInterestId: formData.inventoryInterestId,
-        projectInterestId: formData.projectInterestId,
-        source: formData.source,
-        status: formData.status as LeadStatus,
-        lastCallDate: '------',
-        lastVisitDate: '------',
-        assignedToId: formData.assignedTo || user?.id!,
-        ownerId: formData.assignedTo || user?.id!,
-        createdBy: user?.name || 'Unknown',
-        createdAt: new Date().toISOString(),
-      };
-
-      console.log(leadData);
-
-      addLeadMutation(leadData);
 
       // Reset form and close modal
 
@@ -357,6 +360,8 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
+
+
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">{t('nameFamily')}</label>
                 <div className="relative">
@@ -370,6 +375,26 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 </div>
               </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">{t("gender")}</label>
+                <div className="relative">
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                  >
+                    <option value="">{t("selectGender")}</option>
+                    <option value="male">{t("male")}</option>
+                    <option value="female">{t("female")}</option>
+                  </select>
+
+                </div>
+              </div>
+
+
+
+
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">
                   {t('phoneRequired')}

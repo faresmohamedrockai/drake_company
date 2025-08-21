@@ -502,6 +502,7 @@ const filteredLeadsManager = useMemo(() => {
       filtered = filtered.filter(lead => {
         const nameEn = lead.nameEn?.toLowerCase() || '';
         const nameAr = lead.nameAr?.toLowerCase() || '';
+        const gender = lead.gender?.toLowerCase() || '';
         const contact = lead.contact?.trim() || '';
         const familyName = lead.familyName?.toLowerCase() || '';
         const source = lead.source.toLowerCase();
@@ -523,7 +524,10 @@ const filteredLeadsManager = useMemo(() => {
       if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) {
         return false;
       }
-      if (filters.contact && !lead.contact.toLowerCase().includes(filters.contact.toLowerCase())) {
+   if (filters.gender && lead.gender?.toLowerCase() !== filters.gender.toLowerCase()) {
+  return false;
+}
+      if (filters.contact && !lead.contact?.toLowerCase().includes(filters.contact.toLowerCase())) {
         return false;
       }
       if (filters.budget && lead.budget.toString() !== filters.budget) {

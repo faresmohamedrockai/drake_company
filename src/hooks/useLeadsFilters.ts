@@ -5,6 +5,7 @@ import { User } from '../types';
 interface Filters {
   name: string;
   contact: string;
+  gender: string;
   budget: string;
   inventoryInterestId: string;
   projectInterestId: string;
@@ -21,6 +22,7 @@ export const useLeadsFilters = (location: ReturnType<typeof useLocation>) => {
     name: '',
     contact: '',
     budget: '',
+    gender: '',
     inventoryInterestId: '',
     projectInterestId: '',
     otherProject: '',
@@ -44,6 +46,7 @@ export const useLeadsFilters = (location: ReturnType<typeof useLocation>) => {
     setFilters({
       name: '',
       contact: '',
+      gender: '',
       budget: '',
       projectInterestId:'',
       inventoryInterestId: '',

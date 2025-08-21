@@ -5,11 +5,11 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Meeting, User as UserType } from '../../types';
+import { Meeting, User as UserType, Lead } from '../../types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { Id, toast } from 'react-toastify';
-import { getMeetings, getUsers } from '../../queries/queries';
+import { getMeetings, getUsers, getLeads } from '../../queries/queries';
 import { CalendarPlus } from 'lucide-react';
 import { Apple } from 'lucide-react';
 import { CalendarDays } from 'lucide-react';
@@ -27,12 +27,26 @@ const MeetingsManagement: React.FC = () => {
   });
   const queryClient = useQueryClient();
 
+
+
+
+
+
   // const { meetings, addMeeting, updateMeeting, deleteMeeting, users } = useData();
   const { data: users } = useQuery<UserType[]>({
     queryKey: ['users'],
     staleTime: 1000 * 60 * 5,
     queryFn: () => getUsers(),
   });
+
+
+
+  const { data: leads, isLoading, error } = useQuery<Lead[]>({
+    queryKey: ["leads"],
+    staleTime: 1000 * 60 * 5, // 5 دقائق
+    queryFn: () => getLeads(),
+  });
+
   const { mutateAsync: addMeeting, isPending: isAddingMeeting } = useMutation({
     mutationFn: (meeting: Meeting) => axiosInterceptor.post('/meetings', meeting),
     onSuccess: () => {
@@ -177,14 +191,14 @@ const MeetingsManagement: React.FC = () => {
       // Parse date and time
       const [year, month, day] = date.split('-').map(Number);
       const [hour, minute] = time.split(':').map(Number);
-      
+
       // Validate parsed values
       if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(hour) || isNaN(minute)) {
         throw new Error('Invalid date or time format');
       }
-      
+
       const start = new Date(Date.UTC(year, month - 1, day, hour, minute));
-      
+
       // Parse duration (assume format like '1h', '30m', '1h 30m')
       let durMins = 0;
       const hMatch = duration.match(/(\d+)h/);
@@ -192,7 +206,7 @@ const MeetingsManagement: React.FC = () => {
       if (hMatch) durMins += parseInt(hMatch[1], 10) * 60;
       if (mMatch) durMins += parseInt(mMatch[1], 10);
       if (durMins === 0) durMins = 60; // default 1h
-      
+
       const end = new Date(start.getTime() + durMins * 60000);
       const pad = (n: number) => n.toString().padStart(2, '0');
       const fmt = (d: Date) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}00Z`;
@@ -219,14 +233,14 @@ const MeetingsManagement: React.FC = () => {
       '',
       '⏰ Reminders set for:',
       '• 1 day before the meeting',
-      '• 1 hour before the meeting', 
+      '• 1 hour before the meeting',
       '• At meeting start time'
     ].filter(Boolean).join('\n');
-    
+
     // Google Calendar supports reminder parameters via URL
     // Multiple reminders: 1440 minutes (1 day), 60 minutes (1 hour), 0 minutes (at time)
     const reminders = '&rem=1440&rem=60&rem=0';
-    
+
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(meeting.title)}&dates=${start}%2F${end}&details=${encodeURIComponent(details)}&location=${encodeURIComponent(meeting.location || '')}&trp=false${reminders}`;
   };
 
@@ -242,7 +256,7 @@ const MeetingsManagement: React.FC = () => {
       meeting.location ? `Location: ${meeting.location}` : '',
       meeting.notes ? `Notes: ${meeting.notes}` : '',
     ].filter(Boolean).join('\\n');
-    
+
     // Multiple reminders: 1 day before, 1 hour before, and at appointment time
     const alarms = [
       // 1 day before
@@ -252,7 +266,7 @@ const MeetingsManagement: React.FC = () => {
       // At appointment time
       'BEGIN:VALARM\\nTRIGGER:PT0M\\nACTION:DISPLAY\\nDESCRIPTION:Meeting starting now: ' + meeting.title + '\\nEND:VALARM'
     ].join('\\n');
-    
+
     return `BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//Propai CRM//EN\\nBEGIN:VEVENT\\nUID:${uid}\\nDTSTAMP:${start}\\nDTSTART:${start}\\nDTEND:${end}\\nSUMMARY:${meeting.title}\\nDESCRIPTION:${description}\\nLOCATION:${meeting.location || ''}\\n${alarms}\\nEND:VEVENT\\nEND:VCALENDAR`;
   };
 
@@ -285,6 +299,7 @@ const MeetingsManagement: React.FC = () => {
     setForm({
       title: '',
       client: '',
+      // leadId: '',
       date: '',
       time: '',
       duration: '',
@@ -324,11 +339,14 @@ const MeetingsManagement: React.FC = () => {
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    console.log(form);
+
     if (editId) {
       updateMeeting({
         ...form, status: form.status as 'Scheduled' | 'Completed' | 'Cancelled', createdBy: user.name, id: editId,
       });
     } else {
+
       addMeeting({ ...form, status: form.status as 'Scheduled' | 'Completed' | 'Cancelled', createdBy: user.name });
     }
   };
@@ -356,7 +374,7 @@ const MeetingsManagement: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
- 
+
   // Role-based meeting filtering
   const getFilteredMeetings = () => {
     let userMeetings = meetings;
@@ -557,10 +575,34 @@ const MeetingsManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.title')}</label>
                 <input type="text" name="title" value={form.title} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
+
+
+
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.client')}</label>
-                <input type="text" name="client" value={form.client} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {t('form.client')}
+                </label>
+                <select
+                  name="leadId"
+                  value={form.leadId}
+                  onChange={handleFormChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">اختر Lead</option>
+                  {leads.map((lead) => (
+                    <option key={lead.id} value={lead.id}>
+                      {lead.nameEn || lead.nameAr || lead.contact}
+                    </option>
+                  ))}
+                </select>
               </div>
+
+
+
+
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.date')}</label>
                 <input type="date" name="date" value={form.date} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
@@ -670,12 +712,12 @@ const MeetingsManagement: React.FC = () => {
       {/* Calendar Modal */}
       {calendarModalOpen && selectedMeeting && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div 
+          <div
             className={`
               bg-white rounded-2xl shadow-2xl w-full max-w-md relative flex flex-col
               ${language === 'ar' ? 'font-arabic' : ''}
               transform transition-all duration-300 ease-out
-            `} 
+            `}
             dir={language === 'ar' ? 'rtl' : 'ltr'}
             role="dialog"
             aria-modal="true"
@@ -694,12 +736,12 @@ const MeetingsManagement: React.FC = () => {
               `}
             >
               <span className="sr-only">{t('modal.close')}</span>
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                strokeWidth={2} 
-                stroke="currentColor" 
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
                 className="w-5 h-5"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -713,7 +755,7 @@ const MeetingsManagement: React.FC = () => {
                 <div className="mb-4">
                   <CalendarPlus className="h-12 w-12 text-blue-600 mx-auto" />
                 </div>
-                <h3 
+                <h3
                   id="calendar-modal-title"
                   className="text-2xl font-bold text-gray-900 mb-2"
                 >
@@ -760,10 +802,10 @@ const MeetingsManagement: React.FC = () => {
                   "
                 >
                   <div className="flex items-center justify-center w-8 h-8 bg-white/10 rounded-lg">
-                    <img 
-                      src="https://www.svgrepo.com/show/475656/google-color.svg" 
-                      alt="Google Calendar" 
-                      className="h-6 w-6 flex-shrink-0" 
+                    <img
+                      src="https://www.svgrepo.com/show/475656/google-color.svg"
+                      alt="Google Calendar"
+                      className="h-6 w-6 flex-shrink-0"
                     />
                   </div>
                   <div className="flex flex-col items-center">

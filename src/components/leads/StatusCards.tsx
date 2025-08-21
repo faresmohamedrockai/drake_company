@@ -55,7 +55,7 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
     { key: 'scheduled_visit', count: leads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
     { key: 'all', count: leads.length },
     { key: 'duplicate', count: leads.filter((lead, idx, arr) => 
-      arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contacts && l.contacts.includes(lead.contact)) || (l.email && l.email === lead.email)) !== idx
+      arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contacts && l.contacts.includes(lead.contact as any)) || (l.email && l.email === lead.email)) !== idx
     ).length },
     { key: 'fresh_lead', count: leads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
     { key: 'cold_call', count: leads.filter(lead => lead.source === 'Cold Call').length },

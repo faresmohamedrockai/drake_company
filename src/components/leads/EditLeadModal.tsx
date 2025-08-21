@@ -70,6 +70,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   const [formData, setFormData] = useState<Lead>({
     nameEn: '',
     nameAr: '',
+    gender: '',
     description: '',
     firstConection: '',
     otherProject: '',
@@ -112,6 +113,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       setFormData({
         nameEn: lead.nameEn || '',
         nameAr: lead.nameAr || '',
+        gender: lead.gender || '',
         description: lead.description || '',
         otherProject: lead.otherProject || '',
         cil: lead.cil || false,
@@ -216,6 +218,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       id: lead.id,
       nameEn: formData.nameEn,
       nameAr: formData.nameAr,
+      gender: formData.gender,
       description: formData.description,
       otherProject: formData.otherProject,
       cil: formData.cil,
@@ -223,7 +226,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       contacts: formData.contacts || [],
       email: formData.email,
       firstConection: formData.firstConection,
-       
+
       // 👇 التحويل الصحيح
       interest: Interest[formData.interest.toUpperCase() as keyof typeof Interest],
       tier: Tier[formData.tier.toUpperCase() as keyof typeof Tier],
@@ -329,6 +332,18 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
                   <div className="col-span-1">
                     <label className="block text-sm font-medium text-gray-700">{t('projectInterest')}</label>
                     <div className="relative">
@@ -430,6 +445,25 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                       </span>
                     </div>
 
+
+
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">{t("gender")}</label>
+                      <div className="relative">
+                        <select
+                          value={formData.gender}
+                          onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm transition-all duration-200 appearance-none"
+                        >
+                          <option value="">{t("selectGender")}</option>
+                          <option value="male">{t("male")}</option>
+                          <option value="female">{t("female")}</option>
+                        </select>
+
+
+
+                      </div>
+                    </div>
                     {/* Additional Contacts */}
                     {formData.contacts?.map((phone, index) => (
                       <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-3">

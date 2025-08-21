@@ -22,6 +22,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
     title: string;
     description: string;
     dueDate: string;
+    time: string;
     priority: 'low' | 'medium' | 'high' | 'urgent';
     status: 'pending' | 'in_progress' | 'completed' | 'cancelled' | 'overdue';
     type: 'follow_up' | 'meeting_preparation' | 'contract_review' | 'payment_reminder' | 'visit_scheduling' | 'lead_nurturing' | 'general';
@@ -35,6 +36,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
     title: '',
     description: '',
     dueDate: '',
+    time: '',
     priority: 'medium',
     status: 'pending',
     type: 'general',
@@ -129,6 +131,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
       setFormData({
         title: task.title,
         description: task.description || '',
+        time: task.time || '',
         dueDate: getValidDateString(task.dueDate),
         priority: task.priority,
         status: task.status,
@@ -145,6 +148,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
       setFormData({
         title: '',
         description: '',
+        time: '',
         dueDate: '',
         priority: 'medium',
         status: 'pending',
@@ -179,12 +183,13 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
       alert('Task type is required');
       return;
     }
+const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
 
     // Prepare data for submission
     const submitData: any = {
       ...formData,
       // Send dueDate as an object if it's a valid date, otherwise as empty object
-      dueDate: formData.dueDate ? new Date(formData.dueDate) : {},
+      dueDate: dueDateTime ,
       // Send reminderTime as an object if it exists and reminder is enabled, otherwise as null
       reminderTime: formData.reminder && formData.reminderTime ? new Date(formData.reminderTime) : null,
       // Ensure all optional fields are properly handled
@@ -249,41 +254,38 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
 
           {/* Due Date and Time */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('form.dueDate')} *
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="date"
-                  value={formData.dueDate}
-                  onChange={(e) => handleInputChange('dueDate', e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {t('form.dueTime')}
-              </label>
-              <div className="relative">
-                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="time"
-                  value={formData.dueDate ? new Date(formData.dueDate).toTimeString().slice(0, 5) : ''}
-                  onChange={(e) => {
-                    const [hours, minutes] = e.target.value.split(':');
-                    const newDate = new Date(formData.dueDate);
-                    newDate.setHours(parseInt(hours), parseInt(minutes));
-                    handleInputChange('dueDate', newDate.toISOString().split('T')[0]);
-                  }}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-          </div>
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {t('form.dueDate')} *
+    </label>
+    <div className="relative">
+      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      <input
+        type="date"
+        value={formData.dueDate}
+        onChange={(e) => handleInputChange('dueDate', e.target.value)}
+        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        required
+      />
+    </div>
+  </div>
+
+  <div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">
+      {t('form.dueTime')}
+    </label>
+    <div className="relative">
+      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      <input
+        type="time"
+        value={formData.time}
+        onChange={(e) => handleInputChange('time', e.target.value)}
+        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      />
+    </div>
+  </div>
+</div>
+
 
           {/* Priority and Type */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
