@@ -136,7 +136,7 @@ const useDashboardData = () => {
     taskStatistics,
     allCalls,
     allVisits,
-    isLoading: leadsLoading || meetingsLoading || logsLoading || tasksLoading || taskStatsLoading || callsLoading || visitsLoading,
+    isLoading: leadsLoading || meetingsLoading || logsLoading || tasksLoading || taskStatsLoading,
     user
   };
 };

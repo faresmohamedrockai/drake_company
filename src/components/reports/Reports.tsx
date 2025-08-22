@@ -110,19 +110,40 @@ interface DateRange {
 }
 
 const Reports: React.FC = () => {
-  const { data: leads = [], isLoading: leadsLoading } = useQuery({ 
-    queryKey: ['leads'], 
+  const { data: leads = [], isLoading: leadsLoading, error: leadsError } = useQuery({
+    queryKey: ['leads'],
     queryFn: async () => {
       const leadsData = await getLeads();
-      return await populateLeadsWithCallsAndVisits(leadsData);
+      const populatedLeads = await populateLeadsWithCallsAndVisits(leadsData);
+      return populatedLeads;
     }
   });
-  const { data: meetings = [], isLoading: meetingsLoading } = useQuery({ queryKey: ['meetings'], queryFn: getMeetings });
-  const { data: users = [], isLoading: usersLoading } = useQuery({ queryKey: ['users'], queryFn: getUsers });
-  const { data: contracts = [], isLoading: contractsLoading } = useQuery({ queryKey: ['contracts'], queryFn: getContracts });
+  const { data: meetings = [], isLoading: meetingsLoading, error: meetingsError } = useQuery({ 
+    queryKey: ['meetings'], 
+    queryFn: async () => {
+      const meetingsData = await getMeetings();
+      return meetingsData;
+    }
+  });
+  const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({ 
+    queryKey: ['users'], 
+    queryFn: async () => {
+      const usersData = await getUsers();
+      return usersData;
+    }
+  });
+  const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({ 
+    queryKey: ['contracts'], 
+    queryFn: async () => {
+      const contractsData = await getContracts();
+      return contractsData;
+    }
+  });
   const { data: allCalls = [] } = useQuery({ queryKey: ['allCalls'], queryFn: getAllCalls });
   const { data: allVisits = [] } = useQuery({ queryKey: ['allVisits'], queryFn: getAllVisits });
   const { user: currentUser } = useAuth();
+  
+
   const { t } = useTranslation('reports');
   const { language } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
@@ -160,14 +181,12 @@ const Reports: React.FC = () => {
         u.id === currentUser.id || // Include the team leader themselves
         (u.role === 'sales_rep' && u.teamLeaderId === currentUser.id) // Include team members
       );
-      
+
       // If no team members found, show all users as fallback
       if (teamMembers.length <= 1) { // Only team leader found
-        console.log('No team members found for team leader:', currentUser.name);
-        console.log('Available users:', users.map(u => ({ name: u.name, role: u.role, teamLeaderId: u.teamLeaderId })));
         return users; // Show all users as fallback
       }
-      
+
       return teamMembers;
     }
     return [];
@@ -176,7 +195,7 @@ const Reports: React.FC = () => {
   // Get team members for team leader (including team leader)
   const getTeamMembers = () => {
     if (currentUser?.role === 'team_leader') {
-      return users.filter(u => 
+      return users.filter(u =>
         u.id === currentUser.id || // Include the team leader themselves
         (u.role === 'sales_rep' && u.teamLeaderId === currentUser.id) // Include team members
       );
@@ -191,39 +210,43 @@ const Reports: React.FC = () => {
   const generateTeamLeaderReport = (): TeamLeaderReport => {
     const teamMembers = getTeamMembers();
     const currentDateRange = getDateRange();
-    
+
     const memberDetails = teamMembers.map(member => {
-      const memberLeads = leads.filter(lead => lead.owner?.id === member.id);
+      const memberLeads = leads.filter(lead => 
+        lead.assignedToId === member.id || 
+        lead.ownerId === member.id || 
+        lead.owner?.id === member.id
+      );
       const memberMeetings = meetings.filter(meeting => meeting.assignedToId === member.id);
       const memberContracts = contracts.filter(contract => contract.createdById === member.id);
-      
+
       // Filter by date range
       let filteredLeads = memberLeads;
       let filteredMeetings = memberMeetings;
       let filteredContracts = memberContracts;
-      
+
       if (currentDateRange.startDate && currentDateRange.endDate) {
         filteredLeads = memberLeads.filter(lead => {
           const createdDate = lead.createdAt ? new Date(lead.createdAt) : null;
           return createdDate && createdDate >= currentDateRange.startDate! && createdDate <= currentDateRange.endDate!;
         });
-        
+
         filteredMeetings = memberMeetings.filter(meeting => {
           const meetingDate = meeting.date ? new Date(meeting.date) : null;
           return meetingDate && meetingDate >= currentDateRange.startDate! && meetingDate <= currentDateRange.endDate!;
         });
-        
+
         filteredContracts = memberContracts.filter(contract => {
           const contractDate = contract.contractDate ? new Date(contract.contractDate) : null;
           return contractDate && contractDate >= currentDateRange.startDate! && contractDate <= currentDateRange.endDate!;
         });
       }
-      
+
       const performance = calculateUserPerformance(member, currentDateRange);
-      
+
       return {
         user: member,
-        leads: filteredLeads,
+        leads: memberLeads, // Use all leads, not filtered by date
         meetings: filteredMeetings,
         contracts: filteredContracts,
         performance: {
@@ -233,7 +256,7 @@ const Reports: React.FC = () => {
         }
       };
     });
-    
+
     const teamPerformance = {
       totalLeads: memberDetails.reduce((sum, member) => sum + member.performance.totalLeads, 0),
       totalCalls: memberDetails.reduce((sum, member) => sum + member.performance.totalCalls, 0),
@@ -251,7 +274,7 @@ const Reports: React.FC = () => {
       totalRevenue: memberDetails.reduce((sum, member) => sum + member.performance.totalRevenue, 0),
       averageDealSize: memberDetails.reduce((sum, member) => sum + member.performance.totalRevenue, 0) / memberDetails.reduce((sum, member) => sum + member.contracts.length, 0) || 0
     };
-    
+
     return {
       teamLeader: currentUser as User,
       teamMembers,
@@ -264,75 +287,74 @@ const Reports: React.FC = () => {
   const generateSalesReport = (): SalesReportData => {
     const currentDateRange = getDateRange();
     const accessibleUsers = getAccessibleUsers();
-    
-    // Filter data by date range
-    let filteredLeads = leads;
+
+    // Filter data by date range - Only filter activities, not the leads themselves
+    // Keep all leads, but filter activities by date range
     let filteredMeetings = meetings;
     let filteredContracts = contracts;
-    
+
     if (currentDateRange.startDate && currentDateRange.endDate) {
-      filteredLeads = leads.filter(lead => {
-        const createdDate = lead.createdAt ? new Date(lead.createdAt) : null;
-        return createdDate && createdDate >= currentDateRange.startDate! && createdDate <= currentDateRange.endDate!;
-      });
-      
       filteredMeetings = meetings.filter(meeting => {
         const meetingDate = meeting.date ? new Date(meeting.date) : null;
         return meetingDate && meetingDate >= currentDateRange.startDate! && meetingDate <= currentDateRange.endDate!;
       });
-      
+
       filteredContracts = contracts.filter(contract => {
         const contractDate = contract.contractDate ? new Date(contract.contractDate) : null;
         return contractDate && contractDate >= currentDateRange.startDate! && contractDate <= currentDateRange.endDate!;
       });
     }
-    
+
     // Calculate metrics
-    const totalLeads = filteredLeads.length;
-    const closedDeals = filteredLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
-    const openDeals = filteredLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
+    const totalLeads = leads.length;
+    const closedDeals = leads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
+    const openDeals = leads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
     const totalRevenue = filteredContracts.reduce((sum, contract) => sum + contract.dealValue, 0);
     const averageDealSize = filteredContracts.length > 0 ? totalRevenue / filteredContracts.length : 0;
-    
+
     // Calculate completion rates
-    const totalCalls = filteredLeads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
-    const completedCalls = filteredLeads.filter(lead => lead.status !== LeadStatus.NO_ANSWER).length;
-    const totalVisits = filteredLeads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
-    const completedVisits = filteredLeads.filter(lead => lead.visits?.some(visit => visit.status === 'Completed')).length;
+    const totalCalls = leads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
+    const completedCalls = leads.filter(lead => lead.status !== LeadStatus.NO_ANSWER).length;
+    const totalVisits = leads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
+    const completedVisits = leads.filter(lead => lead.visits?.some(visit => visit.status === 'Completed')).length;
     const totalMeetings = filteredMeetings.length;
     const completedMeetings = filteredMeetings.filter(meeting => meeting.status === 'Completed').length;
-    
+
     // Calculate rates
     const conversionRate = totalLeads > 0 ? ((closedDeals + openDeals) / totalLeads) * 100 : 0;
     const callCompletionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
     const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0;
     const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
-    
+
     // Group data
-    const leadsByStatus = filteredLeads.reduce((acc, lead) => {
+    const leadsByStatus = leads.reduce((acc, lead) => {
       acc[lead.status] = (acc[lead.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
-    const leadsBySource = filteredLeads.reduce((acc, lead) => {
+
+    const leadsBySource = leads.reduce((acc, lead) => {
       acc[lead.source] = (acc[lead.source] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
-    
+
     const revenueByMonth = filteredContracts.reduce((acc, contract) => {
       const month = contract.contractDate ? new Date(contract.contractDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'Unknown';
       acc[month] = (acc[month] || 0) + contract.dealValue;
       return acc;
     }, {} as Record<string, number>);
-    
+
     // Top performing users
     const topPerformingUsers = accessibleUsers.map(user => {
-      const userLeads = filteredLeads.filter(lead => lead.owner?.id === user.id);
+      const userLeads = leads.filter(lead => 
+        lead.assignedToId === user.id || 
+        lead.ownerId === user.id || 
+        lead.owner?.id === user.id
+      );
       const userContracts = filteredContracts.filter(contract => contract.createdById === user.id);
       const userClosedDeals = userLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
       const userRevenue = userContracts.reduce((sum, contract) => sum + contract.dealValue, 0);
       const userConversionRate = userLeads.length > 0 ? (userClosedDeals / userLeads.length) * 100 : 0;
-      
+
       return {
         user,
         performance: {
@@ -343,10 +365,10 @@ const Reports: React.FC = () => {
         }
       };
     }).sort((a, b) => b.performance.totalRevenue - a.performance.totalRevenue).slice(0, 10);
-    
+
     return {
-      period: currentDateRange.startDate && currentDateRange.endDate ? 
-        `${currentDateRange.startDate.toLocaleDateString()} - ${currentDateRange.endDate.toLocaleDateString()}` : 
+      period: currentDateRange.startDate && currentDateRange.endDate ?
+        `${currentDateRange.startDate.toLocaleDateString()} - ${currentDateRange.endDate.toLocaleDateString()}` :
         'All Time',
       totalLeads,
       totalCalls,
@@ -374,50 +396,54 @@ const Reports: React.FC = () => {
   const getTeamProgress = () => {
     const teamMembers = getTeamMembers();
     const currentDateRange = getDateRange();
-    
-    return teamMembers.map(member => {
-      const memberLeads = leads.filter(lead => lead.owner?.id === member.id);
-      const memberMeetings = meetings.filter(meeting => meeting.assignedToId === member.id);
+
+          return teamMembers.map(member => {
+        const memberLeads = leads.filter(lead => 
+          lead.assignedToId === member.id || 
+          lead.ownerId === member.id || 
+          lead.owner?.id === member.id
+        );
+        const memberMeetings = meetings.filter(meeting => meeting.assignedToId === member.id);
       const memberContracts = contracts.filter(contract => contract.createdById === member.id);
-      
+
       // Filter by date range
       let filteredLeads = memberLeads;
       let filteredMeetings = memberMeetings;
       let filteredContracts = memberContracts;
-      
+
       if (currentDateRange.startDate && currentDateRange.endDate) {
         filteredLeads = memberLeads.filter(lead => {
           const createdDate = lead.createdAt ? new Date(lead.createdAt) : null;
           return createdDate && createdDate >= currentDateRange.startDate! && createdDate <= currentDateRange.endDate!;
         });
-        
+
         filteredMeetings = memberMeetings.filter(meeting => {
           const meetingDate = meeting.date ? new Date(meeting.date) : null;
           return meetingDate && meetingDate >= currentDateRange.startDate! && meetingDate <= currentDateRange.endDate!;
         });
-        
+
         filteredContracts = memberContracts.filter(contract => {
           const contractDate = contract.contractDate ? new Date(contract.contractDate) : null;
           return contractDate && contractDate >= currentDateRange.startDate! && contractDate <= currentDateRange.endDate!;
         });
       }
-      
+
       const performance = calculateUserPerformance(member, currentDateRange);
       const totalRevenue = filteredContracts.reduce((sum, contract) => sum + contract.dealValue, 0);
-      
+
       // Calculate progress percentages
-      const leadsProgress = filteredLeads.length > 0 ? 
-        (filteredLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL).length / filteredLeads.length) * 100 : 0;
-      
-      const callsProgress = performance.totalCalls > 0 ? 
+      const leadsProgress = memberLeads.length > 0 ?
+        (memberLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL).length / memberLeads.length) * 100 : 0;
+
+      const callsProgress = performance.totalCalls > 0 ?
         (performance.completedCalls / performance.totalCalls) * 100 : 0;
-      
-      const visitsProgress = performance.totalVisits > 0 ? 
+
+      const visitsProgress = performance.totalVisits > 0 ?
         (performance.completedVisits / performance.totalVisits) * 100 : 0;
-      
-      const meetingsProgress = performance.totalMeetings > 0 ? 
+
+      const meetingsProgress = performance.totalMeetings > 0 ?
         (performance.completedMeetings / performance.totalMeetings) * 100 : 0;
-      
+
       return {
         user: member,
         leads: filteredLeads,
@@ -448,44 +474,47 @@ const Reports: React.FC = () => {
     if (!user) return null;
 
     const dateRange = getDateRange();
-    
+
     // Determine which users' data to include
     let targetUserIds: string[] = [userId];
-    
+
     // If user is a sales_rep, also include their team members' data
     if (user.role === 'sales_rep') {
-      const teamMembers = users.filter(u => 
+      const teamMembers = users.filter(u =>
         u.role === 'sales_rep' && u.teamLeaderId === user.teamLeaderId
       );
       targetUserIds = teamMembers.map(u => u.id);
     }
-    
+
     // If user is a team_leader, include all their team members' data
     if (user.role === 'team_leader') {
-      const teamMembers = users.filter(u => 
+      const teamMembers = users.filter(u =>
         u.role === 'sales_rep' && u.teamLeaderId === user.id
       );
       targetUserIds = teamMembers.map(u => u.id);
     }
-    
-    // Filter data by target users and date range
-    const userLeads = leads.filter(lead => {
-      const isOwner = lead.owner?.id && targetUserIds.includes(lead.owner.id);
-      const isInDateRange = !dateRange.startDate || !dateRange.endDate || 
-        (lead.createdAt && new Date(lead.createdAt) >= dateRange.startDate && new Date(lead.createdAt) <= dateRange.endDate);
+
+          // Filter data by target users and date range
+      const userLeads = leads.filter(lead => {
+        const isOwner = (lead.assignedToId && targetUserIds.includes(lead.assignedToId)) || 
+                       (lead.ownerId && targetUserIds.includes(lead.ownerId)) ||
+                       (lead.owner?.id && targetUserIds.includes(lead.owner.id));
+        const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
+          (lead.createdAt && new Date(lead.createdAt) >= dateRange.startDate && new Date(lead.createdAt) <= dateRange.endDate);
       return isOwner && isInDateRange;
     });
 
+    
     const userMeetings = meetings.filter(meeting => {
       const isAssigned = targetUserIds.includes(meeting.assignedToId);
-      const isInDateRange = !dateRange.startDate || !dateRange.endDate || 
+      const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
         (meeting.date && new Date(meeting.date) >= dateRange.startDate && new Date(meeting.date) <= dateRange.endDate);
       return isAssigned && isInDateRange;
     });
 
     const userContracts = contracts.filter(contract => {
       const isCreator = contract.createdById && targetUserIds.includes(contract.createdById);
-      const isInDateRange = !dateRange.startDate || !dateRange.endDate || 
+      const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
         (contract.contractDate && new Date(contract.contractDate) >= dateRange.startDate && new Date(contract.contractDate) <= dateRange.endDate);
       return isCreator && isInDateRange;
     });
@@ -494,7 +523,8 @@ const Reports: React.FC = () => {
     const totalLeads = userLeads.length;
     const newLeads = userLeads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length;
     const activeLeads = userLeads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length;
-    const convertedLeads = userLeads.filter(lead => 
+    
+    const convertedLeads = userLeads.filter(lead =>
       lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL
     ).length;
     const lostLeads = userLeads.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW).length;
@@ -662,7 +692,7 @@ const Reports: React.FC = () => {
     try {
       const currentDateRange = getDateRange();
       let filename = '';
-      
+
       switch (exportType) {
         case 'team':
           if (isTeamLeader) {
@@ -694,13 +724,13 @@ const Reports: React.FC = () => {
           const allReports = allSalesMembers
             .map(user => generateSalesMemberReport(user.id))
             .filter(report => report !== null) as SalesMemberReport[];
-          
+
           if (allReports.length > 0) {
             filename = exportAllSalesMembersReport(allReports, currentDateRange);
           }
           break;
       }
-      
+
       toast.success(t('export.exportSuccess'));
     } catch (error) {
       console.error('Export error:', error);
@@ -793,28 +823,27 @@ const Reports: React.FC = () => {
     const { startDate, endDate } = dateRange;
     
     // Filter data by date range if specified
-    let userLeads = leads.filter(lead => lead.owner?.id === user.id);
+    let userLeads = leads.filter(lead => 
+      lead.assignedToId === user.id || 
+      lead.ownerId === user.id || 
+      lead.owner?.id === user.id
+    );
+    
     let userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
     let userContracts = contracts.filter(contract => contract.createdById === user.id);
 
-    // Apply date filtering
-    if (startDate && endDate) {
-      userLeads = userLeads.filter(lead => {
-        const createdDate = lead.createdAt ? new Date(lead.createdAt) : null;
-        const lastCallDate = lead.lastCallDate ? new Date(lead.lastCallDate) : null;
-        const lastVisitDate = lead.lastVisitDate ? new Date(lead.lastVisitDate) : null;
-        
-        return (createdDate && createdDate >= startDate && createdDate <= endDate) ||
-               (lastCallDate && lastCallDate >= startDate && lastCallDate <= endDate) ||
-               (lastVisitDate && lastVisitDate >= startDate && lastVisitDate <= endDate);
-      });
+    // Apply date filtering - Only filter activities, not the leads themselves
+    // Keep all leads assigned to the user, but filter activities by date range
+    let userMeetingsInRange = userMeetings;
+    let userContractsInRange = userContracts;
 
-      userMeetings = userMeetings.filter(meeting => {
+    if (startDate && endDate) {
+      userMeetingsInRange = userMeetings.filter(meeting => {
         const meetingDate = meeting.date ? new Date(meeting.date) : null;
         return meetingDate && meetingDate >= startDate && meetingDate <= endDate;
       });
 
-      userContracts = userContracts.filter(contract => {
+      userContractsInRange = userContracts.filter(contract => {
         const contractDate = contract.contractDate ? new Date(contract.contractDate) : null;
         return contractDate && contractDate >= startDate && contractDate <= endDate;
       });
@@ -840,13 +869,13 @@ const Reports: React.FC = () => {
           const callDate = call.date ? new Date(call.date) : null;
           return callDate && callDate >= startDate && callDate <= endDate;
         });
-        
+
         totalCalls += callsInRange.length;
-        
+
         callsInRange.forEach(call => {
           const isCompleted = call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered';
           if (isCompleted) completedCalls++;
-          
+
           userCalls.push({
             leadId: lead.id || '',
             leadName: lead.nameEn || lead.nameAr || 'N/A',
@@ -858,14 +887,14 @@ const Reports: React.FC = () => {
         });
       }
     });
-    
+
     // If no nested calls found, try global API data as fallback
     if (totalCalls === 0) {
       const userLeadIds = userLeads.map(lead => lead.id);
-      const userCallsFromAPI = allCalls.filter((call: any) => 
+      const userCallsFromAPI = allCalls.filter((call: any) =>
         userLeadIds.includes(call.leadId || call.lead_id)
       );
-      
+
       userCallsFromAPI.forEach((call: any) => {
         if (!startDate || !endDate) {
           totalCalls++;
@@ -877,13 +906,13 @@ const Reports: React.FC = () => {
             return;
           }
         }
-        
+
         const isCompleted = call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered';
         if (isCompleted) completedCalls++;
-        
-        const leadName = userLeads.find(lead => lead.id === (call.leadId || call.lead_id))?.nameEn || 
-                        userLeads.find(lead => lead.id === (call.leadId || call.lead_id))?.nameAr || 'N/A';
-        
+
+        const leadName = userLeads.find(lead => lead.id === (call.leadId || call.lead_id))?.nameEn ||
+          userLeads.find(lead => lead.id === (call.leadId || call.lead_id))?.nameAr || 'N/A';
+
         userCalls.push({
           leadId: call.leadId || call.lead_id || '',
           leadName: leadName,
@@ -914,13 +943,13 @@ const Reports: React.FC = () => {
           const visitDate = visit.date ? new Date(visit.date) : null;
           return visitDate && visitDate >= startDate && visitDate <= endDate;
         });
-        
+
         totalVisits += visitsInRange.length;
-        
+
         visitsInRange.forEach(visit => {
           const isCompleted = visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful');
           if (isCompleted) completedVisits++;
-          
+
           userVisits.push({
             leadId: lead.id || '',
             leadName: lead.nameEn || lead.nameAr || 'N/A',
@@ -931,14 +960,14 @@ const Reports: React.FC = () => {
         });
       }
     });
-    
+
     // If no nested visits found, try global API data as fallback
     if (totalVisits === 0) {
       const userLeadIds = userLeads.map(lead => lead.id);
-      const userVisitsFromAPI = allVisits.filter((visit: any) => 
+      const userVisitsFromAPI = allVisits.filter((visit: any) =>
         userLeadIds.includes(visit.leadId || visit.lead_id)
       );
-      
+
       userVisitsFromAPI.forEach((visit: any) => {
         if (!startDate || !endDate) {
           totalVisits++;
@@ -950,13 +979,13 @@ const Reports: React.FC = () => {
             return;
           }
         }
-        
+
         const isCompleted = visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful');
         if (isCompleted) completedVisits++;
-        
-        const leadName = userLeads.find(lead => lead.id === (visit.leadId || visit.lead_id))?.nameEn || 
-                        userLeads.find(lead => lead.id === (visit.leadId || visit.lead_id))?.nameAr || 'N/A';
-        
+
+        const leadName = userLeads.find(lead => lead.id === (visit.leadId || visit.lead_id))?.nameEn ||
+          userLeads.find(lead => lead.id === (visit.leadId || visit.lead_id))?.nameAr || 'N/A';
+
         userVisits.push({
           leadId: visit.leadId || visit.lead_id || '',
           leadName: leadName,
@@ -983,11 +1012,11 @@ const Reports: React.FC = () => {
     userLeads.forEach(lead => {
       const followUpCount = Math.floor(Math.random() * 3) + 1; // 1-3 follow-ups per lead
       totalFollowUps += followUpCount;
-      
+
       for (let i = 0; i < followUpCount; i++) {
         const isCompleted = Math.random() > 0.3; // 70% completion rate
         if (isCompleted) completedFollowUps++;
-        
+
         userFollowUps.push({
           leadId: lead.id || '',
           leadName: lead.nameEn || lead.nameAr || 'N/A',
@@ -999,8 +1028,8 @@ const Reports: React.FC = () => {
       }
     });
 
-    const totalMeetings = userMeetings.length;
-    const completedMeetings = userMeetings.filter(meeting => meeting.status === 'Completed').length;
+    const totalMeetings = userMeetingsInRange.length;
+    const completedMeetings = userMeetingsInRange.filter(meeting => meeting.status === 'Completed').length;
 
     const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
     const openDeals = userLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
@@ -1012,15 +1041,15 @@ const Reports: React.FC = () => {
     const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
     const followUpCompletionRate = totalFollowUps > 0 ? (completedFollowUps / totalFollowUps) * 100 : 0;
 
-    // Calculate revenue
-    const totalRevenue = userContracts.reduce((sum, contract) => sum + contract.dealValue, 0);
-    const averageDealSize = userContracts.length > 0 ? totalRevenue / userContracts.length : 0;
+    // Calculate revenue using date-filtered contracts
+    const totalRevenue = userContractsInRange.reduce((sum, contract) => sum + contract.dealValue, 0);
+    const averageDealSize = userContractsInRange.length > 0 ? totalRevenue / userContractsInRange.length : 0;
 
     // Get last activity date within the date range
     const allActivities = [
       ...userLeads.map(lead => ({ date: lead.lastCallDate, type: 'call', leadName: lead.nameEn || lead.nameAr || '' })),
       ...userLeads.map(lead => ({ date: lead.lastVisitDate, type: 'visit', leadName: lead.nameEn || lead.nameAr || '' })),
-      ...userMeetings.map(meeting => ({ date: meeting.date, type: 'meeting', leadName: meeting.client }))
+      ...userMeetingsInRange.map(meeting => ({ date: meeting.date, type: 'meeting', leadName: meeting.client }))
     ].filter(activity => {
       if (!activity.date || activity.date === '------') return false;
       if (!startDate || !endDate) return true;
@@ -1061,8 +1090,8 @@ const Reports: React.FC = () => {
       visits: userVisits,
       followUps: userFollowUps,
       leads: userLeads,
-      meetings: userMeetings,
-      contracts: userContracts
+      meetings: userMeetingsInRange,
+      contracts: userContractsInRange
     };
   };
 
@@ -1071,6 +1100,7 @@ const Reports: React.FC = () => {
     const accessibleUsers = getAccessibleUsers();
     const currentDateRange = getDateRange();
     const performances = accessibleUsers.map(user => calculateUserPerformance(user, currentDateRange));
+
 
     const totalUsers = accessibleUsers.length;
     const totalLeads = performances.reduce((sum, p) => sum + p.totalLeads, 0);
@@ -1289,17 +1319,17 @@ const Reports: React.FC = () => {
           {/* Export Controls */}
           <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
             <div className="flex gap-2">
-                              <select
-                  value={exportType}
-                  onChange={(e) => setExportType(e.target.value as 'team' | 'sales' | 'user' | 'salesMember' | 'allSalesMembers')}
-                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="team">{t('export.reportTypes.teamLeader')}</option>
-                  <option value="sales">{t('export.reportTypes.sales')}</option>
-                  <option value="user">{t('export.reportTypes.userPerformance')}</option>
-                  <option value="salesMember">{t('export.reportTypes.salesMember')}</option>
-                  <option value="allSalesMembers">{t('export.reportTypes.allSalesMembers')}</option>
-                </select>
+              <select
+                value={exportType}
+                onChange={(e) => setExportType(e.target.value as 'team' | 'sales' | 'user' | 'salesMember' | 'allSalesMembers')}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="team">{t('export.reportTypes.teamLeader')}</option>
+                <option value="sales">{t('export.reportTypes.sales')}</option>
+                <option value="user">{t('export.reportTypes.userPerformance')}</option>
+                <option value="salesMember">{t('export.reportTypes.salesMember')}</option>
+                <option value="allSalesMembers">{t('export.reportTypes.allSalesMembers')}</option>
+              </select>
               <button
                 onClick={handleExport}
                 disabled={isExporting}
@@ -1365,11 +1395,11 @@ const Reports: React.FC = () => {
                   onChange={(e) => setActivityFilter(e.target.value as any)}
                   className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[120px]"
                 >
-                                  <option value="all">{t('additionalLabels.allActivities')}</option>
-                <option value="calls">{t('additionalLabels.callsOnly')}</option>
-                <option value="visits">{t('additionalLabels.visitsOnly')}</option>
-                <option value="meetings">{t('additionalLabels.meetingsOnly')}</option>
-                <option value="deals">{t('additionalLabels.dealsOnly')}</option>
+                  <option value="all">{t('additionalLabels.allActivities')}</option>
+                  <option value="calls">{t('additionalLabels.callsOnly')}</option>
+                  <option value="visits">{t('additionalLabels.visitsOnly')}</option>
+                  <option value="meetings">{t('additionalLabels.meetingsOnly')}</option>
+                  <option value="deals">{t('additionalLabels.dealsOnly')}</option>
                 </select>
 
                 {/* Custom Date Range Picker */}
@@ -1399,9 +1429,8 @@ const Reports: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                  className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1 ${
-                    isFilterExpanded ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
+                  className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-1 ${isFilterExpanded ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
                 >
                   <Filter className="h-4 w-4" />
                   <span className="hidden sm:inline">Advanced</span>
@@ -1469,7 +1498,7 @@ const Reports: React.FC = () => {
                       placeholder="e.g., 20"
                     />
                   </div>
-                  
+
                   {/* Role Filter */}
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
@@ -1487,9 +1516,9 @@ const Reports: React.FC = () => {
                     <label className="block text-xs font-medium text-gray-700 mb-1">Activity Level</label>
                     <select className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                       <option value="">Any Level</option>
-                                      <option value="high">{t('additionalLabels.highActivity')}</option>
-                <option value="medium">{t('additionalLabels.mediumActivity')}</option>
-                <option value="low">{t('additionalLabels.lowActivity')}</option>
+                      <option value="high">{t('additionalLabels.highActivity')}</option>
+                      <option value="medium">{t('additionalLabels.mediumActivity')}</option>
+                      <option value="low">{t('additionalLabels.lowActivity')}</option>
                     </select>
                   </div>
                 </div>
@@ -1672,7 +1701,7 @@ const Reports: React.FC = () => {
                             {t('teamLeader.viewProgress')}
                           </button>
                         </div>
-                        
+
                         <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                           <div>
                             <span className="text-gray-500">Leads:</span>
@@ -1700,8 +1729,8 @@ const Reports: React.FC = () => {
                               <span>{member.performance.leadsProgress.toFixed(1)}%</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                              <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${member.performance.leadsProgress}%` }}
                               ></div>
                             </div>
@@ -1712,8 +1741,8 @@ const Reports: React.FC = () => {
                               <span>{member.performance.callsProgress.toFixed(1)}%</span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2">
-                              <div 
-                                className="bg-green-600 h-2 rounded-full transition-all duration-300" 
+                              <div
+                                className="bg-green-600 h-2 rounded-full transition-all duration-300"
                                 style={{ width: `${member.performance.callsProgress}%` }}
                               ></div>
                             </div>
@@ -1824,13 +1853,13 @@ const Reports: React.FC = () => {
                             <span>{progress.performance.leadsProgress.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-blue-600 h-3 rounded-full transition-all duration-300" 
+                            <div
+                              className="bg-blue-600 h-3 rounded-full transition-all duration-300"
                               style={{ width: `${progress.performance.leadsProgress}%` }}
                             ></div>
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {progress.leads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL).length} 
+                            {progress.leads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL).length}
                             of {progress.leads.length} {t('teamLeader.leadsConverted')}
                           </div>
                         </div>
@@ -1841,8 +1870,8 @@ const Reports: React.FC = () => {
                             <span>{progress.performance.callsProgress.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-green-600 h-3 rounded-full transition-all duration-300" 
+                            <div
+                              className="bg-green-600 h-3 rounded-full transition-all duration-300"
                               style={{ width: `${progress.performance.callsProgress}%` }}
                             ></div>
                           </div>
@@ -1857,8 +1886,8 @@ const Reports: React.FC = () => {
                             <span>{progress.performance.visitsProgress.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-purple-600 h-3 rounded-full transition-all duration-300" 
+                            <div
+                              className="bg-purple-600 h-3 rounded-full transition-all duration-300"
                               style={{ width: `${progress.performance.visitsProgress}%` }}
                             ></div>
                           </div>
@@ -1873,8 +1902,8 @@ const Reports: React.FC = () => {
                             <span>{progress.performance.meetingsProgress.toFixed(1)}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-3">
-                            <div 
-                              className="bg-orange-600 h-3 rounded-full transition-all duration-300" 
+                            <div
+                              className="bg-orange-600 h-3 rounded-full transition-all duration-300"
                               style={{ width: `${progress.performance.meetingsProgress}%` }}
                             ></div>
                           </div>
@@ -1919,13 +1948,13 @@ const Reports: React.FC = () => {
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">{t('export.reportTypes.salesMember')}</h3>
                 <div className="flex items-center gap-2">
-                                     <div className="text-sm text-gray-500">
-                     {currentUser?.role === 'team_leader' ? 'Team Members Performance Report' : 'Team Performance Report'}
-                   </div>
+                  <div className="text-sm text-gray-500">
+                    {currentUser?.role === 'team_leader' ? 'Team Members Performance Report' : 'Team Performance Report'}
+                  </div>
                 </div>
               </div>
 
-                            {/* Sales Member Report Content - All Users Combined Data */}
+              {/* Sales Member Report Content - All Users Combined Data */}
               <div className="space-y-6">
                 {/* Report Header */}
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200 p-4">
@@ -1949,7 +1978,7 @@ const Reports: React.FC = () => {
                         const report = generateSalesMemberReport(user.id);
                         return sum + (report?.conversionRate || 0);
                       }, 0) / allSalesMembers.length;
-                      
+
                       return (
                         <>
                           <div className="text-center">
@@ -2028,7 +2057,7 @@ const Reports: React.FC = () => {
                             <Phone className="h-8 w-8 text-blue-600" />
                           </div>
                         </div>
-                        
+
                         <div className="bg-green-50 rounded-lg p-4">
                           <div className="flex items-center justify-between">
                             <div>
@@ -2039,7 +2068,7 @@ const Reports: React.FC = () => {
                             <Calendar className="h-8 w-8 text-green-600" />
                           </div>
                         </div>
-                        
+
                         <div className="bg-purple-50 rounded-lg p-4">
                           <div className="flex items-center justify-between">
                             <div>
@@ -2050,7 +2079,7 @@ const Reports: React.FC = () => {
                             <MapPin className="h-8 w-8 text-purple-600" />
                           </div>
                         </div>
-                        
+
                         <div className="bg-orange-50 rounded-lg p-4">
                           <div className="flex items-center justify-between">
                             <div>
@@ -2196,12 +2225,11 @@ const Reports: React.FC = () => {
                       return allActivities.map((activity, index) => (
                         <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                           <div className="flex items-center gap-3">
-                            <div className={`w-2 h-2 rounded-full ${
-                              activity.type === 'call' ? 'bg-blue-500' :
+                            <div className={`w-2 h-2 rounded-full ${activity.type === 'call' ? 'bg-blue-500' :
                               activity.type === 'meeting' ? 'bg-green-500' :
-                              activity.type === 'visit' ? 'bg-purple-500' :
-                              'bg-gray-500'
-                            }`}></div>
+                                activity.type === 'visit' ? 'bg-purple-500' :
+                                  'bg-gray-500'
+                              }`}></div>
                             <div>
                               <p className="text-sm font-medium text-gray-900">{activity.description}</p>
                               <p className="text-xs text-gray-500">{activity.leadName}</p>
@@ -2224,7 +2252,7 @@ const Reports: React.FC = () => {
                     {(() => {
                       const allSalesMembers = getAccessibleUsers().filter(user => user.role === 'sales_rep' || user.role === 'team_leader');
                       const combinedLeadsByStatus: Record<string, number> = {};
-                      
+
                       allSalesMembers.forEach(user => {
                         const report = generateSalesMemberReport(user.id);
                         if (report) {
@@ -2251,7 +2279,7 @@ const Reports: React.FC = () => {
                     {(() => {
                       const allSalesMembers = getAccessibleUsers().filter(user => user.role === 'sales_rep' || user.role === 'team_leader');
                       const combinedLeadsBySource: Record<string, number> = {};
-                      
+
                       allSalesMembers.forEach(user => {
                         const report = generateSalesMemberReport(user.id);
                         if (report) {
@@ -2302,12 +2330,11 @@ const Reports: React.FC = () => {
                               </div>
                             </div>
                             <div className="text-right ml-4">
-                              <div className={`px-2 py-1 rounded text-xs font-medium ${
-                                lead.status === 'closed_deal' ? 'bg-green-100 text-green-800' :
+                              <div className={`px-2 py-1 rounded text-xs font-medium ${lead.status === 'closed_deal' ? 'bg-green-100 text-green-800' :
                                 lead.status === 'open_deal' ? 'bg-blue-100 text-blue-800' :
-                                lead.status === 'fresh_lead' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
+                                  lead.status === 'fresh_lead' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                }`}>
                                 {lead.status.replace('_', ' ')}
                               </div>
                               <div className="text-xs text-gray-500 mt-1">
@@ -2341,11 +2368,10 @@ const Reports: React.FC = () => {
                               </div>
                             </div>
                             <div className="text-right ml-4">
-                              <div className={`px-2 py-1 rounded text-xs font-medium ${
-                                meeting.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                              <div className={`px-2 py-1 rounded text-xs font-medium ${meeting.status === 'Completed' ? 'bg-green-100 text-green-800' :
                                 meeting.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
                                 {meeting.status}
                               </div>
                               <div className="text-xs text-gray-500 mt-1 capitalize">
@@ -2386,11 +2412,10 @@ const Reports: React.FC = () => {
                               <div className="font-bold text-green-600">
                                 {contract.dealValue.toLocaleString()} EGP
                               </div>
-                              <div className={`px-2 py-1 rounded text-xs font-medium mt-1 ${
-                                contract.status === 'Signed' ? 'bg-green-100 text-green-800' :
+                              <div className={`px-2 py-1 rounded text-xs font-medium mt-1 ${contract.status === 'Signed' ? 'bg-green-100 text-green-800' :
                                 contract.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
+                                  'bg-red-100 text-red-800'
+                                }`}>
                                 {contract.status}
                               </div>
                             </div>

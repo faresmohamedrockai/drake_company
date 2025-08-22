@@ -15,7 +15,18 @@ export const getZones = async () => {
 
 export const getLeads = async () => {
     const response = await axiosInterceptor.get('/leads');
-    return response.data.leads as Lead[];
+    
+    // Handle different possible response structures
+    if (response.data.leads) {
+        return response.data.leads as Lead[];
+    } else if (response.data.data) {
+        return response.data.data as Lead[];
+    } else if (Array.isArray(response.data)) {
+        return response.data as Lead[];
+    } else {
+        console.error('Unexpected leads API response structure:', response.data);
+        return [];
+    }
 }
 
 // Get leads with calls and visits populated
@@ -46,7 +57,18 @@ export const bulkUpdateLeads = async (leadIds: string[], updateData: Partial<Lea
 
 export const getUsers = async () => {
     const response = await axiosInterceptor.get('/auth/users');
-    return response.data as User[];
+    
+    // Handle different possible response structures
+    if (response.data.users) {
+        return response.data.users as User[];
+    } else if (response.data.data) {
+        return response.data.data as User[];
+    } else if (Array.isArray(response.data)) {
+        return response.data as User[];
+    } else {
+        console.error('Unexpected users API response structure:', response.data);
+        return [];
+    }
 }
 
 export const getProperties = async () => {
@@ -56,7 +78,18 @@ export const getProperties = async () => {
 
 export const getMeetings = async () => {
     const response = await axiosInterceptor.get('/meetings');
-    return response.data.meetings as Meeting[];
+    
+    // Handle different possible response structures
+    if (response.data.meetings) {
+        return response.data.meetings as Meeting[];
+    } else if (response.data.data) {
+        return response.data.data as Meeting[];
+    } else if (Array.isArray(response.data)) {
+        return response.data as Meeting[];
+    } else {
+        console.error('Unexpected meetings API response structure:', response.data);
+        return [];
+    }
 }
 
 export const getContracts = async () => {
