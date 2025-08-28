@@ -80,33 +80,37 @@ export interface Lead {
   nameAr?: string; // Arabic name
   gender?: string; // Arabic name
   description?: string; // Arabic name
-  otherProject?: string; 
+  otherProject?: string;
   contact?: string;
   contacts?: string[];
-  meetings?:Meeting[];
+  meetings?: Meeting[];
   email?: string;
-  familyName?:string
-  firstConection?:string|Date ;
+  familyName?: string
+  toAgentId: string;
+  transferType: string;
+  // notes: string;
+  firstConection?: string | Date;
   budget: number;
   inventoryInterestId?: string;
   projectInterestId?: string;
   source: string;
-  interest:Interest;
+  interest: Interest;
   tier: Tier;
-  cil?:boolean
+  cil?: boolean
   status: LeadStatus;
   lastCallDate?: string;
   lastVisitDate?: string;
-  assignedToId: string;
+  // assignedToId: string;
   ownerId?: string; // Backend uses this field name
   createdAt?: string;
   createdBy?: string;
-  inventoryInterest?:any
-  projectInterest?:any
-  project?:any | null;
+  inventoryInterest?: any
+  projectInterest?: any
+  project?: any | null;
   notes?: string[] | null;
   calls?: CallLog[] | null;
   visits?: VisitLog[] | null;
+  transfers: []
   owner?: User | null;
 }
 
@@ -125,8 +129,10 @@ export interface VisitLog {
   inventoryId: string;
   id: string;
   leadId: string;
+  type: string
   date: string;
   project: string;
+  meettingId: string;
   status: string;
   objections: string;
   notes: string;
@@ -239,6 +245,7 @@ export interface Meeting {
   leadId?: string;
   date: string;
   time: string;
+  // meetingDone?: boolean;
   duration: string;
   type: string;
   status: 'Scheduled' | 'Completed' | 'Cancelled';
@@ -246,6 +253,7 @@ export interface Meeting {
   notes?: string;
   createdAt?: string;
   createdBy?: string;
+  createdById?: string;
   location?: string;
   locationType?: string;
 }
@@ -254,6 +262,7 @@ export interface Contract {
   id?: string;
   leadId?: string;
   inventoryId: string;
+  cNumber: string;
   dealValue: number;
   contractDate: string;
   status: 'Pending' | 'Signed' | 'Cancelled';
@@ -284,17 +293,17 @@ export interface Task {
   reminder: boolean;
   reminderTime?: Date | {} | null; // Handle empty object and null cases from backend
   emailSent: boolean;
-  
+
   // Relations
   assignedToId?: string | null;
   createdById?: string | null;
   leadId?: string | null;
   projectId?: string | null;
   inventoryId?: string | null;
-  
+
   createdAt: Date | {} | null; // Handle empty object and null cases from backend
   updatedAt: Date | {} | null; // Handle empty object and null cases from backend
-  
+
   // Populated relations
   assignedTo?: User | null;
   createdBy?: User | null;
@@ -330,7 +339,7 @@ export interface CreateTaskDto {
   inventoryId?: string | null;
 }
 
-export interface UpdateTaskDto extends Partial<CreateTaskDto> {}
+export interface UpdateTaskDto extends Partial<CreateTaskDto> { }
 
 export interface TaskFilters {
   status?: Task['status'];

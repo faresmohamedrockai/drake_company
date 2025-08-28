@@ -1,16 +1,16 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useData } from '../../contexts/DataContext';
+
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { X, Phone, Calendar, MessageSquare, Plus, Loader2, DollarSign, MapPin, Clock } from 'lucide-react';
+import { X, Phone, Calendar, Plus, DollarSign, MapPin, Clock, Bot, Home,UserPlus } from 'lucide-react';
 import { Lead, CallLog, VisitLog, Property, LeadStatus, Interest, Tier } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RotateCw } from 'lucide-react';
+
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Project } from '../inventory/ProjectsTab';
 import { Id, toast } from 'react-toastify';
-import { formatDate } from '../../utils/formatters';
+
 import { PhoneNumber } from '../ui/PhoneNumber';
 
 
@@ -20,8 +20,18 @@ interface LeadModalProps {
   onClose: () => void;
 }
 
-function addSpacesToCamelCase(text: string) {
-  return text.replace(/([a-z])([A-Z])/g, '$1 $2');
+
+interface Agent {
+  name: string;
+}
+
+interface Transfer {
+  id: string | number;
+  fromAgent: Agent;
+  toAgent: Agent;
+  transferType?: string;
+  notes?: string;
+  createdAt: string;
 }
 
 const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
@@ -31,6 +41,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const [newNote, setNewNote] = useState('');
   const [showCallForm, setShowCallForm] = useState(false);
   const [showVisitForm, setShowVisitForm] = useState(false);
+  const [aiTips, setAiTips] = useState<any>(null);
+  const [loadingTips, setLoadingTips] = useState(false);
   const [showDescriptionForm, setShowDescriptionForm] = useState(false);
   const [isSavingDescription, setIsSavingDescription] = useState(false);
 
@@ -54,6 +66,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     objections: '',
     notes: ''
   } as VisitLog);
+  // console.log(i18n);
 
 
   const [descriptionForm, setDescriptionForm] = useState({
@@ -66,6 +79,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
   const [notes, setNotes] = useState<string[]>(lead.notes || []);
 
+  const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
 
   // فوق داخل الكمبوننت
   const [showPhoneForm, setShowPhoneForm] = useState(false);
@@ -92,6 +106,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
 
 
+console.log(lead);
 
 
 
@@ -193,12 +208,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       setVisitForm({
         inventoryId: '',
         id: '',
+        type: 'site_visit',
+        meettingId: '',
         leadId: '',
         createdBy: '',
         date: new Date().toISOString().split('T')[0],
         project: '',
         status: '',
         objections: '',
+        // type:"",
         notes: ''
       });
       setShowVisitForm(false);
@@ -209,6 +227,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       toast.error(error.response.data.message[0] || "Error adding visit log");
     }
   });
+
+
+
+
   const { data: calls, isLoading: isLoadingCalls } = useQuery<CallLog[]>({
     queryKey: [`calls-${currentLead.id}`],
     staleTime: 1000 * 60 * 5,
@@ -219,6 +241,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     staleTime: 1000 * 60 * 5,
     queryFn: () => getVisits()
   });
+
+
+  const [visitsSt, setVisits] = useState<VisitLog[]>([])
+
+
+
 
   // Sync currentLead with prop lead and refreshKey
   React.useEffect(() => {
@@ -417,6 +445,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
 
 
+
+
+
+
   const handleAddNote = () => {
     if (newNote.trim()) {
       setIsUpdate(true);
@@ -429,7 +461,50 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   };
 
 
+  const [loading, setLoading] = useState(false)
 
+
+
+  const handelChange = async (e, visit: VisitLog) => {
+    const isChecked = e.target.checked;
+
+    if (loading) return;
+    setLoading(true);
+
+    // 👇 يبدأ بـ Loading
+    // const toastId = toast.loading("Updating status... ⏳");
+
+    try {
+      const res = await axiosInterceptor.patch(
+        `${import.meta.env.VITE_BASE_URL}/api/visits/${visit.id}`,
+        {
+          status: isChecked ? "Completed" : "pending",
+          type: "site_visite",
+          meettingId: visit.meettingId,
+        }
+      );
+
+      if (res.status === 200) {
+        // 👇 يتحول لنجاح ويقفل بعد ثانيتين
+        toast.success("Status Changed Successfully ✅", {
+          id: toastId,
+          duration: 2000,
+        });
+
+        const updatedVisits = await getVisits();
+        setVisits(updatedVisits as VisitLog[]);
+      }
+    } catch (err: any) {
+      // 👇 يتحول لفشل ويقفل بعد ثانيتين
+      toast.error(err?.response?.data?.message || "Failed to update visit ❌", {
+        id: toastId,
+        duration: 2000,
+      });
+      console.error("Error updating visit:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
 
@@ -447,8 +522,18 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   }, [isUpdate]);
 
   useEffect(() => {
+
+
+    // تعديل الدالة لتقبل أي جزء من الـ Lead
+    const updateLeadNote = async (leadId: string, data: Partial<Lead>) => {
+      try {
+        await axiosInterceptor.patch(`/leads/${leadId}`, data);
+      } catch (err) {
+        console.error('Error updating lead', err);
+      }
+    };
     if (isUpdate) {
-      updateLead({ ...currentLead, notes: notes });
+      updateLeadNote(lead!.id, { notes });; // ابعت الملاحظات فقط
     }
   }, [notes]);
 
@@ -486,6 +571,81 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   //   }
   // };
 
+const parseDate = (dateStr: string) => {
+  if (!dateStr) return null;
+  // لو التاريخ بالصيغة dd/MM/yyyy
+  const parts = dateStr.split("/");
+  if (parts.length === 3) {
+    const [day, month, year] = parts;
+    return new Date(`${year}-${month}-${day}`);
+  }
+  // fallback: حاول تحوّله عادي
+  return new Date(dateStr);
+};
+
+  // Helper to combine and sort activities
+const getActivities = (lead: any) => {
+  const activities: any = [];
+
+  // 🆕 Lead Created
+  if (lead?.createdAt) {
+    activities.push({
+      id: `lead-created-${lead.id}`,
+      type: "lead_created",
+      title: "Lead created",
+      description: `Lead was created At ${lead.createdAt || "system"}`,
+      date: parseDate(lead.createdAt), // ✅ parse هنا
+      icon: <UserPlus size={18} />,
+      color: "bg-gray-100 text-gray-600",
+    });
+  }
+
+  // Calls
+  lead?.calls?.forEach((call: any) => {
+    activities.push({
+      id: call.id,
+      type: "call",
+      title: "Phone call made",
+      description: call.notes?.trim() || "Discussed project details",
+      date: parseDate(call.date), // ✅ parse هنا
+      icon: <Phone size={18} />,
+      color: "bg-blue-100 text-blue-600",
+    });
+  });
+
+  // Meetings
+  lead?.meetings?.forEach((meeting: any) => {
+    activities.push({
+      id: meeting.id,
+      type: "meeting",
+      title: "Meeting scheduled",
+      description: meeting.notes?.trim() || "Meeting with client",
+      date: parseDate(meeting.date), // ✅
+      icon: <Calendar size={18} />,
+      color: "bg-green-100 text-green-600",
+    });
+  });
+
+  // Visits
+  lead?.visits?.forEach((visit: any, index: number) => {
+    activities.push({
+      id: `visit-${index}`,
+      type: "visit",
+      title: "Site visit",
+      description: visit.notes?.trim() || "Client visited project location",
+      date: parseDate(visit.date), // ✅
+      icon: <Home size={18} />,
+      color: "bg-purple-100 text-purple-600",
+    });
+  });
+
+  // ✅ Sort by date (newest first)
+ return activities.sort(
+  (a, b) =>
+    (b.date ? b.date.getTime() : 0) -
+    (a.date ? a.date.getTime() : 0)
+);
+};
 
 
 
@@ -508,7 +668,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     setTimeout(() => setRefreshKey(k => k + 1), 600); // Simulate loading
   };
 
-  console.log(leads);
+  // console.log(leads);
 
   const handleSaveDescription = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -534,8 +694,38 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   };
 
 
+
+
+
+  const fetchAiTips = async () => {
+    try {
+      setLoadingTips(true);
+      const res = await axiosInterceptor.get(`/ai/tip-lead/${lead.id}`);
+      // console.log(res.data);
+
+      setAiTips(res.data);
+      console.log(aiTips);
+
+      // const resopnd=res.data
+      // console.log(resopnd)
+    } catch (err) {
+      console.error("Error fetching AI tips", err);
+    } finally {
+      setLoadingTips(false);
+      // setAiTips("");
+    }
+  };
+
+
+
+
+
+
+
   if (!isOpen) return null;
 
+
+  // if(loading) return toast.loading("loading....");
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-1 sm:p-2 md:p-4">
       <div className="bg-white rounded-lg sm:rounded-xl w-full max-w-[95vw] sm:max-w-2xl md:max-w-4xl lg:max-w-6xl h-[98vh] sm:h-[95vh] overflow-y-auto relative shadow-2xl">
@@ -631,7 +821,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-gray-500 text-xs sm:text-sm">Budget</span>
                 <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
-                  EGP{" "}
+                  {" "}
                   {currentLead.budget && Number(currentLead.budget) > 0
                     ? new Intl.NumberFormat("en-US", {
                       style: "currency",
@@ -650,7 +840,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               <div className="flex flex-col min-w-0 flex-1">
                 <span className="text-gray-500 text-xs sm:text-sm">Project</span>
                 <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
-                  {currentLead.projectInterest?.nameEn ||currentLead.projectInterest?.nameAr ||  currentLead.otherProject || "N/A"}
+                  {currentLead.projectInterest?.nameEn || currentLead.projectInterest?.nameAr || currentLead.otherProject || "N/A"}
                 </span>
               </div>
             </div>
@@ -876,7 +1066,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
         {/* Enhanced Tabs */}
         <div className="px-2 sm:px-3 md:px-6 pt-2 sm:pt-3 md:pt-4">
           <div className="flex gap-1 sm:gap-2 md:gap-4 lg:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-none">
-            {['details', 'Description', 'calls', 'visits', 'notes', 'phones'].map((tab) => (
+            {['details', 'Description', 'Ai Summry', 'calls', 'visits', 'notes', "Transfer History", "Activity"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -938,7 +1128,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   <div>
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider">First Connection Date</label>
                     <p className="text-sm font-medium text-gray-900 mt-1">
-                      {currentLead.firstConection ? currentLead.firstConection : 'Not specified'}
+                      {currentLead.firstConection ? currentLead?.firstConection : 'Not specified'}
                     </p>
                   </div>
                   <div>
@@ -1060,6 +1250,62 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               </div>
             </div>
           )}
+          {activeTab === 'Ai Summry' && (
+            <div>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-900">
+                  {t('aiSummry') || 'AI Tips'}
+                </h3>
+                <button
+                  onClick={fetchAiTips}
+                  disabled={loadingTips}
+                  className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl hover:bg-purple-700 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50"
+                >
+                  <Bot className="w-5 h-5" />
+                  {loadingTips ? 'Generating...' : t('generateAiTips') || 'Generate AI Tips'}
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="space-y-4">
+                {loadingTips ? (
+                  <p className="text-gray-500 text-center py-6 animate-pulse">🤖 Generating tips...</p>
+                ) : aiTips && (aiTips.ar_tip || aiTips.en_tip) ? (
+                  <div className="rounded-2xl border border-blue-200 shadow-md overflow-hidden">
+                    {/* Arabic Tip */}
+                    {aiTips.ar_tip && (
+                      <div className="bg-gradient-to-l from-blue-50 to-white px-4 py-3 border-b border-blue-100 text-right">
+                        <p className="text-sm text-[#003aa7] leading-relaxed font-semibold">
+                          <span className="mr-1">🤖 نصائح بالذكاء الاصطناعي (AR):</span>
+                        </p>
+                        <p dir='rtl' className="text-gray-800 mt-1 text-sm font-medium whitespace-pre-line">
+                          {aiTips.ar_tip}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* English Tip */}
+                    {aiTips.en_tip && (
+                      <div className="bg-gradient-to-r from-blue-50 to-white px-4 py-3 text-left">
+                        <p className="text-sm text-[#003aa7] leading-relaxed font-semibold">
+                          <span className="mr-1">🤖 AI Tips (EN):</span>
+                        </p>
+                        <p className="text-gray-800 mt-1 text-sm font-medium whitespace-pre-line">
+                          {aiTips.en_tip}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-center py-6">
+                    {t('noTips') || 'No tips available'}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
 
 
           {activeTab === 'calls' && (
@@ -1129,6 +1375,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                   {t('addVisit')}
                 </button>
               </div>
+
               <div className="space-y-6">
                 {visits && visits.length > 0 &&
                   visits.map((visit) => (
@@ -1137,6 +1384,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                         <span className="text-sm font-medium text-gray-900">{visit.date || 'No date'}</span>
                         <span className="text-sm text-green-600">{visit.status || 'No status'}</span>
                       </div>
+
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
                         <div>
                           <span className="text-sm text-gray-600">{t('project')}: </span>
@@ -1145,7 +1394,6 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                               const project = projects?.find(project => project.id === visit.project);
                               if (!project) return 'Not specified';
 
-                              // Display both English and Arabic names if available
                               const hasBothNames = project.nameEn && project.nameAr;
                               if (hasBothNames) {
                                 return (
@@ -1164,15 +1412,75 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                           <span className="text-sm text-gray-900">{visit.objections || 'None'}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-700">{visit.notes || 'No notes'}</p>
+
+
+                      <p className="text-sm text-gray-700 mb-2">{visit.notes || 'No notes'}</p>
+
+                      {(user?.role === "sales_rep" ||
+                        user?.role === "team_leader" ||
+                        user?.role === "admin" ||
+                        user?.role === "sales_admin") && (
+                          <div className="flex items-center mt-2 relative">
+                            <label className="inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                id={`visit-done-${visit.id}`}
+                                checked={visit.status === "completed" || visit.status === "Completed"}
+                                disabled={
+                                  loading ||
+                                  ((user?.role === "sales_rep" ||
+                                    user?.role === "team_leader" ||
+                                    user?.role === "admin" ||
+                                    user?.role === "sales_admin") &&
+                                    (visit.status === "completed" || visit.status === "Completed"))
+                                }
+                                onChange={(e) => handelChange(e, visit)}
+                                className="sr-only peer"
+                              />
+
+                              {/* الـ Track (الخلفية) */}
+                              <div
+                                className={`w-11 h-6 rounded-full transition-all 
+                               peer-checked:bg-green-600 
+                               peer-not-checked:bg-gray-300
+                               ${loading ? "opacity-50 cursor-not-allowed" : ""}
+      `}
+                              ></div>
+
+                              {/* الـ Circle (النقطة اللي تتحرك) */}
+                              <div
+                                className="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all 
+        peer-checked:translate-x-5
+      "
+                              ></div>
+                            </label>
+
+                            {/* النص بجانب التوجل */}
+                            <label
+                              htmlFor={`visit-done-${visit.id}`}
+                              className="ml-3 text-sm text-gray-700 cursor-pointer"
+                            >
+                              {t("Meeting Done")}
+                            </label>
+                          </div>
+
+                        )}
+
+
+
+
                     </div>
                   ))}
+
                 {visits?.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">{String(t('noVisitsLogged') || 'No visits logged')}</p>
+                  <p className="text-gray-500 text-center py-4">
+                    {String(t('noVisitsLogged') || 'No visits logged')}
+                  </p>
                 )}
               </div>
             </div>
           )}
+
 
           {activeTab === 'notes' && (
             <div>
@@ -1225,23 +1533,26 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                         </div>
                       ) : (
                         <>
+
                           <p className="text-sm text-gray-900 mb-2 flex-1">{note}</p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditNote(index)}
-                              className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                              disabled={isUpdatingLead}
-                            >
-                              {t('edit')}
-                            </button>
-                            <button
-                              onClick={() => handleDeleteNote(index)}
-                              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                              disabled={isUpdatingLead}
-                            >
-                              {t('delete')}
-                            </button>
-                          </div>
+                          {
+                            user?.role === "admin" || "sales_admin" ? (<div className="flex gap-2">
+                              <button
+                                onClick={() => handleEditNote(index)}
+                                className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                                disabled={isUpdatingLead}
+                              >
+                                {t('edit')}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteNote(index)}
+                                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                                disabled={isUpdatingLead}
+                              >
+                                {t('delete')}
+                              </button>
+                            </div>) : null
+                          }
                         </>
                       )}
                     </div>
@@ -1252,6 +1563,147 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
               </div>
             </div>
           )}
+
+
+
+          {activeTab === 'Transfer History' && (
+            <div>
+              {/* Title */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-[#1E3A8A] border-b pb-2 tracking-wide">
+                  Lead Transfer History
+                </h3>
+              </div>
+
+              {lead?.transfers && lead.transfers.length > 0 ? (
+                <div className="space-y-6 relative pl-6">
+                  {/* Vertical line for timeline */}
+                  <div className="absolute top-0 left-2 w-0.5 h-full bg-blue-200"></div>
+
+                  {(lead.transfers as Transfer[])
+                    .slice()
+                    .reverse()
+                    .map((transfer) => {
+                      const getInitials = (name?: string) =>
+                        name
+                          ?.split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase();
+
+                      return (
+                        <div
+                          key={transfer.id}
+                          className="relative flex items-start gap-4 bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200"
+                        >
+                          {/* Timeline Dot */}
+                          <div className="absolute -left-[22px] top-6 w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-md"></div>
+
+                          {/* Main content */}
+                          <div className="flex-1">
+                            {/* Agents */}
+                            <div className="flex items-center gap-2">
+                              {/* From Agent */}
+                              <div className="flex items-center gap-2">
+                                <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold shadow">
+                                  {getInitials(transfer.fromAgent?.name)}
+                                </div>
+                                <span className="text-sm font-semibold text-gray-800">
+                                  {transfer.fromAgent?.name}
+                                </span>
+                              </div>
+
+                              <span className="text-gray-400 text-sm">→</span>
+
+                              {/* To Agent */}
+                              <div className="flex items-center gap-2">
+                                <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-sm font-bold shadow">
+                                  {getInitials(transfer.toAgent?.name)}
+                                </div>
+                                <span className="text-sm font-semibold text-gray-800">
+                                  {transfer.toAgent?.name}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Notes */}
+                            {transfer.notes && (
+                              <p className="text-sm text-gray-600 mt-3 border-l-2 border-blue-300 pl-3 italic leading-relaxed">
+                                {transfer.notes}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Date + Type */}
+                          <div className="flex flex-col items-end">
+                            <span className="text-xs text-gray-400">
+                              {transfer.createdAt}
+                            </span>
+                            <span className="text-xs mt-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full shadow-sm font-medium">
+                              {transfer.transferType}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">
+                  No transfer history available
+                </p>
+              )}
+            </div>
+          )}
+
+
+
+          {activeTab === "Activity" && (
+            <div>
+              {/* Title */}
+              <div className="mb-6">
+                <h3 className="text-lg font-bold text-gray-900 border-b pb-2 tracking-wide">
+                  Activity Timeline
+                </h3>
+              </div>
+
+              {/* Timeline */}
+              <div className="space-y-8 relative pl-10">
+                {/* Vertical line */}
+                <div className="absolute top-0 left-4 w-0.5 h-full bg-gray-200"></div>
+
+                {getActivities(lead).map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="relative flex items-start"
+                  >
+                    {/* Icon */}
+                    <div
+                      className={`absolute -left-1 top-1 w-8 h-8 rounded-full flex items-center justify-center ${activity.color}`}
+                    >
+                      {activity.icon}
+                    </div>
+
+                    {/* Content (with padding-left to push text away from icon) */}
+                    <div className="flex-1 pl-12">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {activity.title}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {activity.description}
+                      </p>
+                    </div>
+
+                    {/* Date */}
+                    <div className="text-xs text-gray-400 whitespace-nowrap">
+                      {new Date(activity.date).toISOString().split("T")[0]}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+
 
 
 
@@ -1299,8 +1751,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                         value={callForm.followUpDate || ''}
                         onChange={(e) => setCallForm({ ...callForm, followUpDate: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                     required
-                     />
+                        required
+                      />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">{t('Follow Up Time Reminder')}</label>
@@ -1309,8 +1761,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                         value={callForm.followUpTime || ''}
                         onChange={(e) => setCallForm({ ...callForm, followUpTime: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
-                     required
-                     />
+                        required
+                      />
                     </div>
                   </div>
                 )}
@@ -1463,6 +1915,12 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
+
+
+
+
+
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{t('notesField')}</label>
                   <textarea

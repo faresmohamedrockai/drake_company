@@ -32,6 +32,7 @@
   "tableHeaders": {
     "meeting": "Meeting",
     "client": "Client",
+      "DoneOr": "Done / Not Done",
     "dateTime": "Date&Time",
     "duration": "Duration",
     "type": "Type",
@@ -90,4 +91,5 @@
   "addToAppleCalendar": "Add to Apple Calendar (.ics)",
   "iosCalendarInstruction": "After downloading, tap the file, then tap the share icon and choose \"Add to Calendar\".",
   "calendarPrivacy": "Your calendar data is not stored or shared."
+
 } 

@@ -45,15 +45,49 @@ export const createLead = async (lead: Partial<Lead>) => {
     return response.data.data.lead;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 export const bulkUpdateLeads = async (leadIds: string[], updateData: Partial<Lead>) => {
     // Since there's no bulk endpoint, we'll update each lead individually
     const promises = leadIds.map(leadId => 
-        axiosInterceptor.patch(`/leads/${leadId}`, updateData)
+        axiosInterceptor.post(`/transfer/`, {...updateData,leadId:leadId})
     );
     
     const responses = await Promise.all(promises);
+    getLeads()
     return { success: true, updated: responses.length };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const getUsers = async () => {
     const response = await axiosInterceptor.get('/auth/users');

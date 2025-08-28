@@ -21,11 +21,20 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
   // const { users, properties, addLead } = useData();
   const queryClient = useQueryClient();
 
+
+
+
+
   const { data: users, isLoading: isLoadingUsers } = useQuery<UserType[]>({
     queryKey: ['users'],
     staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: () => getUsers(),
   });
+
+
+
+
+
   const getUsers = async () => {
     const response = await axiosInterceptor.get('/auth/users');
     return response.data as UserType[];
@@ -239,40 +248,40 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
       const primaryContact = formData.contact && formData.contact.trim()
       // Filter out empty phone numbers from contacts array
       const validContacts = formData.contacts ? formData.contacts.filter(contact => contact.trim() !== '') : [];
-const leadDataRaw = {
-  nameEn: formData.nameEn,
-  nameAr: formData.nameAr,
-  gender: formData.gender,
-  description: formData.description,
-  otherProject: formData.otherProject,
-  cil: formData.cil,
-  contact: primaryContact,
-  contacts: validContacts,
-  familyName: formData.familyName,
-  firstConection: formData.firstConection,
-  email: formData.email,
-  interest: Interest[formData.interest?.toUpperCase() as keyof typeof Interest],
-  tier: Tier[formData.tier?.toUpperCase() as keyof typeof Tier],
-  budget: Number(budgetValue),
-  inventoryInterestId: formData.inventoryInterestId,
-  projectInterestId: formData.projectInterestId,
-  source: formData.source,
-  status: formData.status as LeadStatus,
-  lastCallDate: '------',
-  lastVisitDate: '------',
-  assignedToId: formData.assignedTo || user?.id!,
-  ownerId: formData.assignedTo || user?.id!,
-  createdBy: user?.name || 'Unknown',
-  createdAt: new Date().toISOString(),
-};
+      const leadDataRaw = {
+        nameEn: formData.nameEn,
+        nameAr: formData.nameAr,
+        gender: formData.gender,
+        description: formData.description,
+        otherProject: formData.otherProject,
+        cil: formData.cil,
+        contact: primaryContact,
+        contacts: validContacts,
+        familyName: formData.familyName,
+        firstConection: formData.firstConection,
+        email: formData.email,
+        interest: Interest[formData.interest?.toUpperCase() as keyof typeof Interest],
+        tier: Tier[formData.tier?.toUpperCase() as keyof typeof Tier],
+        budget: Number(budgetValue),
+        inventoryInterestId: formData.inventoryInterestId,
+        projectInterestId: formData.projectInterestId,
+        source: formData.source,
+        status: formData.status as LeadStatus,
+        lastCallDate: '------',
+        lastVisitDate: '------',
+        assignedToId: formData.assignedTo || user?.id!,
+        ownerId: formData.assignedTo || user?.id!,
+        createdBy: user?.name || 'Unknown',
+        createdAt: new Date().toISOString(),
+      };
 
-// فلترة القيم الفاضية
-const leadData = Object.fromEntries(
-  Object.entries(leadDataRaw).filter(([_, value]) => value !== null && value !== undefined && value !== '')
-);
+      // فلترة القيم الفاضية
+      const leadData = Object.fromEntries(
+        Object.entries(leadDataRaw).filter(([_, value]) => value !== null && value !== undefined && value !== '')
+      );
 
-console.log(leadData);
-addLeadMutation(leadData);
+      console.log(leadData);
+      addLeadMutation(leadData);
 
 
       // Reset form and close modal
@@ -695,6 +704,8 @@ addLeadMutation(leadData);
                     required
                   >
                     <option value="">{t('selectSource')}</option>
+                    <option value="facebook">{t('facebook')}</option>
+                    <option value="instgram">{t('instagram')}</option>
                     <option value="social_media">{t('socialMedia')}</option>
                     <option value="website">{t('website')}</option>
                     <option value="referral">{t('referral')}</option>

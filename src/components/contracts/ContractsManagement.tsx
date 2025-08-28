@@ -55,6 +55,7 @@ const ContractsManagement: React.FC = () => {
       setForm({
         leadId: '',
         inventoryId: '',
+        cNumber: '',
         dealValue: 0,
         contractDate: '',
         status: 'Pending',
@@ -79,6 +80,7 @@ const ContractsManagement: React.FC = () => {
       setForm({
         leadId: '',
         inventoryId: '',
+        cNumber: '',
         dealValue: 0,
         contractDate: '',
         status: 'Pending',
@@ -114,6 +116,7 @@ const ContractsManagement: React.FC = () => {
   const [form, setForm] = useState<Contract>({
     leadId: '',
     inventoryId: '',
+    cNumber: '',
     dealValue: 0,
     contractDate: '',
     status: 'Pending',
@@ -143,6 +146,7 @@ const ContractsManagement: React.FC = () => {
     setForm({
       leadId: '',
       inventoryId: '',
+      cNumber: '',
       dealValue: 0,
       contractDate: '',
       status: 'Pending',
@@ -294,7 +298,7 @@ const ContractsManagement: React.FC = () => {
                       <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                         <FileText className="h-5 w-5 text-blue-600" />
                       </div>
-                      <div className="text-sm font-medium text-gray-900">{contract.id}</div>
+                      <div className="text-sm font-medium text-gray-900">{contract.cNumber ||  contract.id}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -351,7 +355,7 @@ const ContractsManagement: React.FC = () => {
                 <select name="leadId" value={form.leadId} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
                   <option value="">{t('form.selectLead')}</option>
                   {leads?.map(lead => (
-                    <option key={lead.id} value={lead.id}>{lead.nameEn}</option>
+                    <option key={lead.id} value={lead.id}>{lead.nameEn || lead.nameAr}</option>
                   ))}
                 </select>
               </div>
@@ -399,7 +403,7 @@ const ContractsManagement: React.FC = () => {
           {filteredContracts?.map((contract) => (
           <div key={contract.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">{contract.id}</h3>
+              <h3 className="text-lg font-semibold text-gray-900">{contract.cNumber || contract.id}</h3>
               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
                 {translateContractStatus(contract.status)}
               </span>
@@ -408,7 +412,7 @@ const ContractsManagement: React.FC = () => {
             <div className="space-y-3 mb-4">
               <div>
                 <span className="text-sm font-medium text-gray-700">{t('cardLabels.client')}: </span>
-                <span className="text-sm text-gray-900">{contract.lead?.nameEn}</span>
+                <span className="text-sm text-gray-900">{contract.lead?.nameEn || contract.lead?.nameAr}</span>
               </div>
               <div>
                 <span className="text-sm font-medium text-gray-700">{t('cardLabels.property')}: </span>

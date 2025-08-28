@@ -35,6 +35,10 @@ import { useLeadsFilters } from '../../hooks/useLeadsFilters';
 import { useLeadsSelection } from '../../hooks/useLeadsSelection';
 import { useLeadsStats } from '../../hooks/useLeadsStats';
 import { formatCurrency, formatDate } from '../../utils/formatters';
+import TransferLeadModal from './TransferLead';
+import { AdviceModal } from './AdviceModal';
+import axiosInterceptor from "../../../axiosInterceptor/axiosInterceptor";
+// import axiosInstance from 'axiosInterceptor';
 
 // Constants
 const USER_COLORS = [
@@ -54,11 +58,22 @@ const LeadsList: React.FC = React.memo(() => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [ShowtransferModal, setShowTransferModall] = useState(false);
+  // const [showAdviceModal, setShowAdviceModal] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+  const [transferModalLead, setTransferModalLead] = useState<Lead | null>(null);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
   const [toastId, setToastId] = useState<Id | null>(null);
+
+
+  // ✨ 1. تعريف الحالات الخاصة بنافذة النصيحة
+  const [showAdviceModal, setShowAdviceModal] = useState(false);
+  const [isAdviceLoading, setIsAdviceLoading] = useState(false);
+  const [adviceData, setAdviceData] = useState<any | null>(null);
+  const [adviceError, setAdviceError] = useState<string | null>(null);
+
 
   // Import functionality state
   const [isImporting, setIsImporting] = useState(false);
@@ -101,6 +116,9 @@ const LeadsList: React.FC = React.memo(() => {
     clearSelection
   } = useLeadsSelection();
 
+
+  // console.log(i18n);
+  
   // API Queries
   const { data: leads = [], isLoading: isLoadingLeads, error: leadsError } = useQuery<Lead[]>({
     queryKey: ['leads'],
@@ -391,13 +409,26 @@ const LeadsList: React.FC = React.memo(() => {
     return newLeads;
   };
 
-
-  // User color mapping
-  const userColors = [
-    'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
-    'bg-red-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
-    'bg-yellow-500', 'bg-cyan-500', 'bg-lime-500', 'bg-amber-500'
-  ];
+  const handleGenerateAdvice = async () => {
+    setIsAdviceLoading(true);
+    setAdviceError(null);
+    setAdviceData(null);
+    try {
+      // const lang = i18n.language.startsWith('ar') ? 'ar' : 'en';
+      const response = await axiosInterceptor.get(`/ai/tip-userLead`);
+      if (response.data) {
+        setAdviceData(response.data);
+      } else {
+        throw new Error(t('emptyResponse'));
+      }
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || t('unknownError');
+      setAdviceError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsAdviceLoading(false);
+    }
+  };
 
 
   // const getUserColor = (userName: string) => {
@@ -425,41 +456,41 @@ const LeadsList: React.FC = React.memo(() => {
 
   // Helper function to get searchable name (both languages)
 
-  
 
 
 
 
-const filteredLeadsManager = useMemo(() => {
-  let filtered = leads;
 
-  if (selectedManager && selectedSalesRep) {
-    // حالة اختيار الاتنين: نجيب الـ Sales Rep بس (الأولوية للـ Sales Rep)
-    filtered = filtered.filter(
-      (lead) => lead.owner?.id === selectedSalesRep.id
-    );
-  } else if (selectedSalesRep) {
-    // حالة اختيار Sales Rep بس
-    filtered = filtered.filter(
-      (lead) => lead.owner?.id === selectedSalesRep.id
-    );
-  } else if (selectedManager) {
-    // حالة اختيار Manager بس
-    const teamMembers = users
-      .filter(
-        (u) => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id
-      )
-      .map((u) => u.id);
+  const filteredLeadsManager = useMemo(() => {
+    let filtered = leads;
 
-    filtered = filtered.filter(
-      (lead) =>
-        lead.owner?.id === selectedManager.id || // Leads المدير نفسه
-        teamMembers.includes(lead.owner?.id!)    // Leads التيم بتاعه
-    );
-  }
+    if (selectedManager && selectedSalesRep) {
+      // حالة اختيار الاتنين: نجيب الـ Sales Rep بس (الأولوية للـ Sales Rep)
+      filtered = filtered.filter(
+        (lead) => lead.owner?.id === selectedSalesRep.id
+      );
+    } else if (selectedSalesRep) {
+      // حالة اختيار Sales Rep بس
+      filtered = filtered.filter(
+        (lead) => lead.owner?.id === selectedSalesRep.id
+      );
+    } else if (selectedManager) {
+      // حالة اختيار Manager بس
+      const teamMembers = users
+        .filter(
+          (u) => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id
+        )
+        .map((u) => u.id);
 
-  return filtered;
-}, [leads, selectedManager, selectedSalesRep, users]);
+      filtered = filtered.filter(
+        (lead) =>
+          lead.owner?.id === selectedManager.id || // Leads المدير نفسه
+          teamMembers.includes(lead.owner?.id!)    // Leads التيم بتاعه
+      );
+    }
+
+    return filtered;
+  }, [leads, selectedManager, selectedSalesRep, users]);
 
 
   // Computed values
@@ -472,7 +503,7 @@ const filteredLeadsManager = useMemo(() => {
       // حالة اختيار الاتنين: نجيب المدير + الـ Sales Rep
       filtered = filtered.filter(
         (lead) =>
-          
+
           lead.owner?.id === selectedSalesRep.id   // Leads بتاعة الـ Sales Rep
       );
     } else if (selectedSalesRep) {
@@ -491,7 +522,7 @@ const filteredLeadsManager = useMemo(() => {
       filtered = filtered.filter(
         (lead) =>
           lead.owner?.id === selectedManager.id // Leads المدير نفسه
-     || teamMembers.includes(lead.owner?.id!)    // Leads السيلز اللي تحت إيده
+          || teamMembers.includes(lead.owner?.id!)    // Leads السيلز اللي تحت إيده
       );
     }
 
@@ -524,9 +555,9 @@ const filteredLeadsManager = useMemo(() => {
       if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) {
         return false;
       }
-   if (filters.gender && lead.gender?.toLowerCase() !== filters.gender.toLowerCase()) {
-  return false;
-}
+      if (filters.gender && lead.gender?.toLowerCase() !== filters.gender.toLowerCase()) {
+        return false;
+      }
       if (filters.contact && !lead.contact?.toLowerCase().includes(filters.contact.toLowerCase())) {
         return false;
       }
@@ -603,6 +634,14 @@ const filteredLeadsManager = useMemo(() => {
     setShowEditModal(true);
   }, []);
 
+
+
+
+  const handeltTransferLead = useCallback((lead: Lead) => {
+    setTransferModalLead(lead);
+    setShowTransferModall(true)
+  }, []);
+
   const handleDeleteLead = useCallback((lead: Lead) => {
     setDeletingLead(lead);
     setShowDeleteConfirm(true);
@@ -620,13 +659,23 @@ const filteredLeadsManager = useMemo(() => {
     }
   }, [deletingLead, deleteLeadMutation]);
 
+
+
+
+
+
+
   const handleBulkAssign = useCallback(async () => {
     if (bulkAssignToUserId && selectedLeads.size > 0) {
       try {
         await bulkUpdateLeadsMutation({
           leadIds: Array.from(selectedLeads),
-          updateData: { assignedToId: bulkAssignToUserId }
+          updateData: { toAgentId: bulkAssignToUserId,
+            transferType:"With History",
+            notes:"Get From Bulk Assign To"
+           }
         });
+        getLeads();
       } catch (error) {
         console.error('Error bulk assigning leads:', error);
       }
@@ -765,6 +814,13 @@ const filteredLeadsManager = useMemo(() => {
           onFilterClick={() => setShowFilterModal(true)}
           onAddClick={() => setShowAddModal(true)}
           onImportClick={() => setShowImportModal(true)}
+          // ✨ 3. تمرير الدالة التي تفتح النافذة
+          onAdviceClick={() => {
+            // إعادة تعيين الحالة قبل الفتح لضمان عرض الشاشة الأولية
+            setAdviceData(null);
+            setAdviceError(null);
+            setShowAdviceModal(true);
+          }}
           t={t}
         />
       </div>
@@ -799,6 +855,7 @@ const filteredLeadsManager = useMemo(() => {
           onSelectAll={() => handleSelectAllBase(filteredLeads.map(lead => lead.id!))}
           onLeadClick={handleLeadClick}
           onEditLead={handleEditLead}
+          onTransferLead={handeltTransferLead}
           onDeleteLead={handleDeleteLead}
           t={t}
           i18n={i18n}
@@ -820,6 +877,31 @@ const filteredLeadsManager = useMemo(() => {
         }}
         lead={editingLead}
       />
+
+
+      <TransferLeadModal
+
+        isOpen={ShowtransferModal}
+        onClose={() => {
+          setShowTransferModall(false);
+          setEditingLead(null);
+        }}
+        lead={transferModalLead}
+
+      />
+
+
+      <AdviceModal
+        isOpen={showAdviceModal}
+        onClose={() => setShowAdviceModal(false)}
+        onGenerate={handleGenerateAdvice}
+        isLoading={isAdviceLoading}
+        advice={adviceData}
+        error={adviceError}
+        i18n={i18n}
+        t={t}
+      />
+
 
       {selectedLead && (
         <LeadModal

@@ -139,7 +139,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
         projectInterestId: lead.projectInterestId || '',
         source: lead.source || 'website',
         status: lead.status || 'fresh_lead',
-        assignedToId: ownerIdValue
+       
       });
       setError('');
     }
@@ -200,11 +200,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
       }
     }
 
-    // Check for required fields
-    if (!formData.assignedToId || formData.assignedToId.trim() === '') {
-      setError(language === 'ar' ? 'يجب تحديد المستخدم المُكلف' : 'Assigned user is required');
-      return;
-    }
+  
 
     // Check for duplicate phone number (excluding current lead)
     const existingLead = leads?.find(l => l.contact === formData.contact && l.id !== lead.id);
@@ -241,8 +237,8 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
 
       source: formData.source,
       status: formData.status as LeadStatus,
-      assignedToId: formData.assignedToId,
-      ownerId: formData.assignedToId,
+     
+      // ownerId: formData.assignedToId,
     };
 
 
@@ -255,6 +251,33 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
 
 
   };
+
+
+
+
+console.log(formData);
+
+// 🟢 دالة لتحويل أي تاريخ (حتى لو جاي dd/MM/yyyy) لـ yyyy-MM-dd
+function formatDateToInput(value?: string | Date | null) {
+  if (!value) return "";
+
+  // لو القيمة object (Date)
+  if (value instanceof Date) {
+    return value.toISOString().split("T")[0];
+  }
+
+  // لو القيمة نص و فيها "/"
+  if (typeof value === "string" && value.includes("/")) {
+    const [day, month, year] = value.split("/");
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  // لو القيمة ISO أو string عادية
+  return new Date(value).toISOString().split("T")[0];
+}
+
+
+
 
   if (!isOpen || !lead) return null;
 
@@ -531,7 +554,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                     )}
                   </div>
 
-                  {/* Assigned To */}
+                  {/* Assigned To
                   <div className="md:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 mb-2">{t('assignedToRequired')}</label>
                     <select
@@ -574,7 +597,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                         {language === 'ar' ? 'لا يمكنك تغيير تعيين العميل' : 'You cannot change lead assignment'}
                       </p>
                     )}
-                  </div>
+                  </div> */}
 
                   {/* Budget */}
                   <div className="md:col-span-1">
@@ -673,13 +696,13 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                       required
                     >
                       <option value="">{t('selectSource')}</option>
-                      <option value="Facebook">{t('facebook')}</option>
-                      <option value="Instagram">{t('instagram')}</option>
-                      <option value="Website">{t('website')}</option>
-                      <option value="Referral">{t('referral')}</option>
-                      <option value="Cold Call">{t('coldCall')}</option>
-                      <option value="Walk-in">{t('walkIn')}</option>
-                      <option value="Advertisement">{t('advertisement')}</option>
+                      <option value="facebook">{t('facebook')}</option>
+                      <option value="instgram">{t('instagram')}</option>
+                      <option value="website">{t('website')}</option>
+                      <option value="referral">{t('referral')}</option>
+                      <option value="cold_call">{t('coldCall')}</option>
+                      <option value="walk_in-in">{t('walkIn')}</option>
+                      <option value="advertisement">{t('advertisement')}</option>
                     </select>
                   </div>
 
@@ -752,44 +775,19 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {t('firstConnection')}
                     </label>
-                    <input
-                      type="date"
-                      value={formData.firstConection ? new Date(formData.firstConection).toISOString().split('T')[0] : ''}
-                      onChange={(e) => {
-                        try {
-                          const dateValue = e.target.value;
-                          if (dateValue) {
-                            const date = new Date(dateValue);
-                            if (!isNaN(date.getTime())) {
-                              setFormData({
-                                ...formData,
-                                firstConection: date.toISOString().split('T')[0],
-                              });
-                            } else {
-                              setFormData({
-                                ...formData,
-                                firstConection: '',
-                              });
-                            }
-                          } else {
-                            setFormData({
-                              ...formData,
-                              firstConection: '',
-                            });
-                          }
-                        } catch (error) {
-                          setFormData({
-                            ...formData,
-                            firstConection: '',
-                          });
-                        }
-                        setEmailError("");
-                      }}
-                      className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent bg-gray-50 text-sm transition-all duration-200 ${emailError
-                        ? "border-red-300 focus:ring-red-500"
-                        : "border-gray-300 focus:ring-blue-500"
-                        }`}
-                    />
+                   <input
+  type="date"
+  value={formData.firstConection ? formatDateToInput(formData.firstConection) : ""}
+  onChange={(e) => {
+    const dateValue = e.target.value; // yyyy-MM-dd
+    setFormData({
+      ...formData,
+      firstConection: dateValue, // خزنه بنفس الـ format
+    });
+    setEmailError("");
+  }}
+/>
+
                   </div>
 
                   <div className="space-y-2">

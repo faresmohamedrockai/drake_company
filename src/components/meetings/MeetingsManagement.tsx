@@ -41,7 +41,7 @@ const MeetingsManagement: React.FC = () => {
 
 
 
-  const { data: leads, isLoading, error } = useQuery<Lead[]>({
+  const { data: leads, } = useQuery<Lead[]>({
     queryKey: ["leads"],
     staleTime: 1000 * 60 * 5, // 5 دقائق
     queryFn: () => getLeads(),
@@ -58,6 +58,7 @@ const MeetingsManagement: React.FC = () => {
         client: '',
         date: '',
         time: '',
+        // meetingDone: false,
         duration: '',
         type: '',
         status: 'Scheduled',
@@ -84,6 +85,7 @@ const MeetingsManagement: React.FC = () => {
       setForm({
         title: '',
         client: '',
+        // meetingDone: false,
         date: '',
         time: '',
         duration: '',
@@ -125,6 +127,7 @@ const MeetingsManagement: React.FC = () => {
       title: '',
       client: '',
       date: '',
+      // meetingDone: false,
       time: '',
       duration: '',
       type: '',
@@ -299,7 +302,7 @@ const MeetingsManagement: React.FC = () => {
     setForm({
       title: '',
       client: '',
-      // leadId: '',
+//  meetingDone: false,
       date: '',
       time: '',
       duration: '',
@@ -483,6 +486,7 @@ const MeetingsManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.dateTime')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.duration')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.type')}</th>
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.DoneOr')}</th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.status')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.location')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.actions')}</th>
@@ -518,6 +522,11 @@ const MeetingsManagement: React.FC = () => {
                       {translateMeetingType(meeting.type)}
                     </span>
                   </td>
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex px-2 py-1 text-xs font-bold">
+                      {meeting.meetingDone ? "Done" :  "Not Done" }
+                    </span>
+                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(meeting.status)}`}>
                       {translateMeetingStatus(meeting.status)}
@@ -615,6 +624,7 @@ const MeetingsManagement: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.duration')}</label>
                 <input type="text" name="duration" value={form.duration} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.type')}</label>
                 <select name="type" value={form.type} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
@@ -632,6 +642,22 @@ const MeetingsManagement: React.FC = () => {
                   <option value="Cancelled">{t('statuses.cancelled')}</option>
                 </select>
               </div>
+
+              {/* <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="checkbox"
+                  name="meetingDone"
+                  checked={form.meetingDone || false} // القيمة من state الفورم
+                  onChange={e => setForm({ ...form, meetingDone: e.target.checked })} // تحديث القيمة
+                  className="w-6 h-6 rounded border-gray-300 focus:ring-2 roudned-2xl cursor-pointer"
+                />
+                <label className="text-sm font-medium text-gray-700">
+                  {language === 'ar' ? form.meetingDone?'تم الاجتماع' :'لم يتم الاجتماع' : form.meetingDone?'Meeting Done' :'Meeting Not Done'      }
+                </label>
+              </div> */}
+
+
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.locationType')}</label>
                 <select

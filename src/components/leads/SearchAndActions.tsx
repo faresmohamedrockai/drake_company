@@ -1,5 +1,8 @@
+// src/components/leads/SearchAndActions.tsx
+
 import React from 'react';
-import { Search, Plus, Filter, Upload } from 'lucide-react';
+// ✨ 1. استيراد أيقونة جديدة للزر
+import { Search, Plus, Filter, Upload, Sparkles } from 'lucide-react';
 
 interface SearchAndActionsProps {
   searchTerm: string;
@@ -8,6 +11,7 @@ interface SearchAndActionsProps {
   onFilterClick: () => void;
   onAddClick: () => void;
   onImportClick: () => void;
+  onAdviceClick: () => void; // ✨ 2. إضافة prop جديدة للزر
   t: (key: string) => string;
 }
 
@@ -18,6 +22,7 @@ export const SearchAndActions: React.FC<SearchAndActionsProps> = React.memo(({
   onFilterClick,
   onAddClick,
   onImportClick,
+  onAdviceClick, // ✨ 3. استقبال الـ prop الجديدة
   t
 }) => {
   return (
@@ -41,11 +46,10 @@ export const SearchAndActions: React.FC<SearchAndActionsProps> = React.memo(({
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto mt-2 sm:mt-0">
             <button
               onClick={onFilterClick}
-              className={`flex items-center justify-center px-3 py-2 border rounded-lg transition-colors w-full sm:w-auto text-sm ${
-                activeFiltersCount > 0
+              className={`flex items-center justify-center px-3 py-2 border rounded-lg transition-colors w-full sm:w-auto text-sm ${activeFiltersCount > 0
                   ? 'bg-blue-100 border-blue-300 text-blue-700 hover:bg-blue-200'
                   : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
               title={t('filterLeads')}
               aria-label={t('filterLeads')}
             >
@@ -73,6 +77,15 @@ export const SearchAndActions: React.FC<SearchAndActionsProps> = React.memo(({
               <Upload className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">{t('importLeads') || 'Import'}</span>
             </button>
+            {/* ✨ 4. إضافة الزر الجديد هنا */}
+            <button
+              onClick={onAdviceClick}
+              className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center w-full sm:w-auto text-sm"
+              aria-label={t('getAiAdvice') || 'Get AI Advice'}
+            >
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">{t('getAiAdvice') || 'AI Advice'}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -80,4 +93,4 @@ export const SearchAndActions: React.FC<SearchAndActionsProps> = React.memo(({
   );
 });
 
-SearchAndActions.displayName = 'SearchAndActions'; 
+SearchAndActions.displayName = 'SearchAndActions';

@@ -28,6 +28,7 @@
     "advertisement": "Advertisement",
     "coldCall": "Cold Call",
     "other": "Other"
+    
   },
 
 
@@ -269,5 +270,17 @@
   "gender": "Gender",
   "selectGender": "Select Gender",
   "male": "Male",
-  "female": "Female"
+  "female": "Female",
+  "aiSummry":"Ai Summry",
+  "generateAiTips":"Generate AI Summary",
+   "aiSalesCoach": "AI Sales Coach",
+  "getAiAdvice": "AI Advice",
+  "generatingAdvice": "Generating your advice...",
+  "pleaseWait": "This might take a moment.",
+  "getInstantAnalysis": "Get an instant AI-powered analysis of your current leads and a strategic recommendation.",
+  "generateAdviceForMe": "Generate Advice for Me",
+  "errorOccurred": "An Error Occurred",
+  "unknownError": "An unknown error occurred. Please try again.",
+  "emptyResponse": "The AI returned an empty response.",
+  "invalidResponseFormat": "Received an invalid data format from the server."
 } 

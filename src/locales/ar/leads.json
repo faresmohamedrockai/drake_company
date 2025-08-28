@@ -250,5 +250,17 @@
   "filterByManager": "تصفية حسب المدير",
   "filterBySalesRep": "تصفية حسب مندوب المبيعات",
   "selectManager": "اختيار المدير",
-  "selectSalesRep": "اختيار مندوب المبيعات"
+  "selectSalesRep": "اختيار مندوب المبيعات",
+  "aiSummry":"ملخص الذكاء الاصطناعي",
+  "generateAiTips":"انشئ ملخص بالاذكاء الاصطناعي",
+"aiSalesCoach": "مدرب المبيعات الذكي",
+  "getAiAdvice": "نصيحة ذكية",
+  "generatingAdvice": "جاري إنشاء نصيحتك...",
+  "pleaseWait": "قد يستغرق هذا بعض الوقت.",
+  "getInstantAnalysis": "احصل على تحليل فوري لعملائك الحاليين وتوصية استراتيجية مدعومة بالذكاء الاصطناعي.",
+  "generateAdviceForMe": "أنشئ نصيحة لي",
+  "errorOccurred": "حدث خطأ",
+  "unknownError": "حدث خطأ غير معروف. يرجى المحاولة مرة أخرى.",
+  "emptyResponse": "لم يتمكن الذكاء الاصطناعي من إنشاء رد.",
+  "invalidResponseFormat": "تم استلام بيانات بتنسيق غير صالح من الخادم."
 } 

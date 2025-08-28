@@ -16,8 +16,8 @@ import { Zone } from './ZonesTab';
 import { Developer } from '../../types';
 import { Lead } from '../../types';
 import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
-import { PhoneNumber } from '../ui/PhoneNumber';
-
+// import { PhoneNumber } from '../ui/PhoneNumber';
+ 
 // Fix default marker icon for leaflet in React
 if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
   L.Icon.Default.mergeOptions({
@@ -26,8 +26,8 @@ if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
     shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
   });
 }
-
-
+ 
+ 
 // Add FormState type for form
 type Property = {
   id?: string;
@@ -51,7 +51,7 @@ type Property = {
   parking?: string;
   paymentPlanIndex?: number; // For frontend use only
 };
-
+ 
 const PropertiesTab: React.FC = () => {
   const queryClient = useQueryClient();
   const [toastIsLoading, setToastIsLoading] = useState<Id | null>(null);
@@ -87,14 +87,22 @@ const PropertiesTab: React.FC = () => {
     const response = await axiosInterceptor.get('/projects');
     return response.data.data as Project[];
   }
+ 
+ 
   const updateProperty = async (property: Property) => {
     const response = await axiosInterceptor.patch(`/properties/${property.id}`, property);
     return response.data.property as Property;
   }
+ 
+ 
+ 
+ 
   const deleteProperty = async (id: string) => {
     const response = await axiosInterceptor.delete(`/properties/${id}`);
     return response.data.property as Property;
   }
+ 
+ 
   const { data: developers } = useQuery<Developer[]>({
     queryKey: ['developers'],
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -128,6 +136,12 @@ const PropertiesTab: React.FC = () => {
       setShowForm(false);
     }
   });
+ 
+ 
+ 
+ 
+ 
+ 
   const { mutateAsync: updatePropertyMutation, isPending: isUpdating } = useMutation({
     mutationFn: (property: Property) => updateProperty(property),
     onSuccess: () => {
@@ -150,6 +164,11 @@ const PropertiesTab: React.FC = () => {
       setShowForm(false);
     }
   });
+ 
+ 
+ 
+ 
+ 
   const { mutateAsync: deletePropertyMutation, isPending: isDeleting } = useMutation({
     mutationFn: (id: string) => deleteProperty(id),
     onSuccess: () => {
@@ -191,7 +210,7 @@ const PropertiesTab: React.FC = () => {
     titleEn: '',
     titleAr: '',
     type: '',
-    price: 0, // will be handled as number in input and calculations
+    price: 0,
     location: '',
     area: 0,
     bedrooms: 0,
@@ -233,16 +252,25 @@ const PropertiesTab: React.FC = () => {
     t('stepLocation'),
     t('stepReview')
   ];
-  const [showPlanPopup, setShowPlanPopup] = useState(false);
+  // const [showPlanPopup, setShowPlanPopup] = useState(false);
   const [showImageModal, setShowImageModal] = useState<{ images: string[], title: string } | null>(null);
   const [filteredProperties, setFilteredProperties] = useState<Property[]>([]);
   const [priceError, setPriceError] = useState<string>('');
-
+  const [paymentPlanMode, setPaymentPlanMode] = useState('existing'); // 'existing' أو 'custom'
+  const [customPlan, setCustomPlan] = useState({
+    downpayment: 20,
+    delivery: 10,
+    yearsToPay: 5,
+    deliveryDate: "2026-12-01",
+    firstInstallmentDate: "2024-12-01",
+    installmentMonthsCount: 60, // 5 years * 12 months
+    paymentFrequency: 1 // 1 = monthly, 3 = quarterly, 6 = semi-annually, 12 = annually
+  });
   useEffect(() => {
     if (isAdding || isUpdating || isDeleting) {
       setToastIsLoading(toast.loading("Loading..."))
     }
-
+ 
   }, [isDeleting, isAdding, isUpdating]);
   // Helper functions to get language-appropriate data
   const getPropertyName = (property: any) => {
@@ -252,7 +280,7 @@ const PropertiesTab: React.FC = () => {
     }
     return property.titleEn || property.title || '';
   };
-
+ 
   const getPropertyType = (type: string | undefined) => {
     if (!type) return '';
     if (language === 'ar') {
@@ -270,7 +298,7 @@ const PropertiesTab: React.FC = () => {
     }
     return type;
   };
-
+ 
   const getAmenities = (amenities: string[]) => {
     if (language === 'ar') {
       const amenitiesMap: { [key: string]: string } = {
@@ -285,18 +313,18 @@ const PropertiesTab: React.FC = () => {
     }
     return amenities;
   };
-
+ 
   const getProjectName = (projectId: string | undefined) => {
     if (!projectId) return '';
     const project = projects?.find(p => p.id === projectId);
     if (!project) return '';
-
+ 
     if (language === 'ar' && project.nameAr) {
       return project.nameAr;
     }
     return project.nameEn || project.nameEn;
   };
-
+ 
   const getStatusText = (status: string | undefined) => {
     if (!status) return '';
     if (language === 'ar') {
@@ -309,7 +337,7 @@ const PropertiesTab: React.FC = () => {
     }
     return status;
   };
-
+ 
   const openAddForm = () => {
     setEditId(null);
     setForm({
@@ -337,7 +365,7 @@ const PropertiesTab: React.FC = () => {
     setShowForm(true);
     setFormStep(0); // Reset step to 0 for new form
   };
-
+ 
   const openEditForm = (property: any) => {
     setEditId(property.id);
     setForm({
@@ -355,7 +383,7 @@ const PropertiesTab: React.FC = () => {
     setShowForm(true);
     setFormStep(0); // Reset step to 0 for edit form
   };
-
+ 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'price') {
@@ -375,13 +403,13 @@ const PropertiesTab: React.FC = () => {
       if (selectedProject && Array.isArray(selectedProject.paymentPlans) && selectedProject.paymentPlans.length > 0) {
         paymentPlanIndex = 0;
       }
-
+ 
       // Handle zone selection based on project
       let zoneId = '';
       if (selectedProject?.zoneId) {
         zoneId = selectedProject.zoneId;
       }
-
+ 
       setForm((prev) => ({
         ...prev,
         [name]: value,
@@ -404,7 +432,7 @@ const PropertiesTab: React.FC = () => {
       setForm((prev) => ({ ...prev, [name]: value }));
     }
   };
-
+ 
   // Handle image upload (multiple images, data URLs)
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -423,7 +451,7 @@ const PropertiesTab: React.FC = () => {
       });
     }
   };
-
+ 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
@@ -438,7 +466,7 @@ const PropertiesTab: React.FC = () => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       return uuidRegex.test(str);
     };
-
+ 
     // Prepare data to match backend DTO
     const propertyData = {
       ...(editId && { id: editId }), // Include id when updating
@@ -471,13 +499,13 @@ const PropertiesTab: React.FC = () => {
       addPropertyMutation(propertyData as unknown as Property);
     }
   };
-
+ 
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this property?')) {
       deletePropertyMutation(id);
     }
   };
-
+ 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Available': return 'bg-green-100 text-green-800';
@@ -486,7 +514,7 @@ const PropertiesTab: React.FC = () => {
       default: return 'bg-gray-100 text-gray-800';
     }
   };
-
+ 
   useEffect(() => {
     // console.log("properties", properties);
     const filteredProperties = properties?.filter(property =>
@@ -503,7 +531,7 @@ const PropertiesTab: React.FC = () => {
     );
     setFilteredProperties(filteredProperties || []);
   }, [properties, searchTerm, filterProject, filterZone, filterDeveloper, filterStatus]);
-
+ 
   function handleOpenReport(property: any) {
     setReportProperty(property);
     setShowReportModal(true);
@@ -513,21 +541,21 @@ const PropertiesTab: React.FC = () => {
     setReportNotes('');
     setReportError('');
   }
-
+ 
   function handleReportPhoneSubmit(e: React.FormEvent) {
     e.preventDefault();
     setReportError('');
     setReportPhoneError('');
-
+ 
     // Phone validation
     if (!validatePhoneNumber(reportPhone)) {
       setReportPhoneError(getPhoneErrorMessage(reportPhone, language));
       return;
     }
-
+ 
     // Access control: Team Leader can only for their team, Sales Rep only for their own
     let found = leads?.find(l => l.contact === reportPhone);
-
+ 
     if (!found) {
       setReportError('No client found with this number. Please check and try again.');
       return;
@@ -543,28 +571,17 @@ const PropertiesTab: React.FC = () => {
     const kpiKey = `report_kpi_${user?.id || 'unknown'}_${today}`;
     localStorage.setItem(kpiKey, String(Number(localStorage.getItem(kpiKey) || 0) + 1));
   }
-
-  async function handleDownloadPDF() {
-    const element = document.getElementById('report-preview');
-    if (element) {
-      // Add a style block to hide .no-pdf for PDF export
-      let style = document.createElement('style');
-      style.innerHTML = '.no-pdf { display: none !important; }';
-      element.prepend(style);
-      const html2pdf = (await import('html2pdf.js')).default;
-      await html2pdf().from(element).save(`${reportProperty?.title}-${language === 'ar' && reportLead?.nameAr ? reportLead.nameAr : (reportLead?.nameEn || 'Unknown')}-Report.pdf`);
-      style.remove();
-    }
-  }
-
+ 
+ 
+ 
   function handlePrint() {
     window.print();
   }
-
+ 
   // Helper to get selected project's payment plans
   const selectedProject = projects?.find(p => p.id === form.projectId);
   const paymentPlans = selectedProject?.paymentPlans || [];
-
+ 
   // Helper function to get developer name properly
   const getDeveloperName = (project: any, language: string) => {
     // First try to get from developers array
@@ -572,35 +589,35 @@ const PropertiesTab: React.FC = () => {
     if (developerFromArray) {
       return language === 'ar' && developerFromArray.nameAr ? developerFromArray.nameAr : developerFromArray.nameEn || developerFromArray.name;
     }
-
+ 
     // Then try to get from nested developer object
     if (project?.developer && typeof project.developer === 'object') {
       return language === 'ar' && project.developer.nameAr ? project.developer.nameAr : project.developer.nameEn || project.developer.name;
     }
-
+ 
     // Finally, try to get from developer string field
     if (project?.developer && typeof project.developer === 'string') {
       return project.developer;
     }
-
+ 
     return '-';
   };
-
+ 
   // Helper function to get project name from project object
   const getProjectDisplayName = (project: any, language: string) => {
     if (!project) return '-';
-
+ 
     if (typeof project === 'object') {
       return language === 'ar' && project.nameAr ? project.nameAr : project.nameEn || project.name || '-';
     }
-
+ 
     if (typeof project === 'string') {
       return project;
     }
-
+ 
     return '-';
   };
-
+ 
   return (
     <div>
       {/* Title */}
@@ -609,7 +626,7 @@ const PropertiesTab: React.FC = () => {
           {language === 'ar' ? 'العقارات' : 'Properties'}
         </h2>
       </div>
-
+ 
       {/* Search and Actions + Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-2 flex-1">
@@ -663,7 +680,7 @@ const PropertiesTab: React.FC = () => {
           )}
         </div>
       </div>
-
+ 
       {/* Properties Table */}
       <div className="overflow-x-auto">
         <table className="w-full min-w-full">
@@ -730,7 +747,7 @@ const PropertiesTab: React.FC = () => {
                           </span>
                         </td>
                         <td className="px-2 py-4">
-                          <span className="text-xs text-gray-900 truncate block" title={property.area.toString()}>
+                          <span className="text-xs text-gray-900 truncate block" title={property.area.toString() || ""}>
                             {property.area.toString()}
                           </span>
                         </td>
@@ -747,7 +764,7 @@ const PropertiesTab: React.FC = () => {
                         <td className="px-2 py-4">
                           {zone ? (
                             <button
-                              className="text-xs text-blue-600 underline cursor-pointer truncate block w-full text-left flex items-center"
+                              className="text-xs text-blue-600 underline cursor-pointer truncate  w-full text-left flex items-center"
                               title={zone.nameEn}
                               onClick={() => setZoneModal(zone as Zone)}
                             >
@@ -800,7 +817,7 @@ const PropertiesTab: React.FC = () => {
           </tbody>
         </table>
       </div>
-
+ 
       {/* Add/Edit Property Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -971,7 +988,7 @@ const PropertiesTab: React.FC = () => {
                   {(() => {
                     const selectedProject = projects?.find(p => p.id === form.projectId);
                     const projectHasZone = selectedProject?.zoneId;
-
+ 
                     // If project has a zone, show it as read-only
                     if (projectHasZone) {
                       const zone = zones?.find(z => z.id === projectHasZone);
@@ -987,7 +1004,7 @@ const PropertiesTab: React.FC = () => {
                         </div>
                       );
                     }
-
+ 
                     // If project doesn't have a zone, show zone selection
                     return (
                       <div>
@@ -1075,16 +1092,16 @@ const PropertiesTab: React.FC = () => {
                     if (!selectedProject || !Array.isArray(selectedProject.paymentPlans) || selectedProject.paymentPlans.length === 0) {
                       return null;
                     }
-                    
+ 
                     const planIndex = form.paymentPlanIndex !== undefined ? form.paymentPlanIndex : 0;
                     const plan = selectedProject.paymentPlans[planIndex];
-
+ 
                     if (!plan) {
                       return null;
                     }
-
-                          const price = Number(form.price || 0);
-                    
+ 
+                    const price = Number(form.price || 0);
+ 
                     // Create a safe payment plan with extensive date validation
                     const createSafeDate = (dateStr: string | undefined | null | object, defaultDate: string) => {
                       if (!dateStr || typeof dateStr === 'object') return defaultDate;
@@ -1094,7 +1111,7 @@ const PropertiesTab: React.FC = () => {
                       if (dateObj.toString() === 'Invalid Date') return defaultDate;
                       return dateStr;
                     };
-
+ 
                     const safePlan = {
                       ...plan,
                       firstInstallmentDate: createSafeDate(plan.firstInstallmentDate, "2024-12-01"),
@@ -1104,7 +1121,7 @@ const PropertiesTab: React.FC = () => {
                       yearsToPay: Number(plan.yearsToPay) || 1,
                       installmentMonthsCount: Number(plan.installmentMonthsCount) || 1
                     };
-                    
+ 
                     // Generate schedule with safe plan and comprehensive error handling
                     let schedule: any[] = [];
                     try {
@@ -1126,7 +1143,7 @@ const PropertiesTab: React.FC = () => {
                         </div>
                       );
                     }
-                    
+ 
                     if (schedule.length === 0) {
                       return (
                         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -1139,10 +1156,10 @@ const PropertiesTab: React.FC = () => {
                         </div>
                       );
                     }
-                    
-                          return (
-                            <div className="mt-4">
-                              <div className="font-semibold mb-1">{t('selectedPaymentPlan')}:</div>
+ 
+                    return (
+                      <div className="mt-4">
+                        <div className="font-semibold mb-1">{t('selectedPaymentPlan')}:</div>
                         <div className="mb-2 text-xs text-gray-700">
                           {plan.schedule ? plan.schedule : `${t('plan')} ${planIndex + 1}`}
                           {(!plan.firstInstallmentDate || !plan.deliveryDate) && (
@@ -1150,46 +1167,46 @@ const PropertiesTab: React.FC = () => {
                           )}
                         </div>
                         {schedule.length > 0 ? (
-                              <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
-                                <table className="w-full text-xs">
-                                  <thead>
-                                    <tr className="bg-blue-600 text-white">
-                                      <th className="border px-2 py-1 font-bold">{t('payment')}</th>
-                                      <th className="border px-2 py-1 font-bold">{t('date')}</th>
-                                      <th className="border px-2 py-1 font-bold">{t('amount')}</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {schedule.map((item: any, idx: number) => (
-                                      <tr key={idx} className={
-                                        item.label && item.label.toLowerCase().includes('down payment')
-                                          ? 'bg-blue-50 font-semibold'
-                                          : item.label && item.label.toLowerCase().includes('delivery')
-                                            ? 'bg-orange-50 font-semibold'
-                                            : idx % 2 === 0
-                                              ? 'bg-gray-50'
-                                              : 'bg-white'
-                                      }>
-                                        <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.label}</td>
-                                        <td className="border px-2 py-1">
-                                          {item.label && item.label.toLowerCase().includes('down payment') && item.dueDate ?
-                                            new Date(item.dueDate).toISOString().slice(0, 10) :
-                                            item.dueDate
-                                          }
-                                        </td>
-                                        <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{Math.round(item.amount).toLocaleString()} EGP</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
+                          <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="bg-blue-600 text-white">
+                                  <th className="border px-2 py-1 font-bold">{t('payment')}</th>
+                                  <th className="border px-2 py-1 font-bold">{t('date')}</th>
+                                  <th className="border px-2 py-1 font-bold">{t('amount')}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {schedule.map((item: any, idx: number) => (
+                                  <tr key={idx} className={
+                                    item.label && item.label.toLowerCase().includes('down payment')
+                                      ? 'bg-blue-50 font-semibold'
+                                      : item.label && item.label.toLowerCase().includes('delivery')
+                                        ? 'bg-orange-50 font-semibold'
+                                        : idx % 2 === 0
+                                          ? 'bg-gray-50'
+                                          : 'bg-white'
+                                  }>
+                                    <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{item.label}</td>
+                                    <td className="border px-2 py-1">
+                                      {item.label && item.label.toLowerCase().includes('down payment') && item.dueDate ?
+                                        new Date(item.dueDate).toISOString().slice(0, 10) :
+                                        item.dueDate
+                                      }
+                                    </td>
+                                    <td className={`border px-2 py-1 ${item.label && item.label.toLowerCase().includes('down payment') ? 'text-blue-700' : item.label && item.label.toLowerCase().includes('delivery') ? 'text-orange-700' : ''}`}>{Math.round(item.amount).toLocaleString()} EGP</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
                         ) : (
                           <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
                             {language === 'ar' ? 'لا يمكن عرض جدول المدفوعات - يرجى التحقق من بيانات خطة الدفع' : 'Cannot display payment schedule - please check payment plan data'}
                           </div>
                         )}
-                            </div>
-                          );
+                      </div>
+                    );
                   })()}
                 </div>
               )}
@@ -1212,7 +1229,7 @@ const PropertiesTab: React.FC = () => {
           </div>
         </div>
       )}
-
+ 
       {/* Zone Modal */}
       {zoneModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1247,11 +1264,11 @@ const PropertiesTab: React.FC = () => {
           </div>
         </div>
       )}
-
+ 
       {/* Report Modal */}
       {showReportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative print:max-h-full print:overflow-visible">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:static">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative print:max-h-none print:overflow-visible print:shadow-none print:border-0">
             {/* Exit Button (styled, but not fixed) */}
             <button
               className="absolute top-2 right-2 z-50 text-white bg-red-500 hover:bg-red-700 shadow-lg rounded-full w-10 h-10 flex items-center justify-center text-3xl font-bold transition-all duration-200 border-4 border-white focus:outline-none focus:ring-2 focus:ring-red-400 print:hidden"
@@ -1294,7 +1311,291 @@ const PropertiesTab: React.FC = () => {
               </form>
             )}
             {reportStep === 'preview' && reportLead && (
-              <div id="report-preview" className="bg-white p-4 print:p-0 print:bg-white print:shadow-none" style={{ breakInside: 'avoid', pageBreakInside: 'avoid' }}>
+              <div id="report-preview" className="bg-white p-4 print:p-0 print:bg-white print:shadow-none">
+ 
+                {/* Helper Function for Custom Payment Schedule */}
+                {(() => {
+                  // Function to generate custom payment schedule
+                  window.generateCustomPaymentSchedule = (price, plan, language) => {
+                    const schedule = [];
+                    const downPaymentAmount = price * (plan.downpayment / 100);
+                    const deliveryAmount = price * (plan.delivery / 100);
+                    const installmentTotal = price - downPaymentAmount - deliveryAmount;
+ 
+                    // Down Payment
+                    if (downPaymentAmount > 0) {
+                      const today = new Date();
+                      schedule.push({
+                        label: language === 'ar' ? 'الدفعة الأولى' : 'Down Payment',
+                        amount: downPaymentAmount,
+                        dueDate: today.toISOString().slice(0, 10)
+                      });
+                    }
+ 
+                    // Installments
+                    if (installmentTotal > 0) {
+                      const frequency = plan.paymentFrequency || 1;
+                      const totalInstallments = Math.ceil(plan.yearsToPay * 12 / frequency);
+                      const installmentAmount = installmentTotal / totalInstallments;
+ 
+                      const firstInstallmentDate = new Date(plan.firstInstallmentDate);
+ 
+                      for (let i = 0; i < totalInstallments; i++) {
+                        const dueDate = new Date(firstInstallmentDate);
+                        dueDate.setMonth(dueDate.getMonth() + (i * frequency));
+ 
+                        const installmentLabel = language === 'ar'
+                          ? `القسط ${i + 1}`
+                          : `Installment ${i + 1}`;
+ 
+                        schedule.push({
+                          label: installmentLabel,
+                          amount: installmentAmount,
+                          dueDate: dueDate.toISOString().slice(0, 10)
+                        });
+                      }
+                    }
+ 
+                    // Delivery Payment
+                    if (deliveryAmount > 0) {
+                      schedule.push({
+                        label: language === 'ar' ? 'دفعة التسليم' : 'Delivery Payment',
+                        amount: deliveryAmount,
+                        dueDate: plan.deliveryDate
+                      });
+                    }
+ 
+                    return schedule;
+                  };
+ 
+                  return null;
+                })()}
+ 
+                {/* Payment Plan Customization Dropdown - في الأعلى خالص */}
+                <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg print:hidden">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      {language === 'ar' ? 'إعدادات خطة الدفع' : 'Payment Plan Settings'}
+                    </h3>
+                  </div>
+ 
+                  <div className="flex items-center gap-4 mb-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentPlanMode"
+                        value="existing"
+                        checked={paymentPlanMode === 'existing'}
+                        onChange={(e) => setPaymentPlanMode(e.target.value)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        {language === 'ar' ? 'استخدم الخطة الموجودة' : 'Use Existing Plan'}
+                      </span>
+                    </label>
+ 
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="paymentPlanMode"
+                        value="custom"
+                        checked={paymentPlanMode === 'custom'}
+                        onChange={(e) => setPaymentPlanMode(e.target.value)}
+                        className="mr-2"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        {language === 'ar' ? 'إنشاء خطة مخصصة' : 'Create Custom Plan'}
+                      </span>
+                    </label>
+                  </div>
+ 
+                  {/* Custom Plan Form */}
+                  {paymentPlanMode === 'custom' && (
+                    <div className="bg-white rounded border overflow-hidden">
+                      <div className="bg-blue-50 px-3 py-2 border-b">
+                        <h4 className="font-semibold text-blue-800 text-sm">
+                          {language === 'ar' ? 'إعداد الخطة المخصصة' : 'Custom Plan Setup'}
+                        </h4>
+                      </div>
+ 
+                      <div className="p-3">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              {language === 'ar' ? 'الدفعة الأولى (%)' : 'Down Payment (%)'}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={customPlan.downpayment}
+                              onChange={(e) => {
+                                const newValue = Number(e.target.value);
+                                setCustomPlan({
+                                  ...customPlan,
+                                  downpayment: newValue
+                                });
+                              }}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+ 
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              {language === 'ar' ? 'عند التسليم (%)' : 'On Delivery (%)'}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={customPlan.delivery}
+                              onChange={(e) => {
+                                const newValue = Number(e.target.value);
+                                setCustomPlan({
+                                  ...customPlan,
+                                  delivery: newValue
+                                });
+                              }}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+ 
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              {language === 'ar' ? 'سنوات السداد' : 'Years to Pay'}
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={customPlan.yearsToPay}
+                              onChange={(e) => {
+                                const newValue = Number(e.target.value);
+                                setCustomPlan({
+                                  ...customPlan,
+                                  yearsToPay: newValue,
+                                  installmentMonthsCount: newValue * 12 // حساب عدد الأشهر تلقائياً
+                                });
+                              }}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+ 
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              {language === 'ar' ? 'تاريخ التسليم' : 'Delivery Date'}
+                            </label>
+                            <input
+                              type="date"
+                              value={customPlan.deliveryDate}
+                              onChange={(e) => setCustomPlan({ ...customPlan, deliveryDate: e.target.value })}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+ 
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              {language === 'ar' ? 'تاريخ أول قسط' : 'First Installment Date'}
+                            </label>
+                            <input
+                              type="date"
+                              value={customPlan.firstInstallmentDate}
+                              onChange={(e) => setCustomPlan({ ...customPlan, firstInstallmentDate: e.target.value })}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+ 
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              {language === 'ar' ? 'فترة الدفع (شهر)' : 'Payment Frequency (Months)'}
+                            </label>
+                            <select
+                              value={customPlan.paymentFrequency || 1}
+                              onChange={(e) => setCustomPlan({ ...customPlan, paymentFrequency: Number(e.target.value) })}
+                              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            >
+                              <option value={1}>{language === 'ar' ? 'شهرياً' : 'Monthly'}</option>
+                              <option value={3}>{language === 'ar' ? 'كل 3 أشهر' : 'Quarterly'}</option>
+                              <option value={6}>{language === 'ar' ? 'كل 6 أشهر' : 'Semi-annually'}</option>
+                              <option value={12}>{language === 'ar' ? 'سنوياً' : 'Annually'}</option>
+                            </select>
+                          </div>
+                        </div>
+ 
+                        {/* Preview Calculations */}
+                        {reportProperty?.price && (
+                          <div className="mt-3 p-2 bg-gray-50 rounded text-xs">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              <div>
+                                <span className="font-medium text-gray-600">
+                                  {language === 'ar' ? 'المقدم:' : 'Down Payment:'}
+                                </span>
+                                <div className="text-blue-700 font-bold">
+                                  {Math.round(Number(reportProperty.price) * customPlan.downpayment / 100).toLocaleString()} EGP
+                                </div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-600">
+                                  {language === 'ar' ? 'التسليم:' : 'Delivery:'}
+                                </span>
+                                <div className="text-orange-700 font-bold">
+                                  {Math.round(Number(reportProperty.price) * customPlan.delivery / 100).toLocaleString()} EGP
+                                </div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-600">
+                                  {language === 'ar' ? 'للأقساط:' : 'For Installments:'}
+                                </span>
+                                <div className="text-green-700 font-bold">
+                                  {Math.round(Number(reportProperty.price) * (100 - customPlan.downpayment - customPlan.delivery) / 100).toLocaleString()} EGP
+                                </div>
+                              </div>
+                              <div>
+                                <span className="font-medium text-gray-600">
+                                  {language === 'ar' ? 'القسط الواحد:' : 'Per Installment:'}
+                                </span>
+                                <div className="text-purple-700 font-bold">
+                                  {(() => {
+                                    const installmentAmount = Number(reportProperty.price) * (100 - customPlan.downpayment - customPlan.delivery) / 100;
+                                    const frequency = customPlan.paymentFrequency || 1;
+                                    const totalInstallments = Math.ceil(customPlan.yearsToPay * 12 / frequency);
+                                    return totalInstallments > 0 ? Math.round(installmentAmount / totalInstallments).toLocaleString() : '0';
+                                  })()} EGP
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+ 
+                  {/* Existing Plan Selector */}
+                  {paymentPlanMode === 'existing' && reportProperty?.project && Array.isArray(reportProperty.project.paymentPlans) && reportProperty.project.paymentPlans.length > 1 && (
+                    <div className="p-3 bg-white rounded border">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {language === 'ar' ? 'اختر خطة الدفع' : 'Select Payment Plan'}
+                      </label>
+                      <select
+                        value={reportProperty.paymentPlanIndex || 0}
+                        onChange={(e) => setReportProperty({ ...reportProperty, paymentPlanIndex: Number(e.target.value) })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                      >
+                        {reportProperty.project.paymentPlans.map((plan, idx) => (
+                          <option key={idx} value={idx}>
+                            {language === 'ar'
+                              ? `خطة ${idx + 1}: ${plan.downpayment}% مقدم، ${100 - (plan.downpayment || 0) - (plan.delivery || 0)}% أقساط، ${plan.delivery}% تسليم`
+                              : `Plan ${idx + 1}: ${plan.downpayment}% down, ${100 - (plan.downpayment || 0) - (plan.delivery || 0)}% installments, ${plan.delivery}% delivery`
+                            }
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+ 
                 {/* Header */}
                 <div className="flex items-center mb-4 border-b pb-2 justify-between">
                   <div>
@@ -1318,25 +1619,7 @@ const PropertiesTab: React.FC = () => {
                     />
                   </div>
                 </div>
-                {/* Client Info */}
-                {/* {reportLead && (
-                  <>
-                    {(reportLead.nameEn || reportLead.nameAr || reportLead.contact || reportLead.budget || reportLead.status || reportLead.assignedToId) && (
-                      <div className="mb-4">
-                        <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                          {language === 'ar' ? 'معلومات العميل' : 'Client Information'}
-                        </h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          {(reportLead.nameEn || reportLead.nameAr) && <div><span className="font-medium">{t('name')}:</span> {language === 'ar' && reportLead.nameAr ? reportLead.nameAr : (reportLead.nameEn || '')}</div>}
-                          {reportLead.contact && <div><span className="font-medium">{t('phone')}:</span> <PhoneNumber phone={reportLead.contact} className="inline" /></div>}
-                          {reportLead.budget && <div><span className="font-medium">{t('budget')}:</span> {reportLead.budget}</div>}
-                          {reportLead.status && <div><span className="font-medium">{t('status')}:</span> {reportLead.status}</div>}
-                          {reportLead.assignedToId && <div><span className="font-medium">{t('assignedRep')}:</span> {reportLead.assignedToId}</div>}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )} */}
+ 
                 {/* Property Info */}
                 {reportProperty && (
                   <>
@@ -1360,25 +1643,35 @@ const PropertiesTab: React.FC = () => {
                     )}
                   </>
                 )}
-                {/* Payment Plan Table - Full Installments */}
+ 
+                {/* Payment Plan Table - Modified to use selected mode */}
                 {(() => {
-                  // Find the linked project and its selected payment plan
-                  // First try to use nested project object from property, then fallback to projects array
                   const project = reportProperty?.project && typeof reportProperty.project === 'object'
                     ? reportProperty.project
                     : projects?.find(p => p.id === reportProperty?.projectId);
-                  
-                  if (!project || !Array.isArray(project.paymentPlans) || project.paymentPlans.length === 0) {
-                    return null;
+ 
+                  if (!project || !reportProperty?.price) return null;
+ 
+                  const price = Number(reportProperty.price);
+                  let plan;
+ 
+                  // استخدام الخطة حسب الاختيار
+                  if (paymentPlanMode === 'custom') {
+                    plan = {
+                      ...customPlan,
+                      firstInstallmentDate: customPlan.firstInstallmentDate || "2024-12-01",
+                      installmentMonthsCount: customPlan.installmentMonthsCount || (customPlan.yearsToPay * 12),
+                      paymentFrequency: customPlan.paymentFrequency || 1
+                    };
+                  } else {
+                    if (!Array.isArray(project.paymentPlans) || project.paymentPlans.length === 0) return null;
+                    const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
+                    plan = project.paymentPlans[idx];
                   }
-                  
-                  const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
-                  const plan = project.paymentPlans[idx];
-                  const price = Number(reportProperty?.price || 0);
-                  
+ 
                   if (!plan || !price) return null;
-                  
-                  // Create a safe payment plan with extensive date validation
+ 
+                  // باقي الكود كما هو...
                   const createSafeDate = (dateStr: string | undefined | null | object, defaultDate: string) => {
                     if (!dateStr || typeof dateStr === 'object') return defaultDate;
                     const parsed = Date.parse(dateStr);
@@ -1387,7 +1680,7 @@ const PropertiesTab: React.FC = () => {
                     if (dateObj.toString() === 'Invalid Date') return defaultDate;
                     return dateStr;
                   };
-
+ 
                   const safePlan = {
                     ...plan,
                     firstInstallmentDate: createSafeDate(plan.firstInstallmentDate, "2024-12-01"),
@@ -1395,23 +1688,41 @@ const PropertiesTab: React.FC = () => {
                     downpayment: Number(plan.downpayment) || 0,
                     delivery: Number(plan.delivery) || 0,
                     yearsToPay: Number(plan.yearsToPay) || 1,
-                    installmentMonthsCount: Number(plan.installmentMonthsCount) || 1
+                    installmentMonthsCount: Number(plan.installmentMonthsCount) || (Number(plan.yearsToPay) * 12),
+                    paymentFrequency: Number(plan.paymentFrequency) || 1
                   };
-                  
-                  // Generate schedule with safe plan and comprehensive error handling
+ 
+                  // Debug log للـ custom plan
+                  if (paymentPlanMode === 'custom') {
+                    console.log('Custom Plan Data:', safePlan);
+                  }
+ 
                   let schedule: any[] = [];
                   try {
-                    // Additional validation before calling generatePaymentSchedule
                     if (safePlan.firstInstallmentDate && safePlan.deliveryDate && safePlan.yearsToPay > 0 && price > 0) {
+                      // استخدام generatePaymentSchedule الأصلية
                       schedule = generatePaymentSchedule(price, safePlan);
+ 
+                      // لو مش شغالة أو فاضية، نعمل schedule manual للـ custom plans
+                      if (paymentPlanMode === 'custom' && (!schedule || schedule.length === 0)) {
+                        schedule = window.generateCustomPaymentSchedule(price, safePlan, language);
+                      }
+ 
+                      // Debug log للـ schedule
+                      if (paymentPlanMode === 'custom') {
+                        console.log('Generated Schedule:', schedule);
+                      }
                     }
                   } catch (error) {
                     console.error('Error generating payment schedule for report:', error);
-                    // Return early with error message instead of continuing
                     return (
                       <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                          {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(project, language)}
+                          {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'}
+                          {paymentPlanMode === 'custom'
+                            ? (language === 'ar' ? ' (مخصصة)' : ' (Custom)')
+                            : getProjectDisplayName(project, language)
+                          }
                         </h3>
                         <p className="text-yellow-800 text-sm">
                           {language === 'ar' ? 'لا يمكن عرض جدول المدفوعات - بيانات غير صحيحة' : 'Cannot display payment schedule - invalid data'}
@@ -1419,12 +1730,16 @@ const PropertiesTab: React.FC = () => {
                       </div>
                     );
                   }
-                  
+ 
                   if (schedule.length === 0) {
                     return (
                       <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                          {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(project, language)}
+                          {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'}
+                          {paymentPlanMode === 'custom'
+                            ? (language === 'ar' ? ' (مخصصة)' : ' (Custom)')
+                            : getProjectDisplayName(project, language)
+                          }
                         </h3>
                         <p className="text-yellow-800 text-sm">
                           {language === 'ar' ? 'لا توجد بيانات متاحة لجدول المدفوعات' : 'No payment schedule data available'}
@@ -1432,32 +1747,35 @@ const PropertiesTab: React.FC = () => {
                       </div>
                     );
                   }
-                  
-                  // Find down payment and delivery rows
+ 
                   const downPaymentRow = schedule.find(row => row.label && row.label.toLowerCase().includes('down payment'));
                   const deliveryRow = schedule.find(row => row.label && row.label.toLowerCase().includes('delivery'));
                   const downPayment = downPaymentRow ? downPaymentRow.amount : 0;
                   const delivery = deliveryRow ? deliveryRow.amount : 0;
-                  // Installments total: sum only rows that include 'Installment' in label
                   const installmentsTotal = schedule
                     .filter(row => row.label && row.label.toLowerCase().includes('installment'))
                     .reduce((sum, item) => sum + item.amount, 0);
-                  // Remaining: price - down payment - delivery
-                  const remaining = price - downPayment - delivery;
+ 
                   let deliveryDateStr = '-';
                   if (plan && typeof plan === 'object' && 'deliveryDate' in plan && plan.deliveryDate) {
                     deliveryDateStr = String(plan.deliveryDate);
                   }
+ 
                   return (
                     <div className="mb-4">
                       <h3 className="text-lg font-semibold text-gray-800 mb-3">
-                        {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'} {getProjectDisplayName(project, language)}
+                        {language === 'ar' ? 'خطة الدفع' : 'Payment Plan'}
+                        {paymentPlanMode === 'custom'
+                          ? (language === 'ar' ? ' (مخصصة)' : ' (Custom)')
+                          : getProjectDisplayName(project, language)
+                        }
                         {(!plan.firstInstallmentDate || !plan.deliveryDate) && (
                           <span className="ml-2 text-sm text-orange-600 font-normal">
                             ({language === 'ar' ? 'تواريخ افتراضية مستخدمة' : 'Default dates used'})
                           </span>
                         )}
                       </h3>
+ 
                       {/* Summary Card */}
                       <div className="flex flex-wrap gap-4 mb-4">
                         <div className="flex items-center bg-blue-100 text-blue-800 rounded-lg px-4 py-2 font-bold text-sm shadow-sm">
@@ -1477,6 +1795,7 @@ const PropertiesTab: React.FC = () => {
                           {t('deliveryDate')}: <span className="ml-1">{deliveryDateStr}</span>
                         </div>
                       </div>
+ 
                       {/* Table */}
                       <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
                         <table className="w-full text-sm">
@@ -1517,6 +1836,7 @@ const PropertiesTab: React.FC = () => {
                           </tbody>
                         </table>
                       </div>
+ 
                       {/* Totals */}
                       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-2 text-base font-bold">
                         <div>{language === 'ar' ? 'السعر الإجمالي' : 'Total Price'}: <span className="text-blue-700">{Math.round(price).toLocaleString()} EGP</span></div>
@@ -1527,20 +1847,16 @@ const PropertiesTab: React.FC = () => {
                     </div>
                   );
                 })()}
-                {/* Images */}
+ 
+                {/* Images - باقي الكود كما هو */}
                 {(() => {
-                  // Get property images
                   const propertyImages = reportProperty && Array.isArray(reportProperty.images) ? reportProperty.images : [];
-
-                  // Get project images - first try nested project object, then fallback to projects array
                   const project = reportProperty?.project && typeof reportProperty.project === 'object'
                     ? reportProperty.project
                     : projects?.find(p => p.id === reportProperty?.projectId);
                   const projectImages = project && Array.isArray(project.images) ? project.images : [];
-
-                  // Combine all images
                   const allImages = [...propertyImages, ...projectImages];
-
+ 
                   if (allImages.length > 0) {
                     return (
                       <div className="mb-4">
@@ -1574,6 +1890,7 @@ const PropertiesTab: React.FC = () => {
                   }
                   return null;
                 })()}
+ 
                 {/* Notes */}
                 {reportNotes && (
                   <div className="mb-4">
@@ -1583,6 +1900,7 @@ const PropertiesTab: React.FC = () => {
                     <textarea value={reportNotes} onChange={e => setReportNotes(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg" rows={2} placeholder={language === 'ar' ? 'أضف ملاحظات مخصصة' : 'Add custom notes'} />
                   </div>
                 )}
+ 
                 {/* Footer */}
                 <div className="mt-6 pt-4 border-t text-xs text-gray-500">
                   <div>{settings?.companyName || (language === 'ar' ? 'بروباي العقارية' : 'Propai Real Estate')} | {settings?.companyWebsite || (language === 'ar' ? 'www.propai.com' : 'www.propai.com')} | {settings?.companyEmail || (language === 'ar' ? 'info@propai.com' : 'info@propai.com')}</div>
@@ -1591,6 +1909,7 @@ const PropertiesTab: React.FC = () => {
                     {language === 'ar' ? 'هذا التقرير سري' : 'This report is confidential'}
                   </div>
                 </div>
+ 
                 {/* Print Button */}
                 <div className="flex justify-end gap-2 mt-6 print:hidden no-pdf" id="report-export-buttons">
                   <button onClick={handlePrint} className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300">
@@ -1602,7 +1921,7 @@ const PropertiesTab: React.FC = () => {
           </div>
         </div>
       )}
-
+ 
       {/* Image Modal */}
       {showImageModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
@@ -1646,5 +1965,5 @@ const PropertiesTab: React.FC = () => {
     </div>
   );
 };
-
+ 
 export default PropertiesTab;

@@ -1,5 +1,5 @@
-import React, { useMemo, useState,useEffect } from 'react';
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Eye, Edit, Trash2, ArrowLeftRight } from 'lucide-react';
 import { Interest, Lead, LeadStatus, Property, Tier, User } from '../../types';
 import { PhoneNumber } from '../ui/PhoneNumber';
 
@@ -14,6 +14,7 @@ interface LeadsTableProps {
   onSelectAll: () => void;
   onLeadClick: (lead: Lead) => void;
   onEditLead: (lead: Lead) => void;
+  onTransferLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
   t: (key: string) => string;
   i18n: any;
@@ -38,6 +39,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
   onSelectAll,
   onLeadClick,
   onEditLead,
+  onTransferLead,
   onDeleteLead,
   t,
   i18n,
@@ -47,12 +49,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     const userIndex = users?.findIndex(user => user.name === userName);
     return userIndex !== undefined && userIndex >= 0 ? USER_COLORS[userIndex % USER_COLORS.length] : 'bg-gray-500';
   }, [users]);
-
-
-
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  
+
   // Sort leads from newest to oldest based on createdAt
   const sortedLeads = useMemo(() => {
     return [...leads].sort((a, b) => {
@@ -61,7 +60,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
       return dateB - dateA; // Newest first
     });
   }, [leads]);
-  
+
   const totalPages = Math.ceil(sortedLeads.length / rowsPerPage);
   // البيانات اللي هتتعرض
   const paginatedLeads = sortedLeads.slice(
@@ -123,23 +122,23 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     }
   }, [i18n.language]);
 
- const projectName = (lead: Lead) => {
-  if (i18n.language === 'ar') {
-    return (
-      lead.projectInterest?.nameAr ||
-      lead.projectInterest?.nameEn ||
-      lead?.otherProject ||
-      'لا يوجد'
-    );
-  } else {
-    return (
-      lead.projectInterest?.nameEn ||
-      lead.projectInterest?.nameAr ||
-      lead?.otherProject ||
-      'Not Found'
-    );
-  }
-};
+  const projectName = (lead: Lead) => {
+    if (i18n.language === 'ar') {
+      return (
+        lead.projectInterest?.nameAr ||
+        lead.projectInterest?.nameEn ||
+        lead?.otherProject ||
+        'لا يوجد'
+      );
+    } else {
+      return (
+        lead.projectInterest?.nameEn ||
+        lead.projectInterest?.nameAr ||
+        lead?.otherProject ||
+        'Not Found'
+      );
+    }
+  };
 
 
 
@@ -195,19 +194,19 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     setRowsPerPage(newRowsPerPage);
     setCurrentPage(1); // Reset to first page when changing rows per page
   };
-// import { useEffect } from "react";
+  // import { useEffect } from "react";
 
-// ...
+  // ...
 
-useEffect(() => {
-  if (totalPages <= 1 && currentPage !== 1) {
-    setCurrentPage(1);
-  }
-  // كمان لو عدد الصفحات قل وبقي أقل من الصفحة الحالية يرجعك لأول صفحة
-  if (currentPage > totalPages) {
-    setCurrentPage(1);
-  }
-}, [totalPages, currentPage, setCurrentPage]);
+  useEffect(() => {
+    if (totalPages <= 1 && currentPage !== 1) {
+      setCurrentPage(1);
+    }
+    // كمان لو عدد الصفحات قل وبقي أقل من الصفحة الحالية يرجعك لأول صفحة
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage, setCurrentPage]);
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
@@ -303,7 +302,7 @@ useEffect(() => {
                     </button>
                   </td>
                   <td className="px-2 sm:px-3 md:px-6 py-4 sm:table-cell">
-                    <PhoneNumber 
+                    <PhoneNumber
                       phone={lead.contact}
                       className="text-xs sm:text-sm"
                     />
@@ -442,8 +441,25 @@ useEffect(() => {
                       >
                         <Edit className="h-4 w-4" />
                       </button>
-                    
-                      
+
+
+
+
+
+
+
+
+                      <button
+                        onClick={() => onTransferLead(lead)}
+                        className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                        title={t('editLead')}
+                        aria-label={`Edit ${getDisplayName(lead)}`}
+                      >
+                        <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
+                      </button>
+
+
+
                       <button
                         onClick={() => onDeleteLead(lead)}
                         className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"

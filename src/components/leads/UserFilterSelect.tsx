@@ -156,26 +156,48 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
   const managers = users.filter(user => user.role === 'team_leader');
   
   // Get sales reps based on selected manager and current user's role
-  const getSalesReps = () => {
-    if (currentUser.role === 'team_leader') {
-      // For team leaders, include both team leaders and sales reps
-      return users.filter(user => ['sales_rep', 'team_leader'].includes(user.role));
-    } else if (['admin', 'sales_admin'].includes(currentUser.role)) {
-      // For admin/sales_admin, filter based on selected manager
-      if (selectedManager) {
-        // Show sales reps under the selected manager + the manager themselves
-        const teamMembers = users.filter(user => 
-          user.role === 'sales_rep' && user.teamLeaderId === selectedManager.id
-        );
-        // Include the selected manager as well
-        return [selectedManager, ...teamMembers];
-      } else {
-        // Show all sales reps when no manager is selected
-        return users.filter(user => user.role === 'sales_rep');
-      }
+ const getSalesReps = () => {
+  if (currentUser.role === 'team_leader') {
+    // Team leader يشوف نفسه + السيلز + السيلز أدمين
+    return users.filter(user =>
+      ['sales_rep', 'sales_admin', 'team_leader'].includes(user.role)
+    );
+  } 
+  else if (currentUser.role === 'sales_admin') {
+    if (selectedManager) {
+      // لو محدد مدير: يرجع أعضاء الفريق تحت المدير + المدير نفسه
+      const teamMembers = users.filter(
+        user =>
+          (user.role === 'sales_rep' || user.role === 'sales_admin'||user.role === 'team_leader' ) &&
+          user.teamLeaderId === selectedManager.id
+      );
+      return [selectedManager, ...teamMembers].filter(u => u.role !== 'admin');
+    } else {
+      // يشوف نفسه + أي حد تاني sales_rep / sales_admin فقط
+      return users.filter(user =>
+        ['sales_rep', 'sales_admin'].includes(user.role)
+      );
     }
-    return users.filter(user => user.role === 'sales_rep');
-  };
+  }
+  else if (currentUser.role === 'admin') {
+    if (selectedManager) {
+      const teamMembers = users.filter(
+        user =>
+          (user.role === 'sales_rep' || user.role === 'sales_admin') &&
+          user.teamLeaderId === selectedManager.id
+      );
+      return [selectedManager, ...teamMembers];
+    } else {
+      return users.filter(user =>
+        ['sales_rep', 'sales_admin'].includes(user.role)
+      );
+    }
+  }
+
+  // باقي الحالات: يرجّع السيلز فقط
+  return users.filter(user => user.role === 'sales_rep');
+};
+
 
   const salesReps = getSalesReps();
 
@@ -184,49 +206,55 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
     return null;
   }
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm border p-3 sm:p-4">
-      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-        {/* Manager Filter - Only show for admin and sales_admin */}
-        {['admin', 'sales_admin'].includes(currentUser.role) && (
-          <div className="flex-1 min-w-0">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-              {t('filterByManager') || 'Filter by Manager'}
-            </label>
-            <CustomDropdown
-              value={selectedManager?.id || ''}
-              onChange={(managerId) => {
-                const manager = managers.find(m => m.id === managerId) || null;
-                setSelectedManager(manager);
-                // Clear sales rep selection when manager changes since the available options will change
-                setSelectedSalesRep(null);
-              }}
-              options={managers}
-              placeholder={t('selectManager') || 'Select Manager'}
-              className="w-full"
-            />
-          </div>
-        )}
-
-        {/* Sales Rep Filter - Show for admin, sales_admin, and team_leader */}
+return (
+  <div className="bg-white rounded-lg shadow-sm border p-3 sm:p-4">
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+      {/* Manager Filter */}
+      {['admin', 'sales_admin'].includes(currentUser.role) && (
         <div className="flex-1 min-w-0">
           <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-            {t('filterBySalesRep') || 'Filter by Sales Rep'}
+            {t('filterByManager') || 'Filter by Manager'}
           </label>
           <CustomDropdown
-            value={selectedSalesRep?.id || ''}
-            onChange={(salesRepId) => {
-              const salesRep = salesReps.find(s => s.id === salesRepId) || null;
-              setSelectedSalesRep(salesRep);
+            value={selectedManager?.id || ''}
+            onChange={(managerId) => {
+              const manager = managers.find(m => m.id === managerId) || null;
+              setSelectedManager(manager);
+              setSelectedSalesRep(null); // reset sales rep عند تغيير المانجر
             }}
-            options={salesReps}
-            placeholder={t('selectSalesRep') || 'Select Sales Rep'}
+            options={
+              currentUser.role === 'admin'
+                ? managers.filter(m => m.role === 'team_leader') // admin يشوف team_leaders
+                : currentUser.role === 'sales_admin'
+                ? managers.filter(m => ['team_leader', 'sales_admin'].includes(m.role)) // sales_admin يشوف team_leader + sales_admin managers
+                : managers
+            }
+            placeholder={t('selectManager') || 'Select Manager'}
             className="w-full"
           />
         </div>
+      )}
+
+      {/* Sales Rep Filter */}
+      <div className="flex-1 min-w-0">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">
+          {t('filterBySalesRep') || 'Filter by Sales Rep'}
+        </label>
+        <CustomDropdown
+          value={selectedSalesRep?.id || ''}
+          onChange={(salesRepId) => {
+            const salesRep = salesReps.find(s => s.id === salesRepId) || null;
+            setSelectedSalesRep(salesRep);
+          }}
+          options={salesReps}
+          placeholder={t('selectSalesRep') || 'Select Sales Rep'}
+          className="w-full"
+        />
       </div>
     </div>
-  );
+  </div>
+);
+
 };
 
 export default UserFilterSelect; 

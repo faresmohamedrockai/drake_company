@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useTranslation } from 'react-i18next';
-import { Search, Plus, Edit, Trash2, User, Shield, Eye, EyeOff } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Shield, Eye, EyeOff } from 'lucide-react';
 import { User as UserType } from '../../types';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +18,8 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const [availableUsers, setAvailableUsers] = useState<UserType[]>([]); // عدل النوع حسب مشروعك
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [assignToMap, setAssignToMap] = useState<{ [key: string]: string }>({});
-
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserType | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -171,9 +172,9 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
   const canDeleteUsers = currentUser?.role === 'admin';
 
   // Helper function to get team members for a team leader
-  const getTeamMembers = (teamLeaderId: string) => {
-    return users.filter(user => user.role === 'sales_rep' && user.teamLeaderId === teamLeaderId);
-  };
+  // const getTeamMembers = (teamLeaderId: string) => {
+  //   return users.filter(user => user.role === 'sales_rep' && user.teamLeaderId === teamLeaderId);
+  // };
 
   const filteredUsers = users.filter(user =>
     user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -214,8 +215,6 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
       addUserMutation({ formData: submitData });
 
     }
-
-
   };
 
 
@@ -236,12 +235,6 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
 
 
 
-
-  // useEffect(() => {
-  //   if (isDeleting) {
-  //     toast.success(t('user.deleted'));
-  //   }
-  // }, [isDeleting]);
 
 
 
@@ -281,11 +274,117 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
 
-    // Clear email error when user types
+
     if (name === 'email') {
       setEmailError('');
     }
   }
+  const OrgCard: React.FC<{ user: UserType; selectedUser?: UserType | null }> = ({ user, selectedUser }) => {
+    const getRoleColor = (role: string) => {
+      switch (role) {
+        case 'admin': return 'bg-red-100 text-red-800';
+        case 'sales_admin': return 'bg-purple-100 text-purple-800';
+        case 'team_leader': return 'bg-blue-100 text-blue-800';
+        case 'sales_rep': return 'bg-green-100 text-green-800';
+        default: return 'bg-gray-100 text-gray-800';
+      }
+    };
+
+    const isSelected = selectedUser?.id === user.id;
+
+    return (
+      <div
+        className={`flex flex-col items-center p-4 bg-white shadow rounded-lg border w-36 sm:w-40 transition
+        ${isSelected ? 'ring-4 ring-blue-500 scale-105' : ''}`}
+      >
+        {/* Avatar */}
+        <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+          {user.image ? (
+            <img src={user.image} alt={user.name} className="w-full h-full object-cover rounded-full" />
+          ) : (
+            user.name?.charAt(0)
+          )}
+        </div>
+        {/* Name */}
+        <p className="mt-2 text-sm font-semibold text-gray-900 text-center">
+          {user.name}
+        </p>
+        {/* Role */}
+        <span className={`mt-1 px-2 py-0.5 text-xs rounded-full ${getRoleColor(user.role)}`}>
+          {user.role}
+        </span>
+      </div>
+    );
+  };
+
+
+  const OrgChart: React.FC<{ users: UserType[]; selectedUser?: UserType | null }> = ({ users, selectedUser }) => {
+    const admin = users.find((u) => u.role === "admin");
+    const salesAdmins = users.filter((u) => u.role === "sales_admin");
+    const teamLeaders = users.filter((u) => u.role === "team_leader");
+    const salesReps = users.filter((u) => u.role === "sales_rep");
+
+    return (
+      <div className="flex flex-col items-center space-y-10 mt-10 w-full">
+        {/* Admin */}
+        {admin && <OrgCard user={admin} selectedUser={selectedUser} />}
+        {admin && <div className="w-0.5 h-8 bg-gray-300"></div>}
+
+        {/* Sales Admins */}
+        {salesAdmins.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-6 w-full max-w-5xl">
+            {salesAdmins.map((sa) => (
+              <OrgCard key={sa.id} user={sa} selectedUser={selectedUser} />
+            ))}
+          </div>
+        )}
+        {salesAdmins.length > 0 && <div className="w-0.5 h-8 bg-gray-300"></div>}
+
+        {/* Team Leaders + Sales Reps */}
+        <div className="w-full overflow-x-auto">
+          <div className="flex gap-10 justify-center min-w-max px-4">
+            {teamLeaders.map((leader) => {
+              const repsForLeader = salesReps.filter(
+                (rep) => rep.teamLeader?.id === leader.id
+              );
+
+              return (
+                <div
+                  key={leader.id}
+                  className="flex flex-col items-center space-y-6 min-w-[220px]"
+                >
+                  <OrgCard user={leader} selectedUser={selectedUser} />
+
+                  {repsForLeader.length > 0 && (
+                    <div className="w-0.5 h-6 bg-gray-300"></div>
+                  )}
+
+                  {/* Sales reps grid - 3 per row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {repsForLeader.map((rep) => (
+                      <OrgCard
+                        key={rep.id}
+                        user={rep}
+                        selectedUser={selectedUser}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
+
+
+
+
+
+
 
   return (
     <div className={isRTL ? 'rtl' : 'ltr'}>
@@ -352,6 +451,9 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                 </th>
               </tr>
             </thead>
+
+
+
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-gray-50">
@@ -382,12 +484,27 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                   <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className={`flex space-x-2 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}`}>
                       <button
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setShowOrgModal(true);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                        title={t('viewOrg')}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+
+
+
+                      <button
                         onClick={() => handleEdit(user)}
                         className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
                         title={t('user.edit')}
                       >
                         <Edit className="h-4 w-4" />
                       </button>
+
+
                       {canDeleteUsers && user.id !== currentUser?.id && (
                         <div className="flex flex-col gap-1 items-start">
                           {deletingUserId === user.id ? (
@@ -463,7 +580,9 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
+
                           )}
+
                         </div>
                       )}
 
@@ -475,8 +594,41 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
           </table>
         </div>
       </div>
+      {/* Org Chart Section */}
+      {showOrgModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-7xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {t('Organizational Chart')} - {selectedUser.name}
+              </h3>
+              <button
+                onClick={() => setShowOrgModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Org Chart */}
+            <OrgChart users={users} selectedUser={selectedUser} />
+          </div>
+        </div>
+      )}
+
+
 
       {/* Add/Edit User Modal */}
+
+
+
+
+
+
+
+
+
+
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className={`bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -548,17 +700,6 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                 )}
               </div>
 
-              {/* <div>
-                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.username')}</label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
-                  required
-                  dir={isRTL ? 'rtl' : 'ltr'}
-                />
-              </div> */}
 
               <div>
                 <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>{t('user.password')}</label>
@@ -621,29 +762,35 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
               {/* Team ID for Sales Rep */}
               {formData.role === 'sales_rep' && (
                 <div>
-                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}>
+                  <label
+                    className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'font-arabic' : ''}`}
+                  >
                     {isRTL ? 'اسم قائد الفريق' : 'Team Leader Name'}
                   </label>
                   <select
                     value={formData.teamLeaderId}
                     onChange={handleInputChange}
-                    name='teamLeaderId'
+                    name="teamLeaderId"
                     className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRTL ? 'font-arabic' : ''}`}
                     dir={isRTL ? 'rtl' : 'ltr'}
                     required
                   >
                     <option value="">{t('common:selectTeamLeaderName')}</option>
                     {users
-                      .filter(user => user.role === 'team_leader')
-                      .map(teamLeader => (
+                      .filter(
+                        (user) =>
+                          user.role === "team_leader" &&
+                          user.id !== formData.teamLeaderId // 👈 استبعاد الـ teamLeader المختار
+                      )
+                      .map((teamLeader) => (
                         <option key={teamLeader.id} value={teamLeader.id}>
                           {teamLeader.name} ({teamLeader.email})
                         </option>
-                      ))
-                    }
+                      ))}
                   </select>
                 </div>
               )}
+
 
 
               <div className={`flex justify-end space-x-3 pt-4 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}`}>
@@ -654,20 +801,43 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                 >
                   {t('actions.cancel')}
                 </button>
+
+
+
+
+
                 <button
                   type="submit"
-                  onClick={()=>{
-                    
+                  onClick={() => {
                   }}
                   className={`px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 ${isRTL ? 'font-arabic' : ''}`}
                 >
                   {editingUser ? t('actions.updateUser') : t('actions.addUser')}
                 </button>
+
+
+
+
+
               </div>
             </form>
           </div>
         </div>
       )}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     </div>
   );
 };
