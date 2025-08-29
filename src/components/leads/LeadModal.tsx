@@ -1556,7 +1556,7 @@ const getActivities = (lead: any) => {
                         </>
                       )}
                     </div>
-                  ))}
+                  )).reverse()}
                 {notes && notes.length === 0 && (
                   <p className="text-gray-500 text-center py-4">{String(t('noNotesAdded') || 'No notes added')}</p>
                 )}

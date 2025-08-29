@@ -43,7 +43,7 @@ export default function TransferLeadModal({
   });
 
   const [agent, setAgent] = useState("");
-  const [type, setType] = useState("fresh");
+  const [type, setType] = useState("with-history");
   const [notes, setNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -231,7 +231,6 @@ export default function TransferLeadModal({
             className="w-full border-none rounded-lg px-3 py-2 text-sm focus:ring focus:ring-blue-300"
             required
           >
-            <option value="fresh">Fresh Transfer ( No History )</option>
             <option value="with-history">Transfer with History</option>
           </select>
           <p className="text-xs text-gray-400 mt-1">
