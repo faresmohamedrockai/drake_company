@@ -1070,16 +1070,24 @@ const getActivities = (lead: any) => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-2 sm:py-3 md:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${activeTab === tab
-                  ? 'text-blue-600 border-b-2 border-blue-600'
-                  : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
-                  }`}
+                className={`py-2 sm:py-3 md:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${
+                  activeTab === tab
+                    ? tab === 'Ai Summry'
+                      ? 'text-purple-600 border-b-2 border-purple-600 transition-colors duration-300'
+                      : 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
+                }`}
               >
-                {t(tab)}
+                <span className="flex items-center">
+                  {tab === 'Ai Summry' && <Bot className={`w-4 h-4 mr-1 ${activeTab !== tab && tab === 'Ai Summry' ? 'text-purple-600 animate-pulse' : ''}`} />}
+                  <span className={`${activeTab !== tab && tab === 'Ai Summry' ? 'text-purple-600 animate-pulse' : ''}`}>{t(tab)}</span>
+                </span>
                 {activeTab === tab && (
                   <motion.div
                     layoutId="activeTab"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"
+                    className={`absolute bottom-0 left-0 right-0 h-0.5 ${
+                      tab === 'Ai Summry' ? 'bg-purple-600' : 'bg-blue-600'
+                    }`}
                     initial={false}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />

@@ -1,5 +1,8 @@
 {
   "navigation": {
+    "main": "الرئيسية",
+    "workflows": "سير العمل",
+    "analytics": "التحليلات",
     "dashboard": "لوحة التحكم",
     "leads": "العملاء المحتملين",
     "inventory": "المتاحات",

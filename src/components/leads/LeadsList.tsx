@@ -1,12 +1,7 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import {
-  Search, Plus, Eye, Calendar as CalendarIcon, Edit, Trash2, X,
-  Minus, Phone, Check, Star, MessageSquare, AlertTriangle,
-  ThumbsUp, ThumbsDown, Clock, HelpCircle, User as UserIcon,
-  Filter, Download, RefreshCw, Settings, Upload, Info
-} from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Id, toast } from 'react-toastify';
@@ -21,31 +16,25 @@ import UserFilterSelect from './UserFilterSelect';
 import { LeadsTable } from './LeadsTable';
 import { StatusCards } from './StatusCards';
 import { CallOutcomeCards } from './CallOutcomeCards';
-import { VisitStatusCards } from './VisitStatusCards';
-import { FilterModal } from './FilterModal';
+// import { VisitStatusCards } from './VisitStatusCards';
+import FilterPanel from './FilterPanel';
 import { BulkActionsBar } from './BulkActionsBar';
 import { SearchAndActions } from './SearchAndActions';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
 
 // Types and utilities
 import { Lead, LeadStatus, Property, User } from '../../types';
-import type { PaymentPlan, Project } from '../inventory/ProjectsTab';
+import type { Project } from '../inventory/ProjectsTab';
 import { deleteLead, getLeads, getProperties, getUsers, bulkUpdateLeads, createLead, getProjects } from '../../queries/queries';
 import { useLeadsFilters } from '../../hooks/useLeadsFilters';
 import { useLeadsSelection } from '../../hooks/useLeadsSelection';
-import { useLeadsStats } from '../../hooks/useLeadsStats';
-import { formatCurrency, formatDate } from '../../utils/formatters';
+// import { useLeadsStats } from '../../hooks/useLeadsStats';
 import TransferLeadModal from './TransferLead';
 import { AdviceModal } from './AdviceModal';
 import axiosInterceptor from "../../../axiosInterceptor/axiosInterceptor";
 // import axiosInstance from 'axiosInterceptor';
 
 // Constants
-const USER_COLORS = [
-  'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
-  'bg-red-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
-  'bg-yellow-500', 'bg-cyan-500', 'bg-lime-500', 'bg-amber-500'
-];
 
 const LeadsList: React.FC = React.memo(() => {
   const { user } = useAuth();
@@ -62,7 +51,7 @@ const LeadsList: React.FC = React.memo(() => {
   // const [showAdviceModal, setShowAdviceModal] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferModalLead, setTransferModalLead] = useState<Lead | null>(null);
-  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
   const [toastId, setToastId] = useState<Id | null>(null);
@@ -104,11 +93,8 @@ const LeadsList: React.FC = React.memo(() => {
 
   const {
     selectedLeads,
-    setSelectedLeads,
     isSelectAllChecked,
-    setIsSelectAllChecked,
     showBulkActions,
-    setShowBulkActions,
     bulkAssignToUserId,
     setBulkAssignToUserId,
     handleSelectLead: handleSelectLeadBase,
@@ -141,7 +127,7 @@ const LeadsList: React.FC = React.memo(() => {
     retry: 3
   });
 
-  const { data: users = [], isLoading: isLoadingUsers } = useQuery<User[]>({
+  const { data: users = [] } = useQuery<User[]>({
     queryKey: ['users'],
     staleTime: 1000 * 60 * 5,
     queryFn: getUsers,
@@ -184,7 +170,7 @@ const LeadsList: React.FC = React.memo(() => {
     }
   });
 
-  const { mutateAsync: createLeadMutation, isPending: isCreatingLead } = useMutation({
+  const { mutateAsync: createLeadMutation } = useMutation({
     mutationFn: (lead: Partial<Lead>) => createLead(lead),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
@@ -533,7 +519,6 @@ const LeadsList: React.FC = React.memo(() => {
       filtered = filtered.filter(lead => {
         const nameEn = lead.nameEn?.toLowerCase() || '';
         const nameAr = lead.nameAr?.toLowerCase() || '';
-        const gender = lead.gender?.toLowerCase() || '';
         const contact = lead.contact?.trim() || '';
         const familyName = lead.familyName?.toLowerCase() || '';
         const source = lead.source.toLowerCase();
@@ -548,6 +533,58 @@ const LeadsList: React.FC = React.memo(() => {
 
     // Apply column filters
     filtered = filtered.filter(lead => {
+      const parseInputDate = (value: string | undefined | null): Date | null => {
+        if (!value) return null;
+        const parts = String(value).split('-');
+        if (parts.length !== 3) return null;
+        const [y, m, d] = parts.map(Number);
+        if (!y || !m || !d) return null;
+        return new Date(y, m - 1, d, 0, 0, 0, 0);
+      };
+      const toDayStamp = (d: Date): number => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const parseLeadDate = (raw: any): Date | null => {
+        if (!raw) return null;
+        if (raw instanceof Date) return raw as Date;
+        if (typeof raw === 'number') {
+          const d = new Date(raw);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        const str = String(raw).trim();
+        // Try native parser first
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) return d;
+        // If contains time, split off date part
+        const dateOnly = str.split(' ')[0];
+        // dd/MM/yyyy
+        const ddmmyyyy = /^\d{2}\/\d{2}\/\d{4}$/;
+        if (ddmmyyyy.test(dateOnly)) {
+          const [dd, mm, yyyy] = dateOnly.split('/').map(Number);
+          d = new Date(yyyy, mm - 1, dd);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        // dd-MM-yyyy
+        const ddmmyyyyDash = /^\d{2}-\d{2}-\d{4}$/;
+        if (ddmmyyyyDash.test(dateOnly)) {
+          const [dd, mm, yyyy] = dateOnly.split('-').map(Number);
+          d = new Date(yyyy, mm - 1, dd);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        // yyyy/MM/dd
+        const yyyymmddSlash = /^\d{4}\/\d{2}\/\d{2}$/;
+        if (yyyymmddSlash.test(dateOnly)) {
+          const [yyyy, mm, dd] = dateOnly.split('/').map(Number);
+          d = new Date(yyyy, mm - 1, dd);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        // yyyy-MM-dd
+        const yyyymmddDash = /^\d{4}-\d{2}-\d{2}$/;
+        if (yyyymmddDash.test(dateOnly)) {
+          const [yyyy, mm, dd] = dateOnly.split('-').map(Number);
+          d = new Date(yyyy, mm - 1, dd);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+      };
       const displayName = i18n.language === 'ar' ?
         (lead.nameAr || lead.nameEn || '') :
         (lead.nameEn || lead.nameAr || '');
@@ -580,9 +617,26 @@ const LeadsList: React.FC = React.memo(() => {
         return false;
       }
       if (filters.assignedTo &&
-        lead.assignedToId !== filters.assignedTo &&
         lead.owner?.id !== filters.assignedTo) {
         return false;
+      }
+
+      // Created date range filter
+      const startStr = (filters as any).createdAtStart?.trim?.() || filters.createdAtStart || '';
+      const endStr = (filters as any).createdAtEnd?.trim?.() || filters.createdAtEnd || '';
+      if (startStr || endStr) {
+        const rawCreatedAt: any = (lead as any).createdAt || (lead as any).created_at || (lead as any).createdDate || (lead as any).firstConection;
+        const leadDateObj = parseLeadDate(rawCreatedAt);
+        if (!leadDateObj) return false;
+        const leadStamp = toDayStamp(leadDateObj);
+
+        let startDate = parseInputDate(startStr);
+        let endDate = parseInputDate(endStr);
+        if (startDate && endDate && startDate.getTime() > endDate.getTime()) {
+          const tmp = startDate; startDate = endDate; endDate = tmp;
+        }
+        if (startDate && leadStamp < toDayStamp(startDate)) return false;
+        if (endDate && leadStamp > toDayStamp(endDate)) return false;
       }
       return true;
     });
@@ -670,10 +724,11 @@ const LeadsList: React.FC = React.memo(() => {
       try {
         await bulkUpdateLeadsMutation({
           leadIds: Array.from(selectedLeads),
-          updateData: { toAgentId: bulkAssignToUserId,
-            transferType:"With History",
-            notes:"Get From Bulk Assign To"
-           }
+          updateData: {
+            toAgentId: bulkAssignToUserId,
+            transferType: "With History",
+            notes: ["Get From Bulk Assign To"]
+          }
         });
         getLeads();
       } catch (error) {
@@ -719,7 +774,7 @@ const LeadsList: React.FC = React.memo(() => {
 
   if (leadsError) {
     return (
-      <div className="p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+      <div className="p-6 bg-transparent min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('errorLoadingLeads')}</h2>
@@ -738,24 +793,28 @@ const LeadsList: React.FC = React.memo(() => {
 
   return (
     <div
-      className={`p-3 sm:p-4 md:p-6 bg-gray-50 min-h-screen ${i18n.language === 'ar' ? 'font-arabic' : ''}`}
+      className={`p-3 sm:p-4 md:p-6 bg-transparent min-h-screen ${i18n.language === 'ar' ? 'font-arabic' : ''}`}
       dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
     >
       {/* Header */}
-      <div className="mb-4 sm:mb-6 md:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">{t('title')}</h1>
-            <p className="text-sm sm:text-base text-gray-600">{t('description')}</p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleRefresh}
-              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-              title={t('refreshData')}
-            >
-              <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
-            </button>
+      <div className="relative overflow-hidden mb-4 sm:mb-6 md:mb-8 rounded-2xl bg-gradient-to-r from-indigo-500 via-sky-500 to-cyan-500 text-white">
+        <div className="absolute -top-10 -right-10 h-40 w-40 bg-white/20 rounded-full blur-2xl" />
+        <div className="absolute -bottom-12 -left-10 h-48 w-48 bg-white/10 rounded-full blur-2xl" />
+        <div className="relative p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">{t('title')}</h1>
+              <p className="text-sm sm:text-base text-white/85">{t('description')}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRefresh}
+                className="p-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                title={t('refreshData')}
+              >
+                <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -811,7 +870,7 @@ const LeadsList: React.FC = React.memo(() => {
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           activeFiltersCount={activeFiltersCount}
-          onFilterClick={() => setShowFilterModal(true)}
+          onFilterClick={() => setShowFilters(prev => !prev)}
           onAddClick={() => setShowAddModal(true)}
           onImportClick={() => setShowImportModal(true)}
           // ✨ 3. تمرير الدالة التي تفتح النافذة
@@ -824,6 +883,21 @@ const LeadsList: React.FC = React.memo(() => {
           t={t}
         />
       </div>
+
+      {showFilters && (
+        <div className="mb-4 sm:mb-6">
+          <FilterPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            onClearFilters={clearAllFilters}
+            leads={leads}
+            properties={properties}
+            projects={projects}
+            users={users}
+            t={t}
+          />
+        </div>
+      )}
 
       {/* Bulk Actions Bar */}
       {showBulkActions && (
@@ -843,7 +917,7 @@ const LeadsList: React.FC = React.memo(() => {
       )}
 
       {/* Leads Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      <div className="bg-white/70 backdrop-blur-md border border-white/60 rounded-xl shadow-lg overflow-hidden">
         <LeadsTable
           leads={filteredLeads}
           isLoading={isLoadingLeads}
@@ -911,19 +985,7 @@ const LeadsList: React.FC = React.memo(() => {
         />
       )}
 
-      <FilterModal
-        isOpen={showFilterModal}
-        onClose={() => setShowFilterModal(false)}
-        filters={filters}
-        onFiltersChange={setFilters}
-
-        onClearFilters={clearAllFilters}
-        leads={leads}
-        properties={properties}
-        projects={projects}
-        users={users}
-        t={t}
-      />
+      {/* Inline filter panel replaces modal */}
 
       <DeleteConfirmationModal
         isOpen={showDeleteConfirm}

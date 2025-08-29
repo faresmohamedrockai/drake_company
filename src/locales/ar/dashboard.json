@@ -37,4 +37,12 @@
   "leadsToFollowUp": "العملاء للمتابعة",
   "callsToMeetings": "المكالمات إلى الاجتماعات",
   "meetingsToDeals": "الاجتماعات إلى الصفقات"
-} 
+,
+  "teamOverview": "نظرة عامة على الفريق",
+  "viewMyLeads": "عرض عملائي",
+  "viewTeamLeads": "عرض عملاء الفريق",
+  "totalTeamLeads": "إجمالي عملاء الفريق",
+  "yourLeads": "عملاؤك",
+  "directTeamMembersLeads": "عملاء أعضاء الفريق المباشرين",
+  "directTeamMembers": "أعضاء الفريق المباشرون"
+}

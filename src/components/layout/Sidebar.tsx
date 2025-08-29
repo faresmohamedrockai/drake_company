@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -14,7 +14,9 @@ import {
   Menu,
   BarChart3,
   Globe,
-  CheckSquare
+  CheckSquare,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { User as UserType } from '../../types';
 import UserProfileModal from '../settings/UserProfileModal';
@@ -33,156 +35,192 @@ const Sidebar: React.FC = () => {
   const { t } = useTranslation('common');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
-  const [isSwitching, setIsSwitching] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    const stored = localStorage.getItem('sidebar-collapsed');
+    return stored === 'true';
+  });
   const location = useLocation();
 
-  const toggleLanguage = () => {
-    setIsSwitching(true);
-    setTimeout(() => {
-      setLanguage(language === 'en' ? 'ar' : 'en');
-      setIsSwitching(false);
-    }, 150); // Half of the transition duration
-  };
+  // Language toggle removed from header in this design
 
-  const menuItems = [
-    { id: 'dashboard', label: t('navigation.dashboard'), icon: Home, path: '/dashboard' },
-    { id: 'leads', label: t('navigation.leads'), icon: Users, path: '/leads' },
-    { id: 'inventory', label: t('navigation.inventory'), icon: Building2, path: '/inventory' },
-    { id: 'meetings', label: t('navigation.meetings'), icon: Calendar, path: '/meetings' },
-    { id: 'tasks', label: t('navigation.tasks'), icon: CheckSquare, path: '/tasks' },
-    { id: 'contracts', label: t('navigation.contracts'), icon: FileText, path: '/contracts', adminOnly: true, salesAdminOnly: true },
-    { id: 'reports', label: t('navigation.reports'), icon: BarChart3, path: '/reports', adminOnly: true },
-    { id: 'settings', label: t('navigation.settings'), icon: Settings, path: '/settings' },
-  ];
+  const sections = useMemo(() => ([
+    {
+      id: 'main',
+      title: t('navigation.main', { defaultValue: 'Main' }),
+      items: [
+        { id: 'dashboard', label: t('navigation.dashboard'), icon: Home, path: '/dashboard' },
+        { id: 'leads', label: t('navigation.leads'), icon: Users, path: '/leads' },
+        { id: 'inventory', label: t('navigation.inventory'), icon: Building2, path: '/inventory' },
+      ]
+    },
+    {
+      id: 'workflows',
+      title: t('navigation.workflows', { defaultValue: 'Workflows' }),
+      items: [
+        { id: 'meetings', label: t('navigation.meetings'), icon: Calendar, path: '/meetings' },
+        { id: 'tasks', label: t('navigation.tasks'), icon: CheckSquare, path: '/tasks' },
+        { id: 'contracts', label: t('navigation.contracts'), icon: FileText, path: '/contracts', adminOnly: true, salesAdminOnly: true },
+      ]
+    },
+    {
+      id: 'analytics',
+      title: t('navigation.analytics', { defaultValue: 'Analytics' }),
+      items: [
+        { id: 'reports', label: t('navigation.reports'), icon: BarChart3, path: '/reports', adminOnly: true },
+        { id: 'settings', label: t('navigation.settings'), icon: Settings, path: '/settings' },
+      ]
+    }
+  ]), [t]);
+
+  // Sync CSS var for layout width
+  useEffect(() => {
+    const width = isCollapsed ? '5rem' : '16rem';
+    document.documentElement.style.setProperty('--sidebar-width', width);
+    localStorage.setItem('sidebar-collapsed', String(isCollapsed));
+  }, [isCollapsed]);
 
   // Sidebar content for reuse
   const sidebarContent = (
 
-    <div className="bg-white shadow-lg h-full w-100 flex flex-col">
-      {/* Logo */}
-      <div className="p-6 border-b">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
+    <div className={`bg-white h-full flex flex-col ${rtlPosition('border-r', 'border-l')} border-gray-200 shadow-sm`} style={{ width: isCollapsed ? '5rem' : '16rem' }}>
+      {/* Branding Header */}
+      <div className={`px-4 py-3 ${rtlPosition('pl-5', 'pr-5')} border-b relative`}>
+        <div className="absolute inset-y-0 w-1 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full" style={{ [isRTL ? 'right' : 'left']: 0 as unknown as string }} />
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-start'}`}>
+          <div className="flex items-center min-w-0">
             {settings?.companyImage ? (
               <img
                 src={settings.companyImage}
                 alt="Company Logo"
-                className={`h-10 w-10 rounded-lg ${rtlPosition('mr-4', 'ml-4')} object-cover`}
+                className={`h-8 w-8 rounded-md object-cover ring-1 ring-blue-100`}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   e.currentTarget.nextElementSibling?.classList.remove('hidden');
                 }}
               />
             ) : null}
-            <Building className={`h-10 w-10 text-blue-600 ${rtlPosition('mr-4', 'ml-4')} ${settings?.companyImage ? 'hidden' : ''}`} />
-            {(() => {
-              const companyName = settings?.companyName || 'James Map';
-              const words = companyName.split(' ');
-              const firstLine = words.slice(0, 2).join(' ');
-              const secondLine = words.length > 2 ? words.slice(2).join(' ') : null;
+            <Building className={`h-8 w-8 text-blue-600 ${!isCollapsed ? rtlPosition('mr-3', 'ml-3') : ''} ${settings?.companyImage ? 'hidden' : ''}`} />
+            {!isCollapsed && (() => {
+              const companyName = settings?.companyName || 'Rockai Dev';
               return (
-                <h1
-                  className="text-lg font-semibold text-gray-900 max-w-[150px] leading-tight"
-                  title={companyName}
-                  style={{ wordBreak: 'break-word' }}
-                >
-                  <span className="block truncate">{firstLine}</span>
-                  {secondLine && (
-                    <span className="block truncate text-sm text-gray-500">{secondLine}</span>
-                  )}
-                </h1>
+                <div className="min-w-0 mx-3">
+                  <h1
+                    className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[160px]"
+                    title={companyName}
+                  >
+                    {companyName}
+                  </h1>
+                  <span className="block text-xs text-gray-500 truncate max-w-[160px]">CRM</span>
+                </div>
               );
             })()}
           </div>
+          {/* Language toggle at header corner */}
 
-          {/* Language Toggle */}
-          <div className="flex items-center">
-            <button
-              onClick={toggleLanguage}
-              className="language-toggle-button relative inline-flex h-9 w-20 items-center rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 hover:from-blue-600 hover:to-blue-700 shadow-lg hover:shadow-xl"
-              role="switch"
-              aria-checked={language === 'ar'}
-              aria-label="Toggle language"
-              disabled={isSwitching}
-            >
-              <span className="sr-only">Toggle language</span>
-              <span
-                className={`inline-flex h-7 w-7 transform items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 ease-in-out ${language === 'ar' ? 'translate-x-13' : 'translate-x-1'
-                  }`}
+          {!isCollapsed && (
+            <div className={`absolute top-2 ${rtlPosition('right-2', 'left-2')}`}>
+              <button
+                onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+                className="h-7 w-7 rounded-full bg-blue-600 text-white flex items-center justify-center shadow hover:bg-blue-700 transition-colors"
+                aria-label="Toggle language"
+                title={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
               >
-                <Globe className={`h-3.5 w-3.5 text-blue-600 transition-opacity duration-150 ${isSwitching ? 'opacity-0' : 'opacity-100'
-                  }`} />
-              </span>
-              <div className="absolute inset-0 flex items-center justify-between px-2">
-                <span className={`text-xs font-bold transition-all duration-300 ${language === 'en' ? 'text-blue-100 opacity-0' : 'text-white opacity-100'
-                  }`}>EN</span>
-                <span className={`text-xs font-bold transition-all duration-300 ${language === 'ar' ? 'text-blue-100 opacity-0' : 'text-white opacity-100'
-                  }`}>عربي</span>
-              </div>
-            </button>
-          </div>
+                <Globe className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-6">
-        <ul className="space-y-3">
-          {menuItems.map((item) => {
-            // Check if user has access to this menu item
-            const hasAccess = !item.adminOnly || 
-              user?.role === 'admin' || 
-              user?.role === 'sales_admin' || 
-              user?.role === 'team_leader';
-            
-            if (!hasAccess) return null;
+      <nav className="flex-1 px-3 py-4">
+        {sections.map((section, sectionIdx) => (
+          <div key={section.id} className="mb-3">
+            {/* Section title or divider */}
+            {isCollapsed ? (
+              sectionIdx > 0 ? (
+                <div className="my-2 mx-2 h-px bg-gray-100" />
+              ) : null
+            ) : (
+              <div className={`px-3 py-1 text-[11px] tracking-wider text-gray-400 ${rtlPosition('text-left', 'text-right')}`}>
+                {section.title}
+              </div>
+            )}
+            <ul className="mt-1 space-y-1">
+              {section.items.map((item) => {
+                // Check if user has access to this menu item
+                const hasAccess = !item.adminOnly ||
+                  user?.role === 'admin' ||
+                  user?.role === 'sales_admin' ||
+                  user?.role === 'team_leader';
+                if (!hasAccess) return null;
 
-            const isActive = location.pathname.startsWith(item.path);
+                const active = location.pathname.startsWith(item.path);
 
-            return (
-              <li key={item.id}>
-                <Link
-                  to={item.path}
-                  onClick={() => {
-                    setSidebarOpen(false); // close sidebar on mobile after click
-                  }}
-                  className={`w-full flex items-center px-6 py-4 text-left rounded-lg transition-colors ${isActive
-                      ? 'bg-blue-50 text-blue-600 border-r-2 border-blue-600'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                >
-                  <item.icon className={`h-6 w-6 ${rtlPosition('mr-4', 'ml-4')}`} />
-                  <span className="text-base font-medium">{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+                return (
+                  <li key={item.id}>
+                    <Link
+                      to={item.path}
+                      title={isCollapsed ? item.label : undefined}
+                      onClick={() => setSidebarOpen(false)}
+                      className={`group w-full flex items-center ${isRTL ? 'flex-row-reverse' : ''} ${isCollapsed ? 'justify-center px-0' : rtlPosition('px-3', 'px-3')} py-2 rounded-md transition-colors duration-150 ${active
+                          ? `${isRTL ? 'bg-gradient-to-l' : 'bg-gradient-to-r'} from-blue-600 to-blue-500 text-white shadow-sm`
+                          : 'text-gray-700 hover:bg-gray-100 hover:text-blue-700'
+                        }`}
+                    >
+                      <item.icon className={`h-5 w-5 flex-shrink-0 transition-colors ${isCollapsed ? '' : rtlPosition('mr-3', 'ml-3')} ${active ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`} />
+                      {!isCollapsed && (
+                        <span className={`text-sm font-medium truncate ${isRTL ? 'text-right flex-1' : ''}`}>{item.label}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
-      {/* User Profile */}
-      <div className="p-6 border-t">
-        <div className="flex items-center mb-4 justify-between">
-          <div className="flex items-center">
+      {/* Bottom controls */}
+      <div className="px-3 py-3 border-t">
+        {isCollapsed ? (
+          <div className="flex justify-center">
             <button
-              className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-2xl border-4 border-white shadow-lg transition-transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400 relative overflow-hidden"
+              onClick={() => setIsCollapsed(false)}
+              className="h-10 w-10 rounded-full border border-gray-200 bg-white hover:bg-gray-100 text-gray-700 flex items-center justify-center shadow-sm"
+              aria-label="Open menu"
+              title="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <button
+              className="h-10 w-10 rounded-full overflow-hidden ring-2 ring-white shadow-sm bg-blue-600 text-white flex items-center justify-center flex-shrink-0"
               onClick={() => setProfileModalOpen(true)}
               aria-label="Open profile"
             >
               {user?.image ? (
-
-                <img src={user?.image} alt="avatar" className="object-cover w-full h-full rounded-full" />
-
+                <img src={user?.image} alt="avatar" className="object-cover w-full h-full" />
               ) : (
-                user?.name ? user.name.charAt(0) : '?'
+                <span className="font-semibold">{user?.name ? user.name.charAt(0) : '?'}</span>
               )}
             </button>
-            <div className={rtlPosition('ml-4', 'mr-4')}>
-              <div className="text-lg font-semibold text-gray-900">{user?.name}</div>
-              <div className="text-sm text-gray-500">{user?.role}</div>
+            <div className={`min-w-0 mx-3 flex-1`}>
+              <div className="text-sm font-semibold text-gray-900 truncate">{user?.name}</div>
+              <div className="text-xs text-gray-500 truncate">{user?.role}</div>
             </div>
+            <button
+              onClick={() => setIsCollapsed(true)}
+              className="h-8 w-8 rounded-md border border-gray-200 hover:bg-gray-100 text-gray-600 flex items-center justify-center transition-colors"
+              aria-label="Collapse sidebar"
+              title="Collapse"
+            >
+              {isRTL ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
           </div>
-
-        </div>
+        )}
       </div>
       {/* Profile Modal */}
       {profileModalOpen && (
@@ -195,8 +233,7 @@ const Sidebar: React.FC = () => {
     <>
       {/* Hamburger menu for mobile */}
       <button
-        className={`md:hidden fixed top-4 z-50 bg-white p-2 rounded-full shadow-lg border border-gray-200 transition-all duration-300 ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-          } ${rtlPosition('left-4', 'right-4')}`}
+        className={`md:hidden fixed top-4 z-50 bg-white p-2 rounded-full shadow-lg border border-gray-200 transition-all duration-300 ${sidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'} ${isRTL ? 'left-4' : 'right-4'}`}
         onClick={() => setSidebarOpen(true)}
         aria-label="Open sidebar"
       >
@@ -213,14 +250,17 @@ const Sidebar: React.FC = () => {
             aria-label="Close sidebar"
           />
           {/* Sidebar */}
-          <div className={`relative z-50 ${isRTL ? 'ml-auto' : ''}`}>
+          <div className={`relative z-50 ${isRTL ? 'ml-auto' : ''}`} style={{ width: isCollapsed ? '5rem' : '16rem' }}>
             {sidebarContent}
           </div>
         </div>
       )}
 
       {/* Sidebar for desktop */}
-      <div className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:w-80 md:z-30 ${rtlPosition('md:left-0', 'md:right-0')}`}>
+      <div
+        className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:z-30 ${rtlPosition('md:left-0', 'md:right-0')}`}
+        style={{ width: 'var(--sidebar-width, 16rem)' }}
+      >
         {sidebarContent}
       </div>
     </>

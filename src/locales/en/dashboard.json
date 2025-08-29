@@ -37,4 +37,12 @@
   "leadsToFollowUp": "Leads to Follow Up",
   "callsToMeetings": "Calls to Meetings",
   "meetingsToDeals": "Meetings to Deals"
-} 
+,
+  "teamOverview": "Team Overview",
+  "viewMyLeads": "View My Leads",
+  "viewTeamLeads": "View Team Leads",
+  "totalTeamLeads": "Total Team Leads",
+  "yourLeads": "Your Leads",
+  "directTeamMembersLeads": "Direct Team Members' Leads",
+  "directTeamMembers": "Direct Team Members"
+}

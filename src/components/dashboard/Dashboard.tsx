@@ -8,11 +8,9 @@ import {
   Users,
   TrendingUp,
   Calendar,
-  DollarSign,
   CheckCircle,
   Clock,
   Target,
-  BarChart3,
   Activity,
   ListTodo,
   AlertCircle,
@@ -115,13 +113,13 @@ const useDashboardData = () => {
     enabled: !!user,
   });
 
-  const { data: allCalls = [], isLoading: callsLoading } = useQuery({
+  const { data: allCalls = [] } = useQuery({
     queryKey: ['allCalls'],
     queryFn: getAllCalls,
     staleTime: 1000 * 60 * 5,
   });
 
-  const { data: allVisits = [], isLoading: visitsLoading } = useQuery({
+  const { data: allVisits = [] } = useQuery({
     queryKey: ['allVisits'],
     queryFn: getAllVisits,
     staleTime: 1000 * 60 * 5,
@@ -241,12 +239,12 @@ const KPICards: React.FC<{
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: index * 0.1 }}
-          className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all cursor-pointer group"
+          className="bg-white/70 backdrop-blur-md border border-white/60 p-6 rounded-xl shadow-lg hover:shadow-xl hover:bg-white/80 transition-all cursor-pointer group"
           onClick={card.onClick}
         >
           <div className="flex items-center justify-between mb-4">
-            <div className={`p-3 rounded-full bg-${card.color}-100 group-hover:bg-${card.color}-200 transition-colors`}>
-              <card.icon className={`h-6 w-6 text-${card.color}-600`} />
+            <div className={`p-3 rounded-full transition-colors bg-gradient-to-br from-white/60 to-white/30 ring-1 ring-white/60 shadow-sm`}>
+              <card.icon className="h-6 w-6 text-blue-600" />
             </div>
             {card.info ? (
               <a
@@ -319,7 +317,7 @@ const ConversionMetrics: React.FC<{
   ];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white/70 backdrop-blur-md border border-white/60 p-6 rounded-xl shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
         <CheckCircle className="h-5 w-5 mr-2" />
         {t('conversionMetrics')}
@@ -367,7 +365,7 @@ const ConversionChart: React.FC<{
 
   return (
     <motion.div
-      className="bg-white p-6 rounded-lg shadow-md"
+      className="bg-white/70 backdrop-blur-md border border-white/60 p-6 rounded-xl shadow-lg"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.7, delay: 0.2 }}
@@ -408,42 +406,42 @@ const TeamSummary: React.FC<{
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
         <h3 className="text-lg font-semibold text-blue-900 flex items-center">
           <Users className="h-5 w-5 mr-2" />
-          Team Overview
+          {t('teamOverview') || 'Team Overview'}
         </h3>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={onViewMyLeads}
             className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-md hover:bg-green-200 transition-colors"
           >
-            View My Leads
+            {t('viewMyLeads') || 'View My Leads'}
           </button>
           <button
             onClick={onViewTeamLeads}
             className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
           >
-            View Team Leads
+            {t('viewTeamLeads') || 'View Team Leads'}
           </button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="text-center">
           <div className="text-2xl font-bold text-blue-600">{metrics.totalLeads}</div>
-          <div className="text-sm text-blue-700">Total Team Leads</div>
+          <div className="text-sm text-blue-700">{t('totalTeamLeads') || 'Total Team Leads'}</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-green-600">{metrics.myLeads}</div>
-          <div className="text-sm text-green-700">Your Leads</div>
+          <div className="text-sm text-green-700">{t('yourLeads') || 'Your Leads'}</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-purple-600">{metrics.teamLeads}</div>
-          <div className="text-sm text-purple-700">Direct Team Members' Leads</div>
+          <div className="text-sm text-purple-700">{t('directTeamMembersLeads') || "Direct Team Members' Leads"}</div>
         </div>
         <div className="text-center">
           <div className="text-2xl font-bold text-indigo-600">{metrics.teamMembers}</div>
-          <div className="text-sm text-indigo-700">Direct Team Members</div>
+          <div className="text-sm text-indigo-700">{t('directTeamMembers') || 'Direct Team Members'}</div>
         </div>
       </div>
     </motion.div>
@@ -602,7 +600,7 @@ const TasksCard: React.FC<{
   }).length;
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white/70 backdrop-blur-md border border-white/60 p-6 rounded-xl shadow-lg">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center">
           <ListTodo className="h-5 w-5 mr-2" />
@@ -733,7 +731,7 @@ const RecentActivity: React.FC<{
   t: (key: string) => string;
 }> = ({ logs, t }) => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white/70 backdrop-blur-md border border-white/60 p-6 rounded-xl shadow-lg">
       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
         <Activity className="h-5 w-5 mr-2" />
         {t('recentActivityFeed')}
@@ -943,7 +941,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   // Debug logging for visits data
   React.useEffect(() => {
     const leadsWithVisits = filteredLeads.filter(lead => lead.visits && lead.visits.length > 0);
-    const leadsWithCalls = filteredLeads.filter(lead => lead.calls && lead.calls.length > 0);
     
     console.log('Dashboard Debug:', {
       filteredLeadsCount: filteredLeads.length,
@@ -1102,18 +1099,22 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   return (
     <motion.div
-      className="p-6 bg-gray-50 min-h-screen"
+      className="p-6 bg-transparent min-h-screen"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -30 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
     >
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {t('title')}, {user?.name}! 👋
-        </h1>
-        <p className="text-gray-600">{t('overview')}</p>
+      <div className="relative overflow-hidden mb-8 rounded-2xl bg-gradient-to-r from-indigo-500 via-sky-500 to-cyan-500 text-white">
+        <div className="absolute -top-10 -right-10 h-40 w-40 bg-white/20 rounded-full blur-2xl" />
+        <div className="absolute -bottom-12 -left-10 h-48 w-48 bg-white/10 rounded-full blur-2xl" />
+        <div className="relative p-6">
+          <h1 className="text-3xl font-bold mb-2">
+            {t('title')}, {user?.name}! 👋
+          </h1>
+          <p className="text-white/80">{t('overview')}</p>
+        </div>
       </div>
 
       {/* KPI Cards */}

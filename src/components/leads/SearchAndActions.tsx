@@ -83,7 +83,7 @@ export const SearchAndActions: React.FC<SearchAndActionsProps> = React.memo(({
               className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center justify-center w-full sm:w-auto text-sm"
               aria-label={t('getAiAdvice') || 'Get AI Advice'}
             >
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 animate-[bounce_1s_ease-in-out_infinite] hover:animate-[ping_1s_cubic-bezier(0,0,0.2,1)_infinite] transform hover:scale-110 transition-transform" />
               <span className="hidden sm:inline">{t('getAiAdvice') || 'AI Advice'}</span>
             </button>
           </div>

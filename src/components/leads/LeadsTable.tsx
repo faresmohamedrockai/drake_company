@@ -1,7 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, ArrowLeftRight } from 'lucide-react';
+import { Eye, Edit, Trash2, ArrowLeftRight, Facebook, Instagram, Phone as PhoneIcon, MessageCircle as WhatsAppIcon, Globe, Mail, Link as LinkIcon, Megaphone, User as UserIcon } from 'lucide-react';
 import { Interest, Lead, LeadStatus, Property, Tier, User } from '../../types';
 import { PhoneNumber } from '../ui/PhoneNumber';
+import { Badge } from "../ui/badge";
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -208,13 +209,133 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     }
   }, [totalPages, currentPage, setCurrentPage]);
 
+  const getSourceIcon = useMemo(() => (source: string) => {
+    const key = (source || '').toLowerCase().trim();
+    const iconClass = "w-4 h-4 text-gray-600";
+    switch (key) {
+      case 'whatsapp':
+        return <WhatsAppIcon className={iconClass} />;
+      case 'phone':
+      case 'call':
+        return <PhoneIcon className={iconClass} />;
+      case 'facebook':
+        return <Facebook className={iconClass} />;
+      case 'instagram':
+        return <Instagram className={iconClass} />;
+      case 'website':
+      case 'web':
+        return <Globe className={iconClass} />;
+      case 'email':
+        return <Mail className={iconClass} />;
+      case 'referral':
+        return <UserIcon className={iconClass} />;
+      case 'campaign':
+      case 'ads':
+        return <Megaphone className={iconClass} />;
+      default:
+        return <LinkIcon className={iconClass} />;
+    }
+  }, []);
+
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden">
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-full">
-          <thead className="bg-gray-50">
+        {/* Mobile cards */}
+        <div className="block sm:hidden p-2 space-y-3">
+          {isLoading ? (
+            <div className="text-center text-gray-500 py-6">Loading leads...</div>
+          ) : (
+            paginatedLeads?.map((lead) => (
+              <div key={lead.id} className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:shadow transition">
+                <div className="flex items-start justify-between gap-2">
+                  <button
+                    onClick={() => onLeadClick(lead)}
+                    className="text-blue-600 hover:text-blue-800 font-medium text-sm truncate text-left"
+                    title={getDisplayName(lead)}
+                    aria-label={`View details for ${getDisplayName(lead)}`}
+                  >
+                    {getDisplayName(lead)}
+                  </button>
+                  <input
+                    type="checkbox"
+                    checked={selectedLeads.has(lead.id!)}
+                    onChange={() => handleSelectLead(lead.id!)}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    aria-label={`Select ${getDisplayName(lead)}`}
+                  />
+                </div>
+                <div className="mt-2">
+                  <PhoneNumber phone={lead.contact} className="text-sm" />
+                </div>
+                <div className="mt-2 flex items-center gap-2 text-xs text-gray-700">
+                  {getSourceIcon(lead.source)}
+                  <span className="truncate">{lead.source}</span>
+                </div>
+                <div className="mt-2">
+                  <Badge className={`${getStatusColor(lead.status)} border-0`}>{lead.status}</Badge>
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  {lead.owner ? (
+                    <>
+                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-semibold ${getUserColor(lead.owner.name)}`}>
+                        {getUserInitials(lead.owner.name)}
+                      </span>
+                      <span className="text-sm text-gray-900 truncate" title={lead.owner.name}>
+                        {lead.owner?.name}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-gray-400">{t('unassigned')}</span>
+                  )}
+                </div>
+                <div className="mt-2 text-xs text-gray-500">
+                  {t('lastCall')}: {lead.calls?.[lead.calls.length - 1]?.date || '-'}
+                </div>
+                {/* Mobile actions */}
+                <div className="mt-3 flex items-center justify-end gap-3">
+                  <button
+                    onClick={() => onLeadClick(lead)}
+                    className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                    title={t('viewDetails')}
+                    aria-label={`View details for ${getDisplayName(lead)}`}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => onEditLead(lead)}
+                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                    title={t('editLead')}
+                    aria-label={`Edit ${getDisplayName(lead)}`}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => onTransferLead(lead)}
+                    className="p-1 rounded hover:bg-purple-50 transition-colors"
+                    title={t('transferLead') || 'Transfer Lead'}
+                    aria-label={`Transfer ${getDisplayName(lead)}`}
+                  >
+                    <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
+                  </button>
+                  <button
+                    onClick={() => onDeleteLead(lead)}
+                    className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                    title={t('deleteLead')}
+                    aria-label={`Delete ${getDisplayName(lead)}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop table */}
+        <table className="w-full min-w-full hidden sm:table border-separate border-spacing-y-3 border-spacing-x-0 bg-gray-100">
+          <thead className="bg-blue-900 sticky top-0 z-10">
             <tr>
-              <th className="px-2 sm:px-3 py-3 text-left w-6 sm:w-8">
+              <th className="px-4 py-3 text-left w-6 sm:w-8">
                 <input
                   type="checkbox"
                   checked={isSelectAllChecked}
@@ -223,56 +344,47 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                   aria-label={t('selectAll') || 'Select all leads'}
                 />
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20 sm:w-24">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20 sm:w-24">
                 {t('name')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 sm:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 sm:table-cell">
                 {t('phone')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
-                {t('budget')}
-              </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-32 hidden md:table-cell">
                 {t('IntersName')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
-                {t('TierName')}
-              </th>
 
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 hidden lg:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 hidden lg:table-cell">
                 {t('interestProperty')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
                 {t('project')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20 sm:w-28">
                 {t('source')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20">
-                {t('status')}
-              </th>
 
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20 hidden md:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 hidden md:table-cell">
                 {t('assignedTo')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
                 {t('lastCall')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
                 {t('lastVisit')}
               </th>
-              <th className="px-2 sm:px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16 sm:w-20">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20">
                 {t('meetting')}
               </th>
-              <th className="px-2 sm:px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-8 sm:w-12">
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-8 sm:w-12">
                 {t('actions')}
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white">
             {isLoading ? (
               <tr>
-                <td colSpan={11} className="px-4 sm:px-6 py-8 text-center text-gray-500">
+                <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
                   <div className="flex items-center justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:w-7 border-b-2 border-blue-600 mr-2"></div>
                     <span className="text-sm sm:text-base">Loading leads...</span>
@@ -281,8 +393,8 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
               </tr>
             ) : (
               paginatedLeads?.map((lead) => (
-                <tr key={lead.id} className="hover:bg-gray-50">
-                  <td className="px-2 sm:px-3 py-4">
+                <tr key={lead.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50 rounded-md shadow-sm">
+                  <td className="px-4 py-3">
                     <input
                       type="checkbox"
                       checked={selectedLeads.has(lead.id!)}
@@ -291,7 +403,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       aria-label={`Select ${getDisplayName(lead)}`}
                     />
                   </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4">
+                  <td className="px-4 py-3">
                     <button
                       onClick={() => onLeadClick(lead)}
                       className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-xs sm:text-sm truncate block w-full text-left"
@@ -301,64 +413,44 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       {getDisplayName(lead)}
                     </button>
                   </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4 sm:table-cell">
+                  <td className="px-4 py-3 sm:table-cell">
                     <PhoneNumber
                       phone={lead.contact}
                       className="text-xs sm:text-sm"
                     />
                   </td>
-
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
-                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toString()}>
-                      {typeof lead.budget === 'number' ? lead.budget.toLocaleString() : Number(lead.budget).toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
-                    <span
-                      className={`text-xs sm:text-sm px-2 py-1 rounded-full font-medium truncate block ${getStatusColorInterst(lead.interest)}`}
-                      title={lead.interest.toString()}
-                    >
-                      {lead.interest}
-                    </span>
-                  </td>
-
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
-                    <span
-                      className={`text-xs sm:text-sm px-2 py-1 rounded-full font-medium truncate block ${getStatusColorTier(lead.tier)}`}
-                      title={lead.tier.toString()}
-                    >
-                      {lead.tier}
-                    </span>
+                  <td className="px-4 py-3 hidden md:table-cell">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge className={`${getStatusColorInterst(lead.interest)} border-0`} size="sm">{lead.interest}</Badge>
+                      <Badge className={`${getStatusColorTier(lead.tier)} border-0`} size="sm">{lead.tier}</Badge>
+                      <Badge variant="muted" size="sm">{typeof lead.budget === 'number' ? lead.budget.toLocaleString() : Number(lead.budget).toLocaleString()}</Badge>
+                    </div>
                   </td>
 
 
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden lg:table-cell">
+                  <td className="px-4 py-3 hidden lg:table-cell">
                     <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.inventoryInterestId}>
                       {properties?.find(property => property.id === lead.inventoryInterestId)?.titleEn}
                     </span>
                   </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
+                  <td className="px-4 py-3 hidden md:table-cell">
                     <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toLocaleString()}>
                       {projectName(lead)}
                     </span>
                   </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.source}>
-                      {lead.source}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(lead.status)} truncate max-w-full`}
-                      title={lead.status}
-                    >
-                      {lead.status}
-                    </span>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-gray-900 truncate" title={lead.source}>
+                      {getSourceIcon(lead.source)}
+                      <span className="truncate">{lead.source}</span>
+                    </div>
+                    <div className="mt-1">
+                      <Badge className={`${getStatusColor(lead.status)} border-0`}>{lead.status}</Badge>
+                    </div>
                   </td>
 
 
 
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden md:table-cell">
+                  <td className="px-4 py-3 hidden md:table-cell">
                     {lead.owner ? (
                       <div className="flex items-center space-x-2 min-w-0">
                         <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0 ${getUserColor(lead.owner.name)}`}>
@@ -372,18 +464,18 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       <span className="text-sm text-gray-400">{t('unassigned')}</span>
                     )}
                   </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden lg:table-cell">
+                  <td className="px-4 py-3 hidden lg:table-cell">
                     <span className="text-sm text-gray-900 truncate block" title={lead.calls?.[lead.calls.length - 1]?.date}>
                       {lead.calls?.[lead.calls.length - 1]?.date}
                     </span>
                   </td>
-                  <td className="px-2 sm:px-3 md:px-6 py-4 hidden lg:table-cell">
+                  <td className="px-4 py-3 hidden lg:table-cell">
                     <span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>
                       {lead.visits?.[lead.visits.length - 1]?.date}
                     </span>
                   </td>
 
-                  <td className="px-2 sm:px-3 md:px-6 py-4">
+                  <td className="px-4 py-3">
                     {lead.meetings && lead.meetings.length > 0 ? (
                       (() => {
                         const lastMeeting = [...lead.meetings].sort(
@@ -423,7 +515,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
 
 
 
-                  <td className="px-2 sm:px-3 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => onLeadClick(lead)}
@@ -475,7 +567,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
             )}
             {sortedLeads?.length === 0 && !isLoading && (
               <tr>
-                <td colSpan={11} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
                   {searchTerm ? t('noLeadsFound') : t('noLeadsAvailable')}
                 </td>
               </tr>

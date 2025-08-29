@@ -14,6 +14,8 @@ interface Filters {
   status: string;
   assignedTo: string;
   lastVisitDate: string;
+  createdAtStart?: string;
+  createdAtEnd?: string;
 }
 
 export const useLeadsFilters = (location: ReturnType<typeof useLocation>) => {
@@ -30,6 +32,8 @@ export const useLeadsFilters = (location: ReturnType<typeof useLocation>) => {
     status: '',
     assignedTo: '',
     lastVisitDate: '',
+    createdAtStart: '',
+    createdAtEnd: '',
   });
   const [selectedManager, setSelectedManager] = useState<User | null>(null);
   const [selectedSalesRep, setSelectedSalesRep] = useState<User | null>(null);
@@ -55,6 +59,8 @@ export const useLeadsFilters = (location: ReturnType<typeof useLocation>) => {
       status: '',
       assignedTo: '',
       lastVisitDate: '',
+      createdAtStart: '',
+      createdAtEnd: '',
     });
   };
 

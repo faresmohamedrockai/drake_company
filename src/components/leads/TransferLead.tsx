@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 interface TransferLeadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onTransfer: (data: {
+  onTransfer?: (data: {
     leadId: string;
     fromAgentId?: string;
     toAgentId: string;
@@ -135,8 +135,8 @@ export default function TransferLeadModal({
   if (!isOpen || !lead) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white w-full max-w-4xl rounded-2xl shadow-lg p-6 relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-3 sm:p-4">
+      <div className="bg-white w-full max-w-md sm:max-w-xl md:max-w-3xl rounded-2xl shadow-lg p-4 sm:p-6 relative max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -146,13 +146,13 @@ export default function TransferLeadModal({
         </button>
 
         {/* Header */}
-        <h2 className="text-lg font-semibold mb-5">Transfer Lead</h2>
+        <h2 className="text-base sm:text-lg font-semibold mb-4 sm:mb-5">Transfer Lead</h2>
 
         <hr />
         <br />
 
         {/* Lead Info + Current Assignment */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Lead Info Card */}
           <div className="bg-transparent border rounded-xl p-4 flex justify-between items-start h-fit ">
             <p className="font-medium text-gray-900">
@@ -201,7 +201,7 @@ export default function TransferLeadModal({
           <select
             value={agent}
             onChange={(e) => setAgent(e.target.value)}
-            className="w-full border-none rounded-lg px-3 py-2 text-sm focus:ring focus:ring-blue-300"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring focus:ring-blue-300"
             required
           >
             <option value="">Select an agent</option>
@@ -228,7 +228,7 @@ export default function TransferLeadModal({
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="w-full border-none rounded-lg px-3 py-2 text-sm focus:ring focus:ring-blue-300"
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:ring focus:ring-blue-300"
             required
           >
             <option value="with-history">Transfer with History</option>
@@ -252,10 +252,10 @@ export default function TransferLeadModal({
         </div>
 
         {/* Buttons */}
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
           <button
             onClick={onClose}
-            className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100"
+            className="px-4 py-2 border rounded-lg text-sm hover:bg-gray-100 w-full sm:w-auto"
           >
             Cancel
           </button>
@@ -263,8 +263,7 @@ export default function TransferLeadModal({
            type="button"
             onClick={handleSubmit}
             disabled={loading}
-            className={`px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-2 ${loading ? "opacity-70 cursor-not-allowed" : ""
-              }`}
+            className={`px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center justify-center gap-2 w-full sm:w-auto ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
           >
             {loading ? "Transferring..." : "→ Transfer Lead"}
           </button>
