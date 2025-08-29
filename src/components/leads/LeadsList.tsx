@@ -727,7 +727,7 @@ const LeadsList: React.FC = React.memo(() => {
           updateData: {
             toAgentId: bulkAssignToUserId,
             transferType: "With History",
-            notes: ["Get From Bulk Assign To"]
+            notes: "Get From Bulk Assign To"
           }
         });
         getLeads();
@@ -753,22 +753,6 @@ const LeadsList: React.FC = React.memo(() => {
   //     setToastId(toast.loading(t('deletingLead')));
   //   }
   // }, [isDeletingLead, t]);
-
-  // Error handling
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
