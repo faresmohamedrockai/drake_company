@@ -777,11 +777,7 @@ const UserManagement: React.FC<{ users: UserType[] }> = ({ users }) => {
                   >
                     <option value="">{t('common:selectTeamLeaderName')}</option>
                     {users
-                      .filter(
-                        (user) =>
-                          user.role === "team_leader" &&
-                          user.id !== formData.teamLeaderId // 👈 استبعاد الـ teamLeader المختار
-                      )
+                      .filter((user) => user.role === "team_leader")
                       .map((teamLeader) => (
                         <option key={teamLeader.id} value={teamLeader.id}>
                           {teamLeader.name} ({teamLeader.email})
