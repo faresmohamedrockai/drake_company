@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Search, Plus, Edit, Clock, Calendar as CalendarIcon, Trash2,
+  Search, Plus, Edit, Clock, Calendar as CalendarIcon, Trash2, Filter, X, RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +47,8 @@ const MeetingsManagement: React.FC = () => {
     queryFn: () => getLeads(),
   });
 
+
+  
   const { mutateAsync: addMeeting, isPending: isAddingMeeting } = useMutation({
     mutationFn: (meeting: Meeting) => axiosInterceptor.post('/meetings', meeting),
     onSuccess: () => {
@@ -75,6 +77,9 @@ const MeetingsManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     }
   });
+
+
+
   const { mutateAsync: updateMeeting, isPending: isUpdatingMeeting } = useMutation({
     mutationFn: (meeting: Meeting) => axiosInterceptor.patch(`/meetings/${meeting.id}`, meeting),
     onSuccess: () => {
@@ -104,6 +109,10 @@ const MeetingsManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     }
   });
+
+
+
+
   const { mutateAsync: deleteMeeting, isPending: isDeletingMeeting } = useMutation({
     mutationFn: (id: string) => axiosInterceptor.delete(`/meetings/${id}`),
     onSuccess: () => {
@@ -116,6 +125,11 @@ const MeetingsManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
     }
   });
+
+
+
+
+
   const { user } = useAuth();
   const { t } = useTranslation('meetings');
   const { language } = useLanguage();
@@ -143,7 +157,23 @@ const MeetingsManagement: React.FC = () => {
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [filteredMeetings, setFilteredMeetings] = useState<Meeting[]>([]);
+
+  // Filter states
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    status: '',
+    type: '',
+    locationType: '',
+    assignedToId: '',
+    dateFrom: '',
+    dateTo: '',
+    meetingDone: ''
+  });
+
   // Helper function to translate meeting types
+
+
+
   const translateMeetingType = (type: string) => {
     const typeMap: { [key: string]: string } = {
       'Proposal': t('meetingTypes.proposal'),
@@ -378,6 +408,31 @@ const MeetingsManagement: React.FC = () => {
     }
   };
 
+  // Filter handlers
+  const handleFilterChange = (filterName: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterName]: value
+    }));
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      status: '',
+      type: '',
+      locationType: '',
+      assignedToId: '',
+      dateFrom: '',
+      dateTo: '',
+      meetingDone: ''
+    });
+    setSearchTerm('');
+  };
+
+  const getActiveFiltersCount = () => {
+    return Object.values(filters).filter(value => value !== '').length + (searchTerm ? 1 : 0);
+  };
+
   // Role-based meeting filtering
   const getFilteredMeetings = () => {
     let userMeetings = meetings;
@@ -396,17 +451,50 @@ const MeetingsManagement: React.FC = () => {
     // }
 
     // Search filtering
-    return userMeetings?.filter((meeting: Meeting) =>
+    let filtered = userMeetings?.filter((meeting: Meeting) =>
       meeting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      meeting.client.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+      meeting.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (meeting.notes && meeting.notes.toLowerCase().includes(searchTerm.toLowerCase()))
+    ) || [];
+
+    // Apply filters
+    if (filters.status) {
+      filtered = filtered.filter(meeting => meeting.status === filters.status);
+    }
+
+    if (filters.type) {
+      filtered = filtered.filter(meeting => meeting.type === filters.type);
+    }
+
+    if (filters.locationType) {
+      filtered = filtered.filter(meeting => (meeting as any).locationType === filters.locationType);
+    }
+
+    if (filters.assignedToId) {
+      filtered = filtered.filter(meeting => meeting.assignedToId === filters.assignedToId);
+    }
+
+    if (filters.dateFrom) {
+      filtered = filtered.filter(meeting => meeting.date >= filters.dateFrom);
+    }
+
+    if (filters.dateTo) {
+      filtered = filtered.filter(meeting => meeting.date <= filters.dateTo);
+    }
+
+    if (filters.meetingDone) {
+      const isDone = filters.meetingDone === 'true';
+      filtered = filtered.filter(meeting => (meeting as any).meetingDone === isDone);
+    }
+
+    return filtered;
   };
 
   useEffect(() => {
     if (meetings) {
       setFilteredMeetings(getFilteredMeetings() || []);
     }
-  }, [meetings, searchTerm]);
+  }, [meetings, searchTerm, filters]);
 
   // Performance tracking for reports
   const userMeetingPerformance = React.useMemo(() => {
@@ -426,20 +514,6 @@ const MeetingsManagement: React.FC = () => {
     };
   }, [meetings, user?.name]);
 
-  // Save meeting performance data to localStorage for reports
-  React.useEffect(() => {
-    if (user?.name) {
-      const meetingPerformanceKey = `user_meeting_performance_${user.name}`;
-      localStorage.setItem(meetingPerformanceKey, JSON.stringify({
-        ...userMeetingPerformance,
-        lastUpdated: new Date().toISOString(),
-        userId: user.id,
-        userName: user.name,
-        userRole: user.role
-      }));
-    }
-  }, [userMeetingPerformance, user]);
-
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
 
   return (
@@ -451,27 +525,296 @@ const MeetingsManagement: React.FC = () => {
 
       {/* Search and Actions */}
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400`} />
-            <input
-              type="text"
-              placeholder={t('searchMeetings')}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full ${language === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${language === 'ar' ? 'text-right' : ''}`}
-              dir={language === 'ar' ? 'rtl' : 'ltr'}
-            />
-          </div>
-          {
-            (user?.role === 'admin' || user?.role === 'sales_admin') && (
-
-              <button className={`bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`} onClick={openAddForm}>
-                <Plus className={`h-5 w-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
-                {t('scheduleMeeting')}
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Search and Actions */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400`} />
+              <input
+                type="text"
+                placeholder={t('searchMeetings')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`w-full ${language === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${language === 'ar' ? 'text-right' : ''}`}
+                dir={language === 'ar' ? 'rtl' : 'ltr'}
+              />
+            </div>
+            
+            <div className={`flex items-center gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+              {/* Filter Toggle Button */}
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors
+                  ${showFilters 
+                    ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }
+                  ${language === 'ar' ? 'flex-row-reverse' : ''}
+                `}
+              >
+                <Filter className="h-5 w-5" />
+                <span className="font-medium">
+                  {t('filters', { defaultValue: 'Filters' })}
+                  {getActiveFiltersCount() > 0 && (
+                    <span className="ml-1 px-2 py-0.5 bg-blue-600 text-white text-xs rounded-full">
+                      {getActiveFiltersCount()}
+                    </span>
+                  )}
+                </span>
               </button>
-            )
-          }
+
+              {/* Reset Filters Button */}
+              {getActiveFiltersCount() > 0 && (
+                <button
+                  onClick={resetFilters}
+                  className={`
+                    flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 
+                    text-gray-600 hover:bg-gray-50 transition-colors
+                    ${language === 'ar' ? 'flex-row-reverse' : ''}
+                  `}
+                  title={t('resetFilters', { defaultValue: 'Reset all filters' })}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  <span className="text-sm">{t('reset', { defaultValue: 'Reset' })}</span>
+                </button>
+              )}
+
+              {/* Add Meeting Button */}
+              {(user?.role === 'admin' || user?.role === 'sales_admin') && (
+                <button 
+                  className={`bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ${language === 'ar' ? 'flex-row-reverse' : ''}`} 
+                  onClick={openAddForm}
+                >
+                  <Plus className={`h-5 w-5 ${language === 'ar' ? 'ml-2' : 'mr-2'}`} />
+                  {t('scheduleMeeting')}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filters Panel */}
+          {showFilters && (
+            <div className="border-t pt-4 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('tableHeaders.status', { defaultValue: 'Status' })}
+                  </label>
+                  <select
+                    value={filters.status}
+                    onChange={(e) => handleFilterChange('status', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="">{t('allStatuses', { defaultValue: 'All Statuses' })}</option>
+                    <option value="Scheduled">{t('statuses.scheduled')}</option>
+                    <option value="Completed">{t('statuses.completed')}</option>
+                    <option value="Cancelled">{t('statuses.cancelled')}</option>
+                  </select>
+                </div>
+
+                {/* Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('tableHeaders.type', { defaultValue: 'Type' })}
+                  </label>
+                  <select
+                    value={filters.type}
+                    onChange={(e) => handleFilterChange('type', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="">{t('allTypes', { defaultValue: 'All Types' })}</option>
+                    <option value="Proposal">{t('meetingTypes.proposal')}</option>
+                    <option value="Site Visit">{t('meetingTypes.siteVisit')}</option>
+                    <option value="Negotiation">{t('meetingTypes.negotiation')}</option>
+                  </select>
+                </div>
+
+                {/* Location Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('form.locationType', { defaultValue: 'Location Type' })}
+                  </label>
+                  <select
+                    value={filters.locationType}
+                    onChange={(e) => handleFilterChange('locationType', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="">{t('allLocationTypes', { defaultValue: 'All Location Types' })}</option>
+                    <option value="Online">{t('locationTypes.online')}</option>
+                    <option value="Offline">{t('locationTypes.offline')}</option>
+                  </select>
+                </div>
+
+                {/* Assigned To Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('form.assignedTo', { defaultValue: 'Assigned To' })}
+                  </label>
+                  <select
+                    value={filters.assignedToId}
+                    onChange={(e) => handleFilterChange('assignedToId', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="">{t('allUsers', { defaultValue: 'All Users' })}</option>
+                    {users?.map((user: UserType) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} ({user.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Date From Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('dateFrom', { defaultValue: 'Date From' })}
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.dateFrom}
+                    onChange={(e) => handleFilterChange('dateFrom', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+
+                {/* Date To Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('dateTo', { defaultValue: 'Date To' })}
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.dateTo}
+                    onChange={(e) => handleFilterChange('dateTo', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                </div>
+
+                {/* Meeting Done Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('meetingDone', { defaultValue: 'Meeting Status' })}
+                  </label>
+                  <select
+                    value={filters.meetingDone}
+                    onChange={(e) => handleFilterChange('meetingDone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="">{t('allMeetingStatuses', { defaultValue: 'All Meeting Statuses' })}</option>
+                    <option value="true">{t('meetingDone', { defaultValue: 'Meeting Done' })}</option>
+                    <option value="false">{t('meetingNotDone', { defaultValue: 'Meeting Not Done' })}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Filter Results Summary */}
+              {getActiveFiltersCount() > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className={`flex items-center justify-between ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                    <div className="text-sm text-gray-600">
+                      {t('showingResults', { 
+                        defaultValue: 'Showing {{count}} of {{total}} meetings',
+                        count: filteredMeetings.length,
+                        total: meetings?.length || 0
+                      })}
+                    </div>
+                    <div className={`flex flex-wrap gap-2 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
+                      {/* Active Filter Tags */}
+                      {searchTerm && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {t('search', { defaultValue: 'Search' })}: "{searchTerm}"
+                          <button
+                            onClick={() => setSearchTerm('')}
+                            className="hover:bg-blue-200 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+                      
+                      {filters.status && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                          {t('status', { defaultValue: 'Status' })}: {translateMeetingStatus(filters.status)}
+                          <button
+                            onClick={() => handleFilterChange('status', '')}
+                            className="hover:bg-green-200 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+
+                      {filters.type && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                          {t('type', { defaultValue: 'Type' })}: {translateMeetingType(filters.type)}
+                          <button
+                            onClick={() => handleFilterChange('type', '')}
+                            className="hover:bg-purple-200 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+
+                      {filters.locationType && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                          {t('location', { defaultValue: 'Location' })}: {translateLocationType(filters.locationType)}
+                          <button
+                            onClick={() => handleFilterChange('locationType', '')}
+                            className="hover:bg-orange-200 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+
+                      {filters.assignedToId && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">
+                          {t('assignedTo', { defaultValue: 'Assigned To' })}: {users?.find(u => u.id === filters.assignedToId)?.name}
+                          <button
+                            onClick={() => handleFilterChange('assignedToId', '')}
+                            className="hover:bg-indigo-200 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+
+                      {(filters.dateFrom || filters.dateTo) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                          {t('dateRange', { defaultValue: 'Date Range' })}: 
+                          {filters.dateFrom || '...'} - {filters.dateTo || '...'}
+                          <button
+                            onClick={() => {
+                              handleFilterChange('dateFrom', '');
+                              handleFilterChange('dateTo', '');
+                            }}
+                            className="hover:bg-yellow-200 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+
+                      {filters.meetingDone && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-pink-100 text-pink-800 text-xs rounded-full">
+                          {filters.meetingDone === 'true' ? t('meetingDone', { defaultValue: 'Meeting Done' }) : t('meetingNotDone', { defaultValue: 'Meeting Not Done' })}
+                          <button
+                            onClick={() => handleFilterChange('meetingDone', '')}
+                            className="hover:bg-pink-200 rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -486,9 +829,9 @@ const MeetingsManagement: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.dateTime')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.duration')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.type')}</th>
-                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.DoneOr')}</th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.status')}</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.location')}</th>
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('meetingDone', { defaultValue: 'Meeting Done' })}</th> */}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.actions')}</th>
               </tr>
             </thead>
@@ -522,11 +865,6 @@ const MeetingsManagement: React.FC = () => {
                       {translateMeetingType(meeting.type)}
                     </span>
                   </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-bold">
-                      {meeting.meetingDone ? "Done" :  "Not Done" }
-                    </span>
-                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(meeting.status)}`}>
                       {translateMeetingStatus(meeting.status)}
@@ -535,6 +873,18 @@ const MeetingsManagement: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {(meeting as any).locationType === 'Offline' ? (meeting as any).location : translateLocationType((meeting as any).locationType || 'Online')}
                   </td>
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      (meeting as any).meetingDone 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {(meeting as any).meetingDone 
+                        ? (language === 'ar' ? 'تم' : 'Done')
+                        : (language === 'ar' ? 'لم يتم' : 'Not Done')
+                      }
+                    </span>
+                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className={`flex items-center gap-3 ${language === 'ar' ? 'flex-row-reverse' : ''}`}>
                       <button className="text-blue-600 hover:text-blue-800" onClick={() => openEditForm(meeting)}>
@@ -550,6 +900,25 @@ const MeetingsManagement: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Empty State */}
+        {filteredMeetings?.length === 0 && (
+          <div className="text-center py-12">
+            <CalendarIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {getActiveFiltersCount() > 0 
+                ? t('noMeetingsMatchFilters', { defaultValue: 'No meetings match your filters' })
+                : t('noMeetingsFound', { defaultValue: 'No meetings found' })
+              }
+            </h3>
+            <p className="text-gray-500">
+              {getActiveFiltersCount() > 0 
+                ? t('tryAdjustingFilters', { defaultValue: 'Try adjusting your filters or search term' })
+                : t('createFirstMeeting', { defaultValue: 'Create your first meeting to get started' })
+              }
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Meeting Modal */}
@@ -600,7 +969,7 @@ const MeetingsManagement: React.FC = () => {
                   required
                 >
                   <option value="">اختر Lead</option>
-                  {leads.map((lead) => (
+                  { leads?.length > 0 && leads?.map((lead) => (
                     <option key={lead.id} value={lead.id}>
                       {lead.nameEn || lead.nameAr || lead.contact}
                     </option>
@@ -634,6 +1003,10 @@ const MeetingsManagement: React.FC = () => {
                   <option value="Negotiation">{t('meetingTypes.negotiation')}</option>
                 </select>
               </div>
+
+
+
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.status')}</label>
                 <select name="status" value={form.status} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
@@ -691,6 +1064,9 @@ const MeetingsManagement: React.FC = () => {
               <div className="md:col-span-2 mt-2">
                 <h4 className="text-lg font-semibold text-gray-700 mb-2">{t('form.assignment')}</h4>
               </div>
+
+
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.assignedTo')}</label>
                 <select name="assignedToId" value={form.assignedToId} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" required>
@@ -720,6 +1096,10 @@ const MeetingsManagement: React.FC = () => {
                   })()}
                 </select>
               </div>
+
+
+
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('form.notes')}</label>
                 <textarea name="notes" value={form.notes} onChange={handleFormChange} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" rows={2} />

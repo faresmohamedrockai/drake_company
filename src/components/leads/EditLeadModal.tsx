@@ -108,7 +108,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
   useEffect(() => {
     if (lead) {
       // Try to get the owner ID from different possible sources
-      const ownerIdValue = lead.assignedToId || lead.ownerId || lead.owner?.id || '';
+      // const ownerIdValue = lead.assignedToId || lead.ownerId || lead.owner?.id || '';
 
       setFormData({
         nameEn: lead.nameEn || '',

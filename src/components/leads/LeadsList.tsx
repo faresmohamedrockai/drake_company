@@ -647,6 +647,8 @@ const LeadsList: React.FC = React.memo(() => {
         // Show all leads - no additional filtering needed
       } else if (activeStatusCard === 'my_leads') {
         filtered = filtered.filter(lead => lead.owner?.id === user?.id);
+        } else if (activeStatusCard === 'not_interested_now') {
+        filtered = filtered.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW);
       } else if (activeStatusCard === 'scheduled_visit') {
         filtered = filtered.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT);
       } else if (activeStatusCard === 'duplicate') {

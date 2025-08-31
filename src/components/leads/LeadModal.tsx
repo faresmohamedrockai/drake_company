@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { X, Phone, Calendar, Plus, DollarSign, MapPin, Clock, Bot, Home,UserPlus } from 'lucide-react';
+import { X, Phone, Calendar, Plus, DollarSign, MapPin, Clock, Bot, Home, UserPlus } from 'lucide-react';
 import { Lead, CallLog, VisitLog, Property, LeadStatus, Interest, Tier } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -106,7 +106,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
 
 
-console.log(lead);
+  console.log(lead);
 
 
 
@@ -327,6 +327,7 @@ console.log(lead);
   const [toastId, setToastId] = useState<Id | null>(null);
   const isCancelled = currentLead.status === LeadStatus.CANCELLATION;
   const isSpecialStatus = [LeadStatus.NO_ANSWER, LeadStatus.NOT_INTERSTED_NOW].includes(currentLead.status);
+
 
   // Get current status index for main stages (cancellation is not in main stages)
   const currentStatusIndex = mainStatusStages.findIndex(s => s.value === currentLead.status);
@@ -571,81 +572,81 @@ console.log(lead);
   //   }
   // };
 
-const parseDate = (dateStr: string) => {
-  if (!dateStr) return null;
-  // لو التاريخ بالصيغة dd/MM/yyyy
-  const parts = dateStr.split("/");
-  if (parts.length === 3) {
-    const [day, month, year] = parts;
-    return new Date(`${year}-${month}-${day}`);
-  }
-  // fallback: حاول تحوّله عادي
-  return new Date(dateStr);
-};
+  const parseDate = (dateStr: string) => {
+    if (!dateStr) return null;
+    // لو التاريخ بالصيغة dd/MM/yyyy
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return new Date(`${year}-${month}-${day}`);
+    }
+    // fallback: حاول تحوّله عادي
+    return new Date(dateStr);
+  };
 
   // Helper to combine and sort activities
-const getActivities = (lead: any) => {
-  const activities: any = [];
+  const getActivities = (lead: any) => {
+    const activities: any = [];
 
-  // 🆕 Lead Created
-  if (lead?.createdAt) {
-    activities.push({
-      id: `lead-created-${lead.id}`,
-      type: "lead_created",
-      title: "Lead created",
-      description: `Lead was created At ${lead.createdAt || "system"}`,
-      date: parseDate(lead.createdAt), // ✅ parse هنا
-      icon: <UserPlus size={18} />,
-      color: "bg-gray-100 text-gray-600",
+    // 🆕 Lead Created
+    if (lead?.createdAt) {
+      activities.push({
+        id: `lead-created-${lead.id}`,
+        type: "lead_created",
+        title: "Lead created",
+        description: `Lead was created At ${lead.createdAt || "system"}`,
+        date: parseDate(lead.createdAt), // ✅ parse هنا
+        icon: <UserPlus size={18} />,
+        color: "bg-gray-100 text-gray-600",
+      });
+    }
+
+    // Calls
+    lead?.calls?.forEach((call: any) => {
+      activities.push({
+        id: call.id,
+        type: "call",
+        title: "Phone call made",
+        description: call.notes?.trim() || "Discussed project details",
+        date: parseDate(call.date), // ✅ parse هنا
+        icon: <Phone size={18} />,
+        color: "bg-blue-100 text-blue-600",
+      });
     });
-  }
 
-  // Calls
-  lead?.calls?.forEach((call: any) => {
-    activities.push({
-      id: call.id,
-      type: "call",
-      title: "Phone call made",
-      description: call.notes?.trim() || "Discussed project details",
-      date: parseDate(call.date), // ✅ parse هنا
-      icon: <Phone size={18} />,
-      color: "bg-blue-100 text-blue-600",
+    // Meetings
+    lead?.meetings?.forEach((meeting: any) => {
+      activities.push({
+        id: meeting.id,
+        type: "meeting",
+        title: "Meeting scheduled",
+        description: meeting.notes?.trim() || "Meeting with client",
+        date: parseDate(meeting.date), // ✅
+        icon: <Calendar size={18} />,
+        color: "bg-green-100 text-green-600",
+      });
     });
-  });
 
-  // Meetings
-  lead?.meetings?.forEach((meeting: any) => {
-    activities.push({
-      id: meeting.id,
-      type: "meeting",
-      title: "Meeting scheduled",
-      description: meeting.notes?.trim() || "Meeting with client",
-      date: parseDate(meeting.date), // ✅
-      icon: <Calendar size={18} />,
-      color: "bg-green-100 text-green-600",
+    // Visits
+    lead?.visits?.forEach((visit: any, index: number) => {
+      activities.push({
+        id: `visit-${index}`,
+        type: "visit",
+        title: "Site visit",
+        description: visit.notes?.trim() || "Client visited project location",
+        date: parseDate(visit.date), // ✅
+        icon: <Home size={18} />,
+        color: "bg-purple-100 text-purple-600",
+      });
     });
-  });
 
-  // Visits
-  lead?.visits?.forEach((visit: any, index: number) => {
-    activities.push({
-      id: `visit-${index}`,
-      type: "visit",
-      title: "Site visit",
-      description: visit.notes?.trim() || "Client visited project location",
-      date: parseDate(visit.date), // ✅
-      icon: <Home size={18} />,
-      color: "bg-purple-100 text-purple-600",
-    });
-  });
-
-  // ✅ Sort by date (newest first)
- return activities.sort(
-  (a, b) =>
-    (b.date ? b.date.getTime() : 0) -
-    (a.date ? a.date.getTime() : 0)
-);
-};
+    // ✅ Sort by date (newest first)
+    return activities.sort(
+      (a, b) =>
+        (b.date ? b.date.getTime() : 0) -
+        (a.date ? a.date.getTime() : 0)
+    );
+  };
 
 
 
@@ -718,9 +719,27 @@ const getActivities = (lead: any) => {
 
 
 
+  function getLastOrNextMeeting(meetings: any[]) {
+    if (!meetings || meetings.length === 0) return null;
 
+    const today = new Date().toISOString().split("T")[0];
 
+    // رتب الميتنجات
+    const sorted = [...meetings].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
 
+    // آخر ميتنج في الليست
+    const last = sorted[sorted.length - 1];
+
+    // حدد هل هو last ولا next
+    const type = last.date < today ? "Last Meeting" : "Next Meeting";
+
+    return { ...last, type };
+  }
+
+  // 👇 جوه الكومبوننت
+  const meetingInfo = getLastOrNextMeeting(currentLead.meetings || []);
 
   if (!isOpen) return null;
 
@@ -844,17 +863,48 @@ const getActivities = (lead: any) => {
                 </span>
               </div>
             </div>
+            <div className="relative">
+              {/* ✅ الـ Badge فوق الكارد */}
+              <div
+                className={`absolute -top-2 left-2 px-3 py-1 text-xs font-semibold rounded-full shadow-md
+                  ${meetingInfo
+                    ? meetingInfo.type === "Last Meeting"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-purple-100 text-purple-700"
+                    : "bg-gray-200 text-gray-600"
+                  }`}
+              >
+                {meetingInfo ? meetingInfo.type : "No Meeting Created"}
+              </div>
 
-            {/* Meeting */}
-            <div className="flex flex-row items-center p-3 sm:p-4 border rounded-xl bg-gray-50 gap-3 sm:gap-4">
-              <Clock size={20} className="text-purple-500 flex-shrink-0 sm:w-6 sm:h-6" />
-              <div className="flex flex-col min-w-0 flex-1">
-                <span className="text-gray-500 text-xs sm:text-sm">Meeting Time</span>
-                <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
-                  {currentLead.meetings?.[0]?.time || "N/A"}
-                </span>
+              {/* ✅ الكارد نفسها */}
+              <div className="flex flex-row items-center p-3 sm:p-4 border rounded-xl bg-gray-50 gap-3 sm:gap-4 min-h-[80px]">
+                <Clock
+                  size={20}
+                  className={`flex-shrink-0 sm:w-6 sm:h-6 ${meetingInfo
+                    ? meetingInfo.type === "Last Meeting"
+                      ? "text-green-500"
+                      : "text-purple-500"
+                    : "text-gray-400"
+                    }`}
+                />
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="text-gray-500 text-xs sm:text-sm">
+                    {meetingInfo ? meetingInfo.type : "N/A"}
+                  </span>
+                  <span className="font-medium text-gray-900 text-sm sm:text-base break-words">
+                    {meetingInfo
+                      ? `${meetingInfo.date} - ${meetingInfo.location || "N/A"}`
+                      : "No details available"}
+                  </span>
+                </div>
               </div>
             </div>
+
+
+
+
+
           </div>
 
 
@@ -1070,13 +1120,12 @@ const getActivities = (lead: any) => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`py-2 sm:py-3 md:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${
-                  activeTab === tab
-                    ? tab === 'Ai Summry'
-                      ? 'text-purple-600 border-b-2 border-purple-600 transition-colors duration-300'
-                      : 'text-blue-600 border-b-2 border-blue-600'
-                    : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
-                }`}
+                className={`py-2 sm:py-3 md:py-4 px-2 sm:px-3 text-xs sm:text-sm font-medium capitalize transition-all duration-200 relative whitespace-nowrap flex-shrink-0 ${activeTab === tab
+                  ? tab === 'Ai Summry'
+                    ? 'text-purple-600 border-b-2 border-purple-600 transition-colors duration-300'
+                    : 'text-blue-600 border-b-2 border-blue-600'
+                  : 'text-gray-500 hover:text-gray-700 hover:border-b-2 hover:border-gray-300'
+                  }`}
               >
                 <span className="flex items-center">
                   {tab === 'Ai Summry' && <Bot className={`w-4 h-4 mr-1 ${activeTab !== tab && tab === 'Ai Summry' ? 'text-purple-600 animate-pulse' : ''}`} />}
@@ -1085,9 +1134,8 @@ const getActivities = (lead: any) => {
                 {activeTab === tab && (
                   <motion.div
                     layoutId="activeTab"
-                    className={`absolute bottom-0 left-0 right-0 h-0.5 ${
-                      tab === 'Ai Summry' ? 'bg-purple-600' : 'bg-blue-600'
-                    }`}
+                    className={`absolute bottom-0 left-0 right-0 h-0.5 ${tab === 'Ai Summry' ? 'bg-purple-600' : 'bg-blue-600'
+                      }`}
                     initial={false}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
