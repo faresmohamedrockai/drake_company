@@ -107,7 +107,7 @@ export interface Lead {
   inventoryInterest?: any
   projectInterest?: any
   project?: any | null;
-  notes?: string[] | null;
+  notes?: string[] | string|null;
   calls?: CallLog[] | null;
   visits?: VisitLog[] | null;
   transfers: []

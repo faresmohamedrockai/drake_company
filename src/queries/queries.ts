@@ -130,6 +130,15 @@ export const getContracts = async () => {
     const response = await axiosInterceptor.get('/contracts');
     return response.data.data as Contract[];
 }
+export const getDashboardData = async () => {
+    const response = await axiosInterceptor.get('/leads/dashboard-data');
+    return response.data.data ;
+}
+
+export const getUsersStatus = async () => {
+    const response = await axiosInterceptor.get('auth/users-data');
+    return response.data ;
+}
 
 export const addContract = async (contract: Contract) => {
     const response = await axiosInterceptor.post('/contracts', contract);

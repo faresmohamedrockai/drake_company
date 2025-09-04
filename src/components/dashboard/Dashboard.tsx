@@ -16,14 +16,19 @@ import {
   AlertCircle,
   PlayCircle,
   XCircle,
-  ArrowRight
+  ArrowRight,
+  Trophy, // 🏆 أيقونة جديدة
+  Award,  // 🎖️ أيقونة جديدة
+  Medal   // 🏅 أيقونة جديدة
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 
-import { getLeads, getLogs, getMeetings, getUsers, getMyTasks, getTaskStatistics, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits } from '../../queries/queries';
+// تم إضافة getUsersStatus لجلب بيانات لوحة الصدارة
+import { getLeads, getLogs, getMeetings, getUsers, getMyTasks, getTaskStatistics, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus } from '../../queries/queries';
 import { Lead, Log, Meeting, User as UserType, LeadStatus, Task, TaskStatistics } from '../../types';
 import UserFilterSelect from '../leads/UserFilterSelect';
 import LeadsSummaryCards from '../leads/LeadsSummaryCards';
+import AgentLeaderboard from './AgentComponet';
 
 interface DashboardProps {
   setCurrentView?: (view: string) => void;
@@ -92,6 +97,11 @@ const useDashboardData = () => {
     queryFn: getMeetings,
     staleTime: 1000 * 60 * 5,
   });
+  const { data: dashoarddata, isLoading: dashboardLoading } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: getDashboardData,
+    staleTime: 1000 * 60 * 5,
+  });
 
   const { data: logs = [], isLoading: logsLoading } = useQuery<Log[]>({
     queryKey: ['logs'],
@@ -125,6 +135,13 @@ const useDashboardData = () => {
     staleTime: 1000 * 60 * 5,
   });
 
+  // Fetch user performance data for the leaderboard
+  const { data: userData = [], isLoading: userDataLoading } = useQuery({
+    queryKey: ['userData'],
+    queryFn: getUsersStatus,
+    staleTime: 1000 * 60 * 5,
+  });
+
   return {
     users,
     leads,
@@ -133,8 +150,10 @@ const useDashboardData = () => {
     myTasks,
     taskStatistics,
     allCalls,
+    dashoarddata,
     allVisits,
-    isLoading: leadsLoading || meetingsLoading || logsLoading || tasksLoading || taskStatsLoading,
+    userData, // <-- Expose the new data
+    isLoading: leadsLoading || meetingsLoading || logsLoading || tasksLoading || taskStatsLoading || userDataLoading,
     user
   };
 };
@@ -180,6 +199,12 @@ const useLeadFiltering = (leads: Lead[], users: UserType[], user: any, selectedM
     return filteredLeads;
   }, [leads, users, user, selectedManager, selectedSalesRep]);
 };
+
+
+// --- START: AGENT LEADERBOARD COMPONENT ---
+
+// --- END: AGENT LEADERBOARD COMPONENT ---
+
 
 // KPI Cards Component
 const KPICards: React.FC<{ 
@@ -474,11 +499,7 @@ const TasksCard: React.FC<{
 }> = ({ myTasks, taskStatistics, t, onNavigateToTasks }) => {
   // Debug logging
   React.useEffect(() => {
-    console.log('TasksCard Debug:', {
-      myTasksLength: myTasks.length,
-      myTasks: myTasks,
-      taskStatistics: taskStatistics
-    });
+
   }, [myTasks, taskStatistics]);
 
   const formatDueDate = (dueDate: Date | {} | null) => {
@@ -783,7 +804,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const navigate = useNavigate();
   
   // Get dashboard data
-  const { users, leads, meetings, logs, myTasks, taskStatistics, allCalls, allVisits, isLoading, user } = useDashboardData();
+  const { users, leads, meetings, logs, myTasks, taskStatistics, allCalls, allVisits, isLoading, user,dashoarddata, userData } = useDashboardData();
   
   // Safety check - don't render if user is not available
   if (!user || !user.id || !user.role) {
@@ -808,10 +829,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const today = new Date().toISOString().split('T')[0];
   const totalProspects = filteredLeads.length;
   const activeLeads = filteredLeads.filter(l => 
-    [LeadStatus.FRESH_LEAD, LeadStatus.FOLLOW_UP, LeadStatus.SCHEDULED_VISIT, LeadStatus.OPEN_DEAL].includes(l.status)
+    [LeadStatus.FRESH_LEAD, LeadStatus.FOLLOW_UP, LeadStatus.SCHEDULED_VISIT, LeadStatus.OPEN_DEAL,LeadStatus.VIP].includes(l.status)
   ).length;
   const todayMeetings = meetings.filter(m => m.date === today).length;
   const followUpLeads = filteredLeads.filter(l => l.status === LeadStatus.FOLLOW_UP).length;
+
+  // Prepare leaderboard data by sorting userData
+  const sortedLeaderboardData = useMemo(() => {
+    if (!userData) return [];
+    return [...userData].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+  }, [userData]);
 
   // Calculate conversion rates with actual data
   const calculateConversionRates = () => {
@@ -819,22 +846,25 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     let totalCalls = 0;
     let completedCalls = 0;
     let totalVisits = 0;
-    let completedVisits = 0;
+    let completedMeetings = 0;
     
     filteredLeads.forEach(lead => {
       // Count calls from leads data
       if (lead.calls && Array.isArray(lead.calls)) {
         totalCalls += lead.calls.length;
+
+        
         completedCalls += lead.calls.filter((call: any) => 
-          call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered'
+           call.outcome !== 'Not Interested' 
         ).length;
       }
+      // console.log(" Completed Calls = "+ completedCalls);
       
       // Count visits from leads data
-      if (lead.visits && Array.isArray(lead.visits)) {
-        totalVisits += lead.visits.length;
-        completedVisits += lead.visits.filter((visit: any) => 
-          visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful')
+      if (lead.meetings && Array.isArray(lead.meetings)) {
+        totalVisits += lead?.meetings.length;
+        completedMeetings += lead?.meetings.filter((meetings: any) => 
+          meetings.status && (meetings.status === 'Completed')
         ).length;
       }
     });
@@ -860,12 +890,13 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     
     if (totalVisits === 0 && globalVisits.length > 0) {
       totalVisits = globalVisits.length;
-      completedVisits = globalVisits.filter((visit: any) => 
-        visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful')
+      completedMeetings = globalVisits.filter((meetings: any) => 
+        meetings.status && (meetings.status === 'Completed')
       ).length;
     }
     
     const callCompletionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
+    console.log(completedCalls);
     
     // Calculate calls to meetings rate properly
     // We need to count actual calls that led to meetings, not leads
@@ -898,8 +929,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
               call.outcome.toLowerCase().includes('meeting') ||
               call.outcome.toLowerCase().includes('visit') ||
               call.outcome.toLowerCase().includes('appointment') ||
-              call.outcome.toLowerCase() === 'interested' ||
-              call.outcome.toLowerCase() === 'follow up'
+              call.outcome.toLowerCase() === 'Intersted' ||
+              call.outcome.toLowerCase() === 'Follow Up Required'
             )
           ).length;
         }
@@ -930,54 +961,24 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
       totalCalls,
       totalVisits,
       completedCalls,
-      completedVisits,
+      completedMeetings,
       callsResultingInMeetings,
       leadsWithMeetingsCount: leadsWithMeetings.size
     };
   };
 
-  const { callCompletionRate, callsToMeetingsRate, totalCalls, totalVisits, completedCalls, completedVisits, callsResultingInMeetings, leadsWithMeetingsCount } = calculateConversionRates();
+  const { callCompletionRate, callsToMeetingsRate, totalCalls, totalVisits, completedCalls, completedMeetings, callsResultingInMeetings, leadsWithMeetingsCount, } = calculateConversionRates();
   
   // Debug logging for visits data
-  React.useEffect(() => {
-    const leadsWithVisits = filteredLeads.filter(lead => lead.visits && lead.visits.length > 0);
+  // React.useEffect(() => {
+  //   const leadsWithVisits = filteredLeads.filter(lead => lead.visits && lead.visits.length > 0);
     
-    console.log('Dashboard Debug:', {
-      filteredLeadsCount: filteredLeads.length,
-      totalMeetings: meetings.length,
-      allCallsCount: allCalls.length,
-      allVisitsCount: allVisits.length,
-      totalCalls,
-      totalVisits,
-      completedCalls,
-      completedVisits,
-      callCompletionRate,
-      callsToMeetingsRate,
-      leadsWithMeetingsCount,
-      calculationBreakdown: {
-        formula: 'callsResultingInMeetings / totalCalls * 100',
-        callsResultingInMeetings,
-        totalCalls,
-        leadsWithMeetingsCount,
-        result: callsToMeetingsRate,
-        explanation: 'Counts actual calls that led to meetings vs total calls made'
-      },
-      leadsWithVisitsCount: leadsWithVisits.length,
-      sampleLeadStructure: filteredLeads[0] ? {
-        id: filteredLeads[0].id,
-        hasVisits: !!filteredLeads[0].visits,
-        visitsLength: filteredLeads[0].visits?.length || 0,
-        hasCalls: !!filteredLeads[0].calls,
-        callsLength: filteredLeads[0].calls?.length || 0,
-      } : null,
-      meetingsSample: meetings.slice(0, 3).map(m => ({
-        id: m.id,
-        leadId: m.leadId,
-        title: m.title,
-        status: m.status
-      })),
-    });
-  }, [filteredLeads, allCalls, allVisits, totalCalls, totalVisits]);
+
+
+
+
+
+  // }, [filteredLeads, allCalls, allVisits, totalCalls, totalVisits]);
 
   // Team leader specific metrics
   const teamLeaderMetrics = useMemo(() => {
@@ -987,20 +988,19 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     if (selectedSalesRep) return null;
     
     // Get all sales reps under this team leader
-    const directTeamMembers = users.filter(u => u.role === 'sales_rep' && u.teamLeaderId === user.id).map(u => u.id);
-    
+  
     // TEMPORARY: Show all leads breakdown
     const myLeads = leads.filter(lead => lead.owner?.id === user.id);
     const teamLeads = leads.filter(lead => lead.owner?.id !== user.id);
     
-    console.log('Team Leader Metrics Debug:', {
-      teamLeader: user?.name || 'Unknown',
-      teamLeaderId: user?.id || 'Unknown',
-      directTeamMembers: directTeamMembers.length,
-      totalLeads: leads.length,
-      myLeads: myLeads.length,
-      teamLeads: teamLeads.length
-    });
+    // console.log('Team Leader Metrics Debug:', {
+    //   teamLeader: user?.name || 'Unknown',
+    //   teamLeaderId: user?.id || 'Unknown',
+    //   directTeamMembers: directTeamMembers.length,
+    //   totalLeads: leads.length,
+    //   myLeads: myLeads.length,
+    //   teamLeads: teamLeads.length
+    // });
     
     return {
       myLeads: myLeads.length,
@@ -1012,10 +1012,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   // Conversion rates
   const conversionRates = {
-    leadsToFollowUp: totalProspects ? Math.round((followUpLeads / totalProspects) * 100) : 0,
-    callsToMeetings: callsToMeetingsRate,
-    meetingsToDeals: meetings.length ? Math.round((meetings.filter(m => m.status === 'Completed').length / meetings.length) * 100) : 0,
-    callCompletionRate: callCompletionRate,
+    leadsToFollowUp: dashoarddata?.followUpRate,
+    callsToMeetings:dashoarddata?.pendingCallsRate,
+    meetingsToDeals: dashoarddata?.meetingSuccessRate ,
+    callCompletionRate:  dashoarddata?.callCompletionRate,
   };
 
   // Prepare lead status cards data
@@ -1126,6 +1126,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
         t={t}
         navigate={navigate}
       />
+      
+      {/* Agent Leaderboard */}
+      <div className="mb-8">
+        <AgentLeaderboard data={sortedLeaderboardData} />
+        
+      </div>
 
       {/* Show More/Less Toggle */}
       <div className="flex justify-end mb-6">

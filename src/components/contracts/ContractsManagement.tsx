@@ -196,17 +196,33 @@ const ContractsManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    if (contracts) {
+    if (!contracts) return;
+
+    // لو مفيش searchTerm رجّع كل العقود
+    if (!searchTerm.trim()) {
       setFilteredContracts(contracts);
+      return;
     }
-    if (contracts && searchTerm) {
-      setFilteredContracts(contracts.filter(contract =>
-        contract.lead?.nameEn?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contract.inventory?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contract.id?.toLowerCase().includes(searchTerm.toLowerCase())
-      ));
-    }
+
+    const lowerSearch = searchTerm
+
+    const filtered = contracts.filter(contract => {
+      return (
+        contract.lead?.nameEn?.toLowerCase().includes(lowerSearch) ||
+        contract.lead?.nameAr?.toLowerCase().includes(lowerSearch) ||
+        contract.lead?.contact?.toLowerCase().includes(lowerSearch) ||
+        contract.lead?.contacts?.some(c => c.toLowerCase().includes(lowerSearch)) ||
+        // contract.lead?.notes?.some(note => note.toLowerCase().includes(lowerSearch)) ||
+        contract.cNumber?.includes(lowerSearch) ||
+        contract.inventory?.title?.toLowerCase().includes(lowerSearch) ||
+        contract.inventory?.titleAr?.toLowerCase().includes(lowerSearch) ||
+        contract.id?.toLowerCase().includes(lowerSearch)
+      );
+    });
+
+    setFilteredContracts(filtered);
   }, [contracts, searchTerm]);
+
 
 
   // Role-based access control
@@ -278,70 +294,70 @@ const ContractsManagement: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.contractId')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.leadName')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.propertyProject')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.dealValue')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.contractDate')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.status')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.createdBy')}</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.actions')}</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredContracts?.map((contract) => (
-                <tr key={contract.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="text-sm font-medium text-gray-900">{contract.cNumber ||  contract.id}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <User className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">{contract.lead?.nameEn}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">{contract.inventory?.title}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 text-green-600 mr-1" />
-                      <span className="text-sm font-medium text-gray-900">{contract.dealValue}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                      <span className="text-sm text-gray-900">{contract.contractDate}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
-                      {translateContractStatus(contract.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contract.createdBy?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <button className="text-blue-600 hover:text-blue-800 mr-3" onClick={() => openEditForm(contract)}>
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(contract.id || '')}>
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.contractId')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.leadName')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.propertyProject')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.dealValue')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.contractDate')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.status')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.createdBy')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{t('tableHeaders.actions')}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredContracts?.map((contract) => (
+                  <tr key={contract.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                          <FileText className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="text-sm font-medium text-gray-900">{contract.cNumber || contract.id}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <User className="h-4 w-4 text-gray-400 mr-2" />
+                        <span className="text-sm text-gray-900">{contract.lead?.nameEn}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900">{contract.inventory?.title}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <DollarSign className="h-4 w-4 text-green-600 mr-1" />
+                        <span className="text-sm font-medium text-gray-900">{contract.dealValue}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                        <span className="text-sm text-gray-900">{contract.contractDate}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
+                        {translateContractStatus(contract.status)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{contract.createdBy?.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <button className="text-blue-600 hover:text-blue-800 mr-3" onClick={() => openEditForm(contract)}>
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button className="text-red-600 hover:text-red-800" onClick={() => handleDelete(contract.id || '')}>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       )}
 
       {/* Add/Edit Contract Modal */}
@@ -401,40 +417,40 @@ const ContractsManagement: React.FC = () => {
       {!isLoadingContracts && (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-8">
           {filteredContracts?.map((contract) => (
-          <div key={contract.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">{contract.cNumber || contract.id}</h3>
-              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
-                {translateContractStatus(contract.status)}
-              </span>
-            </div>
+            <div key={contract.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">{contract.cNumber || contract.id}</h3>
+                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
+                  {translateContractStatus(contract.status)}
+                </span>
+              </div>
 
-            <div className="space-y-3 mb-4">
-              <div>
-                <span className="text-sm font-medium text-gray-700">{t('cardLabels.client')}: </span>
-                <span className="text-sm text-gray-900">{contract.lead?.nameEn || contract.lead?.nameAr}</span>
+              <div className="space-y-3 mb-4">
+                <div>
+                  <span className="text-sm font-medium text-gray-700">{t('cardLabels.client')}: </span>
+                  <span className="text-sm text-gray-900">{contract.lead?.nameEn || contract.lead?.nameAr}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">{t('cardLabels.property')}: </span>
+                  <span className="text-sm text-gray-900">{contract.inventory?.title}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">{t('cardLabels.dealValue')}: </span>
+                  <span className="text-sm font-bold text-green-600">{contract.dealValue}</span>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">{t('cardLabels.date')}: </span>
+                  <span className="text-sm text-gray-900">{contract.contractDate}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">{t('cardLabels.property')}: </span>
-                <span className="text-sm text-gray-900">{contract.inventory?.title}</span>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">{t('cardLabels.dealValue')}: </span>
-                <span className="text-sm font-bold text-green-600">{contract.dealValue}</span>
-              </div>
-              <div>
-                <span className="text-sm font-medium text-gray-700">{t('cardLabels.date')}: </span>
-                <span className="text-sm text-gray-900">{contract.contractDate}</span>
-              </div>
-            </div>
 
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">{t('cardLabels.notes')}</h4>
-              <p className="text-sm text-gray-600 line-clamp-3">{contract.notes}</p>
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-2">{t('cardLabels.notes')}</h4>
+                <p className="text-sm text-gray-600 line-clamp-3">{contract.notes}</p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
       )}
     </div>
   );

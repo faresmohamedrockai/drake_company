@@ -1794,6 +1794,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                     <option value="Not Interested">{t('notInterested')}</option>
                     <option value="Follow Up Required">{t('followUpRequired')}</option>
                     <option value="Meeting Scheduled">{t('meetingScheduled')}</option>
+                    <option value="No Answer">{t('No Answer')}</option>
                   </select>
                 </div>
 

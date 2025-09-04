@@ -13,20 +13,20 @@ interface StatusCardsProps {
 }
 
 // Icon and color mappings for status cards
-const statusCardIcons: Record<string, JSX.Element> = {
-  all: <UserIcon className="h-6 w-6 text-white" />,
-  duplicate: <AlertTriangle className="h-6 w-6 text-white" />,
-  fresh_lead: <Star className="h-6 w-6 text-white" />,
-  cold_call: <Phone className="h-6 w-6 text-white" />,
-  follow_up: <MessageSquare className="h-6 w-6 text-white" />,
-  scheduled_visit: <CalendarIcon className="h-6 w-6 text-white" />,
-  open_deal: <Check className="h-6 w-6 text-white" />,
-  closed_deal: <Check className="h-6 w-6 text-white" />,
-  cancellation: <X className="h-6 w-6 text-white" />,
-  no_answer: <HelpCircle className="h-6 w-6 text-white" />,
-  not_interested_now: <ThumbsDown className="h-6 w-6 text-white" />,
-  reservation: <Clock className="h-6 w-6 text-white" />,
-};
+// const statusCardIcons: Record<string, JSX.Element> = {
+//   all: <UserIcon className="h-6 w-6 text-white" />,
+//   duplicate: <AlertTriangle className="h-6 w-6 text-white" />,
+//   fresh_lead: <Star className="h-6 w-6 text-white" />,
+//   cold_call: <Phone className="h-6 w-6 text-white" />,
+//   follow_up: <MessageSquare className="h-6 w-6 text-white" />,
+//   scheduled_visit: <CalendarIcon className="h-6 w-6 text-white" />,
+//   open_deal: <Check className="h-6 w-6 text-white" />,
+//   closed_deal: <Check className="h-6 w-6 text-white" />,
+//   cancellation: <X className="h-6 w-6 text-white" />,
+//   no_answer: <HelpCircle className="h-6 w-6 text-white" />,
+//   not_interested_now: <ThumbsDown className="h-6 w-6 text-white" />,
+//   reservation: <Clock className="h-6 w-6 text-white" />,
+// };
 
 // Helper to add spaces to camelCase or PascalCase
 function addSpacesToCamelCase(text: string) {

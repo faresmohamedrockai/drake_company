@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits } from '../../queries/queries';
+import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData,getUsersStatus } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
+import AgentLeaderboard from "../dashboard/AgentComponet"
 import {
   Search,
   Filter,
@@ -30,7 +31,9 @@ import {
   DollarSign,
   BarChart4,
   Settings,
-  MapPin
+  MapPin,
+  Trophy, // 🏆 أيقونة جديدة للمركز الأول
+  Medal   // 🏅 أيقونة جديدة للمركز الثالث
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, PieChart as RechartsPieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { LeadStatus, User, Lead, Meeting, Contract } from '../../types';
@@ -63,6 +66,7 @@ interface UserPerformance {
   totalRevenue: number;
   averageDealSize: number;
   lastActivity: string;
+  score: number; // Add score to the interface
   // Detailed activity data
   calls: Array<{
     leadId: string;
@@ -118,31 +122,69 @@ const Reports: React.FC = () => {
       return populatedLeads;
     }
   });
-  const { data: meetings = [], isLoading: meetingsLoading, error: meetingsError } = useQuery({ 
-    queryKey: ['meetings'], 
+  const { data: meetings = [], isLoading: meetingsLoading, error: meetingsError } = useQuery({
+    queryKey: ['meetings'],
     queryFn: async () => {
       const meetingsData = await getMeetings();
       return meetingsData;
     }
   });
-  const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({ 
-    queryKey: ['users'], 
+
+
+
+ const { data: dashoarddata, isLoading: dashboardLoading } = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: async () => {
+      const DashboardData = await getDashboardData();
+      return DashboardData;
+    }
+  });
+console.log("Report Data ",dashoarddata)
+
+ const { data: userData = [], isLoading: UserDataLOading } = useQuery({
+    queryKey: ['userData'],
+    queryFn: async () => {
+      const UserStatusData = await getUsersStatus();
+      return UserStatusData;
+    }
+  });
+// console.log("User Data ",userData)
+
+
+
+
+
+
+
+
+
+
+
+  const { data: users = [], isLoading: usersLoading, error: usersError } = useQuery({
+    queryKey: ['users'],
     queryFn: async () => {
       const usersData = await getUsers();
       return usersData;
     }
   });
-  const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({ 
-    queryKey: ['contracts'], 
+  const { data: contracts = [], isLoading: contractsLoading, error: contractsError } = useQuery({
+    queryKey: ['contracts'],
     queryFn: async () => {
       const contractsData = await getContracts();
       return contractsData;
     }
   });
+
+  const sortedLeaderboardData = useMemo(() => {
+    if (!userData) return [];
+    return [...userData].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+  }, [userData]);
+
+
   const { data: allCalls = [] } = useQuery({ queryKey: ['allCalls'], queryFn: getAllCalls });
   const { data: allVisits = [] } = useQuery({ queryKey: ['allVisits'], queryFn: getAllVisits });
   const { user: currentUser } = useAuth();
-  
+
 
   const { t } = useTranslation('reports');
   const { language } = useLanguage();
@@ -192,8 +234,31 @@ const Reports: React.FC = () => {
     return [];
   };
 
+
+
+
+
+
+
+
+
+
+
+
+
   // Get team members for team leader (including team leader)
-  const getTeamMembers = () => {
+ 
+
+
+
+
+
+
+
+
+
+
+ const getTeamMembers = () => {
     if (currentUser?.role === 'team_leader') {
       return users.filter(u =>
         u.id === currentUser.id || // Include the team leader themselves
@@ -205,16 +270,15 @@ const Reports: React.FC = () => {
 
   // Check if current user is team leader
   const isTeamLeader = currentUser?.role === 'team_leader';
-
   // Generate team leader report
   const generateTeamLeaderReport = (): TeamLeaderReport => {
     const teamMembers = getTeamMembers();
     const currentDateRange = getDateRange();
 
     const memberDetails = teamMembers.map(member => {
-      const memberLeads = leads.filter(lead => 
-        lead.assignedToId === member.id || 
-        lead.ownerId === member.id || 
+      const memberLeads = leads.filter(lead =>
+        lead.assignedToId === member.id ||
+        lead.ownerId === member.id ||
         lead.owner?.id === member.id
       );
       const memberMeetings = meetings.filter(meeting => meeting.assignedToId === member.id);
@@ -286,10 +350,12 @@ const Reports: React.FC = () => {
   // Generate sales report
   const generateSalesReport = (): SalesReportData => {
     const currentDateRange = getDateRange();
+
+
+
     const accessibleUsers = getAccessibleUsers();
 
-    // Filter data by date range - Only filter activities, not the leads themselves
-    // Keep all leads, but filter activities by date range
+
     let filteredMeetings = meetings;
     let filteredContracts = contracts;
 
@@ -315,8 +381,8 @@ const Reports: React.FC = () => {
     // Calculate completion rates
     const totalCalls = leads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
     const completedCalls = leads.filter(lead => lead.status !== LeadStatus.NO_ANSWER).length;
-    const totalVisits = leads.reduce((sum, lead) => sum + (lead.visits?.length || 0), 0);
-    const completedVisits = leads.filter(lead => lead.visits?.some(visit => visit.status === 'Completed')).length;
+    const totalVisits = leads.reduce((sum, lead) => sum + (lead.meetings?.length || 0), 0);
+    const completedVisits = leads.filter(lead => lead.meetings?.some(meetings => meetings.status === 'Scheduled')).length;
     const totalMeetings = filteredMeetings.length;
     const completedMeetings = filteredMeetings.filter(meeting => meeting.status === 'Completed').length;
 
@@ -345,9 +411,9 @@ const Reports: React.FC = () => {
 
     // Top performing users
     const topPerformingUsers = accessibleUsers.map(user => {
-      const userLeads = leads.filter(lead => 
-        lead.assignedToId === user.id || 
-        lead.ownerId === user.id || 
+      const userLeads = leads.filter(lead =>
+        lead.assignedToId === user.id ||
+        lead.ownerId === user.id ||
         lead.owner?.id === user.id
       );
       const userContracts = filteredContracts.filter(contract => contract.createdById === user.id);
@@ -392,21 +458,31 @@ const Reports: React.FC = () => {
     };
   };
 
+
+
+
+
+
+
+
+
+
+
   // Get team progress data
   const getTeamProgress = () => {
     const teamMembers = getTeamMembers();
     const currentDateRange = getDateRange();
 
           return teamMembers.map(member => {
-        const memberLeads = leads.filter(lead => 
-          lead.assignedToId === member.id || 
-          lead.ownerId === member.id || 
+        const memberLeads = leads.filter(lead =>
+          lead.assignedToId === member.id ||
+          lead.ownerId === member.id ||
           lead.owner?.id === member.id
         );
         const memberMeetings = meetings.filter(meeting => meeting.assignedToId === member.id);
       const memberContracts = contracts.filter(contract => contract.createdById === member.id);
 
-      // Filter by date range
+     
       let filteredLeads = memberLeads;
       let filteredMeetings = memberMeetings;
       let filteredContracts = memberContracts;
@@ -496,7 +572,7 @@ const Reports: React.FC = () => {
 
           // Filter data by target users and date range
       const userLeads = leads.filter(lead => {
-        const isOwner = (lead.assignedToId && targetUserIds.includes(lead.assignedToId)) || 
+        const isOwner = (lead.assignedToId && targetUserIds.includes(lead.assignedToId)) ||
                        (lead.ownerId && targetUserIds.includes(lead.ownerId)) ||
                        (lead.owner?.id && targetUserIds.includes(lead.owner.id));
         const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
@@ -504,7 +580,7 @@ const Reports: React.FC = () => {
       return isOwner && isInDateRange;
     });
 
-    
+
     const userMeetings = meetings.filter(meeting => {
       const isAssigned = targetUserIds.includes(meeting.assignedToId);
       const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
@@ -523,7 +599,7 @@ const Reports: React.FC = () => {
     const totalLeads = userLeads.length;
     const newLeads = userLeads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length;
     const activeLeads = userLeads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length;
-    
+
     const convertedLeads = userLeads.filter(lead =>
       lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL
     ).length;
@@ -708,9 +784,7 @@ const Reports: React.FC = () => {
           filename = exportUserPerformanceReport(users, leads, meetings, contracts, currentDateRange);
           break;
         case 'salesMember':
-          // Always generate report for current user
-          // For team leaders: shows their team members' data
-          // For team members: shows their own data + team members data
+       
           if (currentUser?.id) {
             const salesMemberReport = generateSalesMemberReport(currentUser.id);
             if (salesMemberReport) {
@@ -740,6 +814,10 @@ const Reports: React.FC = () => {
     }
   };
 
+
+
+
+  
   // Get date range based on selected timeframe
   const getDateRange = (): DateRange => {
     const today = new Date();
@@ -821,14 +899,14 @@ const Reports: React.FC = () => {
   // Calculate user performance based on date range
   const calculateUserPerformance = (user: any, dateRange: DateRange): UserPerformance => {
     const { startDate, endDate } = dateRange;
-    
+
     // Filter data by date range if specified
-    let userLeads = leads.filter(lead => 
-      lead.assignedToId === user.id || 
-      lead.ownerId === user.id || 
+    let userLeads = leads.filter(lead =>
+      lead.assignedToId === user.id ||
+      lead.ownerId === user.id ||
       lead.owner?.id === user.id
     );
-    
+
     let userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
     let userContracts = contracts.filter(contract => contract.createdById === user.id);
 
@@ -1086,6 +1164,7 @@ const Reports: React.FC = () => {
       totalRevenue,
       averageDealSize,
       lastActivity: lastActivity || 'No activity',
+      score: 0, // Fallback score
       calls: userCalls,
       visits: userVisits,
       followUps: userFollowUps,
@@ -1094,6 +1173,12 @@ const Reports: React.FC = () => {
       contracts: userContractsInRange
     };
   };
+
+
+
+
+
+
 
   // Calculate overall metrics
   const calculateOverallMetrics = (): PerformanceMetrics => {
@@ -1132,8 +1217,92 @@ const Reports: React.FC = () => {
 
   // Get filtered and sorted performances
   const getFilteredPerformances = () => {
-    const currentDateRange = getDateRange();
-    let performances = getAccessibleUsers().map(user => calculateUserPerformance(user, currentDateRange));
+    let performances: UserPerformance[] = [];
+
+    // Prioritize using the new `userData` if it's available and contains data
+    if (userData && userData.length > 0) {
+      performances = userData.map((user: any): UserPerformance => {
+        // Aggregate all activities from all leads for the user
+        const allUserCalls = user.leads.flatMap((lead: any) => lead.calls || []);
+        const allUserMeetings = user.leads.flatMap((lead: any) => lead.meetings || []);
+        const allUserVisits = user.leads.flatMap((lead: any) => lead.visits || []);
+
+        // Calculate call metrics
+        const totalCalls = allUserCalls.length;
+        const completedCalls = allUserCalls.filter(
+          (call: any) => call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered'
+        ).length;
+
+        // Calculate visit metrics (assuming all logged visits are completed as status is missing)
+        const totalVisits = allUserVisits.length;
+        const completedVisits = totalVisits;
+
+        // Calculate meeting metrics
+        const totalMeetings = allUserMeetings.length;
+        const completedMeetings = allUserMeetings.filter((meeting: any) => meeting.status === 'Completed').length;
+
+        // Calculate deal metrics from the leads array
+        const closedDeals = user.leads.filter((lead: any) => lead.status === 'closed_deal').length;
+        const openDeals = user.leads.filter((lead: any) => lead.status === 'open_deal').length;
+
+        // Calculate completion rates
+        const callCompletionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
+        const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0; // Assuming 100% for now
+        const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
+
+        // Determine the last activity date
+        const allActivityDates = [
+          ...allUserCalls.map((c: any) => new Date(c.createdAt)),
+          ...allUserMeetings.map((m: any) => new Date(m.createdAt)),
+          ...allUserVisits.map((v: any) => new Date(v.createdAt)),
+        ].filter(date => !isNaN(date.getTime()));
+
+        const lastActivity = allActivityDates.length > 0
+          ? new Date(Math.max.apply(null, allActivityDates.map(d => d.getTime()))).toLocaleDateString()
+          : 'No activity';
+
+        // Construct the performance object matching the UserPerformance interface
+        return {
+          id: user.id,
+          name: user.name,
+          role: user.role,
+          totalLeads: user.totalLeads,
+          assignedLeads: user.totalLeads,
+          conversionRate: user.conversion, // Use pre-calculated conversion
+          score: user.totalScore, // Use pre-calculated score
+          completedCalls,
+          totalCalls,
+          completedVisits,
+          totalVisits,
+          completedMeetings,
+          totalMeetings,
+          closedDeals,
+          openDeals,
+          callCompletionRate: Math.round(callCompletionRate * 10) / 10,
+          visitCompletionRate: Math.round(visitCompletionRate * 10) / 10,
+          meetingCompletionRate: Math.round(meetingCompletionRate * 10) / 10,
+          lastActivity,
+          // Fill in default/empty values for fields not present in userData
+          totalFollowUps: 0,
+          completedFollowUps: 0,
+          followUpCompletionRate: 0,
+          totalRevenue: 0,
+          averageDealSize: 0,
+          teamId: users.find(u => u.id === user.id)?.teamId,
+          calls: [],
+          visits: [],
+          followUps: [],
+          leads: [],
+          meetings: [],
+          contracts: [],
+        };
+      });
+    } else {
+      // Fallback to the original calculation method if userData is not available
+      const currentDateRange = getDateRange();
+      performances = getAccessibleUsers().map(user => calculateUserPerformance(user, currentDateRange));
+    }
+
 
     // Filter by search term
     if (searchTerm) {
@@ -1180,8 +1349,10 @@ const Reports: React.FC = () => {
           bValue = b.conversionRate;
           break;
         case 'activity':
-          aValue = new Date(a.lastActivity).getTime();
-          bValue = new Date(b.lastActivity).getTime();
+          const aDate = new Date(a.lastActivity).getTime();
+          const bDate = new Date(b.lastActivity).getTime();
+          aValue = isNaN(aDate) ? 0 : aDate;
+          bValue = isNaN(bDate) ? 0 : bDate;
           break;
         default:
           aValue = a.conversionRate;
@@ -1189,9 +1360,13 @@ const Reports: React.FC = () => {
       }
 
       if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
+        if (aValue < bValue) return -1;
+        if (aValue > bValue) return 1;
+        return 0;
       } else {
-        return aValue < bValue ? 1 : -1;
+        if (aValue > bValue) return -1;
+        if (aValue < bValue) return 1;
+        return 0;
       }
     });
 
@@ -1213,6 +1388,12 @@ const Reports: React.FC = () => {
   const performances = getFilteredPerformances();
   const metrics = calculateOverallMetrics();
 
+  // --- START: AGENT LEADERBOARD LOGIC ---
+  // Sort the data based on the 'score' from the performance object
+  const leaderboardData = [...performances]
+    .sort((a, b) => b.score - a.score);
+
+ 
   // Chart data
   const performanceChartData = performances.map(p => ({
     name: p.name,
@@ -1942,6 +2123,11 @@ const Reports: React.FC = () => {
 
       {viewMode === 'dashboard' ? (
         <>
+          {/* Agent Leaderboard */}
+          <div className="mb-8">
+            <AgentLeaderboard data={sortedLeaderboardData} />
+          </div>
+          
           {/* Sales Member Report View */}
           {exportType === 'salesMember' && (
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -2464,7 +2650,8 @@ const Reports: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.callCompletion') || 'Call Completion'}</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{metrics.averageCallCompletionRate}%</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900">{dashoarddata?.callCompletionRate
+}%</p>
                   <p className="text-xs text-gray-500">{t('metrics.rate') || 'rate'}</p>
                 </div>
                 <Phone className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
@@ -2528,21 +2715,22 @@ const Reports: React.FC = () => {
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-xl sm:text-2xl font-bold text-green-600">{metrics.averageCallCompletionRate}%</div>
+                <div className="text-xl sm:text-2xl font-bold text-green-600">{dashoarddata?.avgCompleationCallsRate || 0
+}%</div>
                 <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgCallCompletion') || 'Avg Call Completion'}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageCallCompletionRate > 80 ? (t('performance.outstanding') || 'Outstanding') :
-                    metrics.averageCallCompletionRate > 60 ? (t('performance.good') || 'Good') :
-                      metrics.averageCallCompletionRate > 40 ? (t('performance.fair') || 'Fair') : (t('performance.needsWork') || 'Needs Work')}
+                  {dashoarddata?.avgCompleationCallsRate  > 80 ? (t('performance.outstanding') || 'Outstanding') :
+                    dashoarddata?.avgCompleationCallsRate > 60 ? (t('performance.good') || 'Good') :
+                     dashoarddata?.avgCompleationCallsRate  > 40 ? (t('performance.fair') || 'Fair') : (t('performance.needsWork') || 'Needs Work')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-xl sm:text-2xl font-bold text-purple-600">{metrics.averageMeetingCompletionRate}%</div>
+                <div className="text-xl sm:text-2xl font-bold text-purple-600">{dashoarddata?.meetingSuccessRate || 0}%</div>
                 <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgMeetingCompletion') || 'Avg Meeting Completion'}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {metrics.averageMeetingCompletionRate > 90 ? (t('performance.perfect') || 'Perfect') :
-                    metrics.averageMeetingCompletionRate > 70 ? (t('performance.good') || 'Good') :
-                      metrics.averageMeetingCompletionRate > 50 ? (t('performance.fair') || 'Fair') : (t('performance.needsAttention') || 'Needs Attention')}
+                  {dashoarddata?.meetingSuccessRate> 90 ? (t('performance.perfect') || 'Perfect') :
+                    dashoarddata?.meetingSuccessRate > 70 ? (t('performance.good') || 'Good') :
+                      dashoarddata?.meetingSuccessRate > 50 ? (t('performance.fair') || 'Fair') : (t('performance.needsAttention') || 'Needs Attention')}
                 </div>
               </div>
             </div>
@@ -2696,4 +2884,4 @@ const Reports: React.FC = () => {
   );
 };
 
-export default Reports; 
+export default Reports;
