@@ -16,10 +16,7 @@ import {
   AlertCircle,
   PlayCircle,
   XCircle,
-  ArrowRight,
-  Trophy, // 🏆 أيقونة جديدة
-  Award,  // 🎖️ أيقونة جديدة
-  Medal   // 🏅 أيقونة جديدة
+  ArrowRight
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 
@@ -97,7 +94,7 @@ const useDashboardData = () => {
     queryFn: getMeetings,
     staleTime: 1000 * 60 * 5,
   });
-  const { data: dashoarddata, isLoading: dashboardLoading } = useQuery({
+  const { data: dashoarddata } = useQuery({
     queryKey: ['dashboard'],
     queryFn: getDashboardData,
     staleTime: 1000 * 60 * 5,
@@ -201,9 +198,7 @@ const useLeadFiltering = (leads: Lead[], users: UserType[], user: any, selectedM
 };
 
 
-// --- START: AGENT LEADERBOARD COMPONENT ---
 
-// --- END: AGENT LEADERBOARD COMPONENT ---
 
 
 // KPI Cards Component
@@ -967,7 +962,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     };
   };
 
-  const { callCompletionRate, callsToMeetingsRate, totalCalls, totalVisits, completedCalls, completedMeetings, callsResultingInMeetings, leadsWithMeetingsCount, } = calculateConversionRates();
+  const { callCompletionRate } = calculateConversionRates();
   
   // Debug logging for visits data
   // React.useEffect(() => {
@@ -1099,7 +1094,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
   return (
     <motion.div
-      className="p-6 bg-transparent min-h-screen"
+      className="p-6 bg-transparent min-h-screen overflow-x-hidden"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -30 }}

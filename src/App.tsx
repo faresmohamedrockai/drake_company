@@ -162,7 +162,7 @@ const AppContent: React.FC = () => {
     <div className="flex h-screen bg-gradient-to-br from-indigo-50 via-sky-50 to-cyan-50 dark:from-slate-900 dark:via-slate-950 dark:to-black">
       <Sidebar />
       <main
-        className={`flex-1 overflow-y-auto transition-all relative ${rtlMargin('md:ml-[var(--sidebar-width,16rem)]', 'md:mr-[var(--sidebar-width,16rem)]')}`}
+        className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden transition-all relative ${rtlMargin('md:ml-[var(--sidebar-width,16rem)]', 'md:mr-[var(--sidebar-width,16rem)]')}`}
       >
         <div className={`hidden md:block absolute inset-y-0 ${rtlMargin('left-0', 'right-0')} w-px bg-gray-200`} />
         <AnimatePresence mode="wait" initial={false}>
