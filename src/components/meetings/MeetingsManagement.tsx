@@ -757,6 +757,7 @@ const MeetingsManagement: React.FC = () => {
                           </button>
                         </span>
                       )}
+                      
 
                       {filters.locationType && (
                         <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
