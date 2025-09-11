@@ -204,7 +204,7 @@ const ContractsManagement: React.FC = () => {
       return;
     }
 
-    const lowerSearch = searchTerm
+    const lowerSearch = searchTerm.toUpperCase()
 
     const filtered = contracts.filter(contract => {
       return (
@@ -320,7 +320,8 @@ const ContractsManagement: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <User className="h-4 w-4 text-gray-400 mr-2" />
-                        <span className="text-sm text-gray-900">{contract.lead?.nameEn}</span>
+                        <span className="text-sm text-gray-900">{contract.lead?.nameEn || contract.lead?.nameAr
+                          }</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">

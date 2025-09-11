@@ -1,6 +1,6 @@
-import React, { useState, useEffect,useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData,getUsersStatus } from '../../queries/queries';
+import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -50,8 +50,6 @@ interface UserPerformance {
   assignedLeads: number;
   completedCalls: number;
   totalCalls: number;
-  completedVisits: number;
-  totalVisits: number;
   completedMeetings: number;
   totalMeetings: number;
   totalFollowUps: number;
@@ -60,51 +58,27 @@ interface UserPerformance {
   openDeals: number;
   conversionRate: number;
   callCompletionRate: number;
-  visitCompletionRate: number;
   meetingCompletionRate: number;
   followUpCompletionRate: number;
   totalRevenue: number;
   averageDealSize: number;
   lastActivity: string;
-  score: number; // Add score to the interface
-  // Detailed activity data
-  calls: Array<{
-    leadId: string;
-    leadName: string;
-    date: string;
-    duration: string;
-    outcome: string;
-    notes: string;
-  }>;
-  visits: Array<{
-    leadId: string;
-    leadName: string;
-    date: string;
-    status: string;
-    notes: string;
-  }>;
-  followUps: Array<{
-    leadId: string;
-    leadName: string;
-    date: string;
-    type: string;
-    status: string;
-    notes: string;
-  }>;
+  score: number;
+  calls: Array<{ leadId: string; leadName: string; date: string; duration: string; outcome: string; notes: string; }>;
+  followUps: Array<{ leadId: string; leadName: string; date: string; type: string; status: string; notes: string; }>;
   leads: Lead[];
   meetings: Meeting[];
   contracts: Contract[];
 }
 
+// --- INTERFACE UPDATED: visits removed ---
 interface PerformanceMetrics {
   totalUsers: number;
   totalLeads: number;
   totalCalls: number;
-  totalVisits: number;
   totalMeetings: number;
   averageConversionRate: number;
   averageCallCompletionRate: number;
-  averageVisitCompletionRate: number;
   averageMeetingCompletionRate: number;
 }
 
@@ -132,23 +106,23 @@ const Reports: React.FC = () => {
 
 
 
- const { data: dashoarddata, isLoading: dashboardLoading } = useQuery({
+  const { data: dashoarddata, isLoading: dashboardLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
       const DashboardData = await getDashboardData();
       return DashboardData;
     }
   });
-console.log("Report Data ",dashoarddata)
+  console.log("Report Data ", dashoarddata)
 
- const { data: userData = [], isLoading: UserDataLOading } = useQuery({
+  const { data: userData = [], isLoading: UserDataLOading } = useQuery({
     queryKey: ['userData'],
     queryFn: async () => {
       const UserStatusData = await getUsersStatus();
       return UserStatusData;
     }
   });
-// console.log("User Data ",userData)
+  // console.log("User Data ",userData)
 
 
 
@@ -208,12 +182,12 @@ console.log("Report Data ",dashoarddata)
   const [exportType, setExportType] = useState<'team' | 'sales' | 'user' | 'salesMember' | 'allSalesMembers'>('team');
   const [teamMemberView, setTeamMemberView] = useState<'overview' | 'member'>('overview');
 
-  // Check if user has access to reports
+
   const canAccessReports = currentUser?.role === 'admin' ||
     currentUser?.role === 'sales_admin' ||
     currentUser?.role === 'team_leader';
 
-  // Get users based on hierarchy
+
   const getAccessibleUsers = () => {
     if (currentUser?.role === 'admin' || currentUser?.role === 'sales_admin') {
       return users;
@@ -247,7 +221,6 @@ console.log("Report Data ",dashoarddata)
 
 
   // Get team members for team leader (including team leader)
- 
 
 
 
@@ -258,7 +231,8 @@ console.log("Report Data ",dashoarddata)
 
 
 
- const getTeamMembers = () => {
+
+  const getTeamMembers = () => {
     if (currentUser?.role === 'team_leader') {
       return users.filter(u =>
         u.id === currentUser.id || // Include the team leader themselves
@@ -271,7 +245,21 @@ console.log("Report Data ",dashoarddata)
   // Check if current user is team leader
   const isTeamLeader = currentUser?.role === 'team_leader';
   // Generate team leader report
+
+
+
+
+
+
+
+
+
+
+
+
+
   const generateTeamLeaderReport = (): TeamLeaderReport => {
+
     const teamMembers = getTeamMembers();
     const currentDateRange = getDateRange();
 
@@ -294,6 +282,9 @@ console.log("Report Data ",dashoarddata)
           const createdDate = lead.createdAt ? new Date(lead.createdAt) : null;
           return createdDate && createdDate >= currentDateRange.startDate! && createdDate <= currentDateRange.endDate!;
         });
+
+
+
 
         filteredMeetings = memberMeetings.filter(meeting => {
           const meetingDate = meeting.date ? new Date(meeting.date) : null;
@@ -321,6 +312,16 @@ console.log("Report Data ",dashoarddata)
       };
     });
 
+
+
+
+
+
+
+
+
+
+
     const teamPerformance = {
       totalLeads: memberDetails.reduce((sum, member) => sum + member.performance.totalLeads, 0),
       totalCalls: memberDetails.reduce((sum, member) => sum + member.performance.totalCalls, 0),
@@ -347,12 +348,15 @@ console.log("Report Data ",dashoarddata)
     };
   };
 
+
+
+
+
+
+
   // Generate sales report
   const generateSalesReport = (): SalesReportData => {
     const currentDateRange = getDateRange();
-
-
-
     const accessibleUsers = getAccessibleUsers();
 
 
@@ -380,7 +384,7 @@ console.log("Report Data ",dashoarddata)
 
     // Calculate completion rates
     const totalCalls = leads.reduce((sum, lead) => sum + (lead.calls?.length || 0), 0);
-    const completedCalls = leads.filter(lead => lead.status !== LeadStatus.NO_ANSWER).length;
+    const completedCalls = leads.filter(lead => lead.calls?.some(call => call.outcome === 'Interested')).length;
     const totalVisits = leads.reduce((sum, lead) => sum + (lead.meetings?.length || 0), 0);
     const completedVisits = leads.filter(lead => lead.meetings?.some(meetings => meetings.status === 'Scheduled')).length;
     const totalMeetings = filteredMeetings.length;
@@ -473,16 +477,16 @@ console.log("Report Data ",dashoarddata)
     const teamMembers = getTeamMembers();
     const currentDateRange = getDateRange();
 
-          return teamMembers.map(member => {
-        const memberLeads = leads.filter(lead =>
-          lead.assignedToId === member.id ||
-          lead.ownerId === member.id ||
-          lead.owner?.id === member.id
-        );
-        const memberMeetings = meetings.filter(meeting => meeting.assignedToId === member.id);
+    return teamMembers.map(member => {
+      const memberLeads = leads.filter(lead =>
+        lead.assignedToId === member.id ||
+        lead.ownerId === member.id ||
+        lead.owner?.id === member.id
+      );
+      const memberMeetings = meetings.filter(meeting => meeting.assignedToId === member.id);
       const memberContracts = contracts.filter(contract => contract.createdById === member.id);
 
-     
+
       let filteredLeads = memberLeads;
       let filteredMeetings = memberMeetings;
       let filteredContracts = memberContracts;
@@ -545,108 +549,109 @@ console.log("Report Data ",dashoarddata)
     return teamProgress.find(member => member.user.id === selectedTeamMember);
   };
 
-  const generateSalesMemberReport = (userId: string): SalesMemberReport | null => {
+    const generateSalesMemberReport = (userId: string): SalesMemberReport | null => {
     const user = users.find(u => u.id === userId);
     if (!user) return null;
 
     const dateRange = getDateRange();
+    // [FIX]: The target should only be the specific user for whom the report is generated.
+    // The previous logic incorrectly gathered data for the entire team.
+    const targetUserIds: string[] = [userId];
 
-    // Determine which users' data to include
-    let targetUserIds: string[] = [userId];
-
-    // If user is a sales_rep, also include their team members' data
-    if (user.role === 'sales_rep') {
-      const teamMembers = users.filter(u =>
-        u.role === 'sales_rep' && u.teamLeaderId === user.teamLeaderId
-      );
-      targetUserIds = teamMembers.map(u => u.id);
-    }
-
-    // If user is a team_leader, include all their team members' data
-    if (user.role === 'team_leader') {
-      const teamMembers = users.filter(u =>
-        u.role === 'sales_rep' && u.teamLeaderId === user.id
-      );
-      targetUserIds = teamMembers.map(u => u.id);
-    }
-
-          // Filter data by target users and date range
-      const userLeads = leads.filter(lead => {
-        const isOwner = (lead.assignedToId && targetUserIds.includes(lead.assignedToId)) ||
-                       (lead.ownerId && targetUserIds.includes(lead.ownerId)) ||
-                       (lead.owner?.id && targetUserIds.includes(lead.owner.id));
-        const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
-          (lead.createdAt && new Date(lead.createdAt) >= dateRange.startDate && new Date(lead.createdAt) <= dateRange.endDate);
+    // Filter data specifically for the target user within the selected date range
+    const userLeads = leads.filter(lead => {
+      const isOwner =
+        (lead.assignedToId && targetUserIds.includes(lead.assignedToId)) ||
+        (lead.ownerId && targetUserIds.includes(lead.ownerId)) ||
+        (lead.owner?.id && targetUserIds.includes(lead.owner.id));
+      const isInDateRange =
+        !dateRange.startDate ||
+        !dateRange.endDate ||
+        (lead.createdAt && new Date(lead.createdAt) >= dateRange.startDate && new Date(lead.createdAt) <= dateRange.endDate);
       return isOwner && isInDateRange;
     });
 
-
     const userMeetings = meetings.filter(meeting => {
       const isAssigned = targetUserIds.includes(meeting.assignedToId);
-      const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
+      const isInDateRange =
+        !dateRange.startDate ||
+        !dateRange.endDate ||
         (meeting.date && new Date(meeting.date) >= dateRange.startDate && new Date(meeting.date) <= dateRange.endDate);
       return isAssigned && isInDateRange;
     });
 
     const userContracts = contracts.filter(contract => {
       const isCreator = contract.createdById && targetUserIds.includes(contract.createdById);
-      const isInDateRange = !dateRange.startDate || !dateRange.endDate ||
+      const isInDateRange =
+        !dateRange.startDate ||
+        !dateRange.endDate ||
         (contract.contractDate && new Date(contract.contractDate) >= dateRange.startDate && new Date(contract.contractDate) <= dateRange.endDate);
       return isCreator && isInDateRange;
     });
 
-    // Calculate lead metrics
+    // --- All calculations below will now be based on the individual user's data ---
+
+    // Lead Management
     const totalLeads = userLeads.length;
     const newLeads = userLeads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length;
     const activeLeads = userLeads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length;
-
-    const convertedLeads = userLeads.filter(lead =>
-      lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL
-    ).length;
+    const convertedLeads = userLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL || lead.status === LeadStatus.OPEN_DEAL).length;
     const lostLeads = userLeads.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW).length;
     const leadConversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
 
-    // Calculate activity metrics (simulated data for calls, visits, follow-ups)
-    const totalCalls = Math.floor(Math.random() * 50) + 20; // Simulated data
-    const completedCalls = Math.floor(totalCalls * 0.8);
+    // Activity Metrics - Calls
+    const allCalls = userLeads.flatMap(l => l.calls?.map(c => ({...c, leadName: l.nameEn || l.nameAr || 'N/A'})) || []);
+    const totalCalls = allCalls.length;
+    const completedCalls = allCalls.filter(c => c.outcome === 'Interested' || c.outcome === 'Done').length;
     const missedCalls = totalCalls - completedCalls;
     const callCompletionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
-    const averageCallDuration = '5-10 minutes'; // Simulated data
+    const averageCallDurationValue = allCalls.reduce((sum, c) => sum + (Number(c.duration) || 0), 0);
+    const averageCallDuration = totalCalls > 0 ? `${Math.round(averageCallDurationValue / totalCalls)} minutes` : 'N/A';
 
-    const totalVisits = Math.floor(Math.random() * 20) + 10; // Simulated data
-    const completedVisits = Math.floor(totalVisits * 0.9);
+
+    // Activity Metrics - Visits (assuming visits are stored in a similar way or within leads)
+    const allVisits = userLeads.flatMap(l => l.visits?.map(v => ({...v, leadName: l.nameEn || l.nameAr || 'N/A'})) || []);
+    const totalVisits = allVisits.length;
+    const completedVisits = allVisits.filter(v => v.status === 'Completed').length;
     const scheduledVisits = totalVisits - completedVisits;
     const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0;
 
+    // Activity Metrics - Meetings
     const totalMeetings = userMeetings.length;
     const completedMeetings = userMeetings.filter(m => m.status === 'Completed').length;
     const scheduledMeetings = totalMeetings - completedMeetings;
     const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
 
-    // Follow-ups (simulated data)
-    const totalFollowUps = Math.floor(Math.random() * 30) + 15;
-    const completedFollowUps = Math.floor(totalFollowUps * 0.85);
+    // Follow-ups
+    const allFollowUps = userLeads.flatMap(l => l.calls?.filter(c => c.outcome === 'Follow Up Required').map(c => ({
+      leadId: l.id,
+      leadName: l.nameEn || l.nameAr || 'N/A',
+      date: c.date,
+      type: 'Call',
+      status: 'Pending', // This might need adjustment based on your data logic
+      notes: c.notes || ''
+    })) || []);
+    const totalFollowUps = allFollowUps.length;
+    const completedFollowUps = allFollowUps.filter(f => f.status === 'Completed').length;
     const pendingFollowUps = totalFollowUps - completedFollowUps;
     const followUpCompletionRate = totalFollowUps > 0 ? (completedFollowUps / totalFollowUps) * 100 : 0;
 
-    // Sales performance
-    const totalReservations = Math.floor(Math.random() * 15) + 5; // Simulated data
-    const confirmedReservations = Math.floor(totalReservations * 0.7);
-    const pendingReservations = Math.floor(totalReservations * 0.2);
-    const cancelledReservations = totalReservations - confirmedReservations - pendingReservations;
-
+    // Sales Performance
     const totalContracts = userContracts.length;
     const signedContracts = userContracts.filter(c => c.status === 'Signed').length;
     const pendingContracts = userContracts.filter(c => c.status === 'Pending').length;
     const cancelledContracts = totalContracts - signedContracts - pendingContracts;
 
     const totalRevenue = userContracts.reduce((sum, contract) => sum + contract.dealValue, 0);
-    const averageDealSize = totalContracts > 0 ? totalRevenue / totalContracts : 0;
-    const totalDeals = convertedLeads;
+    const averageDealSize = signedContracts > 0 ? totalRevenue / signedContracts : 0;
     const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
     const openDeals = userLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
+    const totalDeals = closedDeals + openDeals;
+    
+    // Overall Conversion Rate
+    const conversionRate = totalLeads > 0 ? (closedDeals / totalLeads) * 100 : 0;
 
-    // Lead status breakdown
+    // Data Breakdowns
     const leadsByStatus: Record<string, number> = {};
     userLeads.forEach(lead => {
       leadsByStatus[lead.status] = (leadsByStatus[lead.status] || 0) + 1;
@@ -657,66 +662,49 @@ console.log("Report Data ",dashoarddata)
       leadsBySource[lead.source] = (leadsBySource[lead.source] || 0) + 1;
     });
 
-    // Recent activities (simulated data)
+    // Recent Activities Timeline
     const recentActivities = [
-      {
+      ...allCalls.slice(-5).map(c => ({
         type: 'call' as const,
-        date: new Date().toLocaleDateString(),
-        description: 'Follow-up call with client',
-        leadName: userLeads[0]?.nameEn || userLeads[0]?.nameAr || 'N/A',
-        outcome: 'Positive response'
-      },
-      {
+        date: new Date(c.date).toLocaleDateString(),
+        description: `Call with ${c.leadName}`,
+        leadName: c.leadName || 'N/A',
+        outcome: c.outcome
+      })),
+      ...userMeetings.slice(-5).map(m => ({
         type: 'meeting' as const,
-        date: new Date(Date.now() - 86400000).toLocaleDateString(),
-        description: 'Property viewing meeting',
-        leadName: userLeads[1]?.nameEn || userLeads[1]?.nameAr || 'N/A',
-        outcome: 'Scheduled follow-up'
-      }
-    ];
+        date: new Date(m.date).toLocaleDateString(),
+        description: `Meeting: ${m.title}`,
+        leadName: m.client || 'N/A',
+        outcome: m.status
+      })),
+      ...userContracts.slice(-5).map(ct => ({
+        type: 'contract' as const,
+        date: new Date(ct.contractDate).toLocaleDateString(),
+        description: `Contract generated`,
+        leadName: ct.lead?.nameEn || ct.lead?.nameAr || 'N/A',
+        outcome: ct.status
+      }))
+    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-    // Performance metrics
-    const conversionRate = totalLeads > 0 ? (closedDeals / totalLeads) * 100 : 0;
-    const averageResponseTime = '2-4 hours'; // Simulated data
-    const customerSatisfactionScore = Math.floor(Math.random() * 20) + 80; // Simulated data
 
-    // Detailed data (simulated for calls, visits, follow-ups)
-    const calls = userLeads.slice(0, 5).map(lead => ({
-      leadId: lead.id || '',
-      leadName: lead.nameEn || lead.nameAr || 'N/A',
-      date: new Date().toLocaleDateString(),
-      duration: '8 minutes',
-      outcome: 'Positive',
-      notes: 'Client interested in property details'
-    }));
+    // Dummy data for fields not available in the provided context
+    const averageResponseTime = 'N/A'; 
+    const customerSatisfactionScore = 0;
 
-    const visits = userLeads.slice(0, 3).map(lead => ({
-      leadId: lead.id || '',
-      leadName: lead.nameEn || lead.nameAr || 'N/A',
-      date: new Date().toLocaleDateString(),
-      status: 'Completed',
-      notes: 'Property viewing completed successfully'
-    }));
-
-    const followUps = userLeads.slice(0, 4).map(lead => ({
-      leadId: lead.id || '',
-      leadName: lead.nameEn || lead.nameAr || 'N/A',
-      date: new Date().toLocaleDateString(),
-      type: 'Email',
-      status: 'Completed',
-      notes: 'Sent property brochure'
-    }));
-
+    // Construct the final report object matching the interface
     return {
       user,
       period: `${dateRange.startDate?.toLocaleDateString() || 'All Time'} - ${dateRange.endDate?.toLocaleDateString() || 'Present'}`,
       dateRange,
+      // Lead Management
       totalLeads,
       newLeads,
       activeLeads,
       convertedLeads,
       lostLeads,
       leadConversionRate,
+      // Activity Metrics
       totalCalls,
       completedCalls,
       missedCalls,
@@ -730,14 +718,16 @@ console.log("Report Data ",dashoarddata)
       completedMeetings,
       scheduledMeetings,
       meetingCompletionRate,
+      // Follow-ups
       totalFollowUps,
       completedFollowUps,
       pendingFollowUps,
       followUpCompletionRate,
-      totalReservations,
-      confirmedReservations,
-      pendingReservations,
-      cancelledReservations,
+      // Sales Performance
+      totalReservations: 0, // Placeholder
+      confirmedReservations: 0, // Placeholder
+      pendingReservations: 0, // Placeholder
+      cancelledReservations: 0, // Placeholder
       totalContracts,
       signedContracts,
       pendingContracts,
@@ -747,20 +737,25 @@ console.log("Report Data ",dashoarddata)
       totalDeals,
       closedDeals,
       openDeals,
+      // Lead Status Breakdown
       leadsByStatus,
       leadsBySource,
+      // Activity Timeline
       recentActivities,
+      // Performance Metrics
       conversionRate,
       averageResponseTime,
       customerSatisfactionScore,
+      // Detailed Data for Excel Sheets
       leads: userLeads,
       meetings: userMeetings,
       contracts: userContracts,
-      calls,
-      visits,
-      followUps
+      calls: allCalls,
+      visits: allVisits,
+      followUps: allFollowUps
     };
   };
+
 
   // Export functions
   const handleExport = async () => {
@@ -783,25 +778,18 @@ console.log("Report Data ",dashoarddata)
         case 'user':
           filename = exportUserPerformanceReport(users, leads, meetings, contracts, currentDateRange);
           break;
-        case 'salesMember':
-       
-          if (currentUser?.id) {
-            const salesMemberReport = generateSalesMemberReport(currentUser.id);
-            if (salesMemberReport) {
-              filename = exportSalesMemberReport(salesMemberReport);
-            }
-          }
-          break;
-        case 'allSalesMembers':
+     
           // Generate reports for all accessible sales members
           const allSalesMembers = getAccessibleUsers().filter(user => user.role === 'sales_rep' || user.role === 'team_leader');
-          const allReports = allSalesMembers
-            .map(user => generateSalesMemberReport(user.id))
-            .filter(report => report !== null) as SalesMemberReport[];
+          const allReports = await Promise.all(
+            allSalesMembers.map(user => generateSalesMemberReport(user.id))
+          );
+          const validReports = allReports.filter(report => report !== null) as SalesMemberReport[];
 
-          if (allReports.length > 0) {
-            filename = exportAllSalesMembersReport(allReports, currentDateRange);
+          if (validReports.length > 0) {
+            filename = exportAllSalesMembersReport(validReports, currentDateRange);
           }
+
           break;
       }
 
@@ -817,7 +805,7 @@ console.log("Report Data ",dashoarddata)
 
 
 
-  
+
   // Get date range based on selected timeframe
   const getDateRange = (): DateRange => {
     const today = new Date();
@@ -910,8 +898,7 @@ console.log("Report Data ",dashoarddata)
     let userMeetings = meetings.filter(meeting => meeting.assignedToId === user.id);
     let userContracts = contracts.filter(contract => contract.createdById === user.id);
 
-    // Apply date filtering - Only filter activities, not the leads themselves
-    // Keep all leads assigned to the user, but filter activities by date range
+
     let userMeetingsInRange = userMeetings;
     let userContractsInRange = userContracts;
 
@@ -951,7 +938,7 @@ console.log("Report Data ",dashoarddata)
         totalCalls += callsInRange.length;
 
         callsInRange.forEach(call => {
-          const isCompleted = call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered';
+          const isCompleted = call.outcome && call.outcome !== 'No Answer' && call.outcome !== 'Not Interested';
           if (isCompleted) completedCalls++;
 
           userCalls.push({
@@ -985,7 +972,7 @@ console.log("Report Data ",dashoarddata)
           }
         }
 
-        const isCompleted = call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered';
+        const isCompleted = call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not interested';
         if (isCompleted) completedCalls++;
 
         const leadName = userLeads.find(lead => lead.id === (call.leadId || call.lead_id))?.nameEn ||
@@ -1015,8 +1002,8 @@ console.log("Report Data ",dashoarddata)
 
     // First, try to get visits from leads data (nested approach)
     userLeads.forEach(lead => {
-      if (lead.visits && Array.isArray(lead.visits)) {
-        const visitsInRange = lead.visits.filter(visit => {
+      if (lead.meetings && Array.isArray(lead.meetings)) {
+        const visitsInRange = lead?.meetings?.filter(visit => {
           if (!startDate || !endDate) return true;
           const visitDate = visit.date ? new Date(visit.date) : null;
           return visitDate && visitDate >= startDate && visitDate <= endDate;
@@ -1024,7 +1011,7 @@ console.log("Report Data ",dashoarddata)
 
         totalVisits += visitsInRange.length;
 
-        visitsInRange.forEach(visit => {
+        visitsInRange?.forEach(visit => {
           const isCompleted = visit.status && (visit.status.toLowerCase() === 'completed' || visit.status.toLowerCase() === 'successful');
           if (isCompleted) completedVisits++;
 
@@ -1393,7 +1380,10 @@ console.log("Report Data ",dashoarddata)
   const leaderboardData = [...performances]
     .sort((a, b) => b.score - a.score);
 
- 
+
+
+
+
   // Chart data
   const performanceChartData = performances.map(p => ({
     name: p.name,
@@ -1402,6 +1392,9 @@ console.log("Report Data ",dashoarddata)
     visitCompletionRate: p.visitCompletionRate,
     meetingCompletionRate: p.meetingCompletionRate
   }));
+
+
+
 
   const roleDistributionData = [
     { name: 'Sales Rep', value: performances.filter(p => p.role === 'sales_rep').length },
@@ -1508,8 +1501,7 @@ console.log("Report Data ",dashoarddata)
                 <option value="team">{t('export.reportTypes.teamLeader')}</option>
                 <option value="sales">{t('export.reportTypes.sales')}</option>
                 <option value="user">{t('export.reportTypes.userPerformance')}</option>
-                <option value="salesMember">{t('export.reportTypes.salesMember')}</option>
-                <option value="allSalesMembers">{t('export.reportTypes.allSalesMembers')}</option>
+       
               </select>
               <button
                 onClick={handleExport}
@@ -2127,7 +2119,7 @@ console.log("Report Data ",dashoarddata)
           <div className="mb-8">
             <AgentLeaderboard data={sortedLeaderboardData} />
           </div>
-          
+
           {/* Sales Member Report View */}
           {exportType === 'salesMember' && (
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -2651,7 +2643,7 @@ console.log("Report Data ",dashoarddata)
                 <div>
                   <p className="text-xs sm:text-sm font-medium text-gray-600">{t('metrics.callCompletion') || 'Call Completion'}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900">{dashoarddata?.callCompletionRate
-}%</p>
+                  }%</p>
                   <p className="text-xs text-gray-500">{t('metrics.rate') || 'rate'}</p>
                 </div>
                 <Phone className="h-6 w-6 sm:h-8 sm:w-8 text-orange-600" />
@@ -2716,19 +2708,19 @@ console.log("Report Data ",dashoarddata)
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-green-600">{dashoarddata?.avgCompleationCallsRate || 0
-}%</div>
+                }%</div>
                 <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgCallCompletion') || 'Avg Call Completion'}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {dashoarddata?.avgCompleationCallsRate  > 80 ? (t('performance.outstanding') || 'Outstanding') :
+                  {dashoarddata?.avgCompleationCallsRate > 80 ? (t('performance.outstanding') || 'Outstanding') :
                     dashoarddata?.avgCompleationCallsRate > 60 ? (t('performance.good') || 'Good') :
-                     dashoarddata?.avgCompleationCallsRate  > 40 ? (t('performance.fair') || 'Fair') : (t('performance.needsWork') || 'Needs Work')}
+                      dashoarddata?.avgCompleationCallsRate > 40 ? (t('performance.fair') || 'Fair') : (t('performance.needsWork') || 'Needs Work')}
                 </div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-xl sm:text-2xl font-bold text-purple-600">{dashoarddata?.meetingSuccessRate || 0}%</div>
                 <div className="text-xs sm:text-sm text-gray-600">{t('charts.avgMeetingCompletion') || 'Avg Meeting Completion'}</div>
                 <div className="text-xs text-gray-500 mt-1">
-                  {dashoarddata?.meetingSuccessRate> 90 ? (t('performance.perfect') || 'Perfect') :
+                  {dashoarddata?.meetingSuccessRate > 90 ? (t('performance.perfect') || 'Perfect') :
                     dashoarddata?.meetingSuccessRate > 70 ? (t('performance.good') || 'Good') :
                       dashoarddata?.meetingSuccessRate > 50 ? (t('performance.fair') || 'Fair') : (t('performance.needsAttention') || 'Needs Attention')}
                 </div>

@@ -679,7 +679,7 @@ const Settings: React.FC = () => {
                 </div>
               </div>
 
-              {/* Push Notifications Section */}
+              {/* Push Notifications Section
               <div className="bg-green-50 rounded-lg p-4 sm:p-6">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <Smartphone className="h-5 w-5 mr-2 text-green-600" />
@@ -763,9 +763,9 @@ const Settings: React.FC = () => {
                     </div>
                   )}
                 </div>
-              </div>
+              </div> */}
 
-              {/* Contract Alerts Section */}
+              {/* Contract Alerts Section
               <div className="bg-purple-50 rounded-lg p-4 sm:p-6">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 flex items-center">
                   <FileText className="h-5 w-5 mr-2 text-purple-600" />
@@ -829,12 +829,12 @@ const Settings: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div> */}
               <div className="pt-4 flex flex-col sm:flex-row items-center space-y-3 sm:space-y-0 sm:space-x-4">
                 <button
                   className={`w-full sm:w-auto bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold ${!settingsChanged ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={handleSaveSettings}
-                  disabled={!settingsChanged}
+                  // disabled={!settingsChanged}
                 >
                   {t('saveSettings')}
                 </button>

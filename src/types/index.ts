@@ -83,6 +83,7 @@ export interface Lead {
   otherProject?: string;
   contact?: string;
   contacts?: string[];
+  
   meetings?: Meeting[];
   email?: string;
   familyName?: string

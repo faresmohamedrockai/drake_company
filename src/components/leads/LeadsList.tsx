@@ -215,6 +215,7 @@ const LeadsList: React.FC = React.memo(() => {
   }, [searchTerm, activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, selectedManager, selectedSalesRep, clearSelection]);
 
   // Excel import functionality
+   // Excel import functionality
   const handleExcelImport = async (file: File) => {
     setIsImporting(true);
     setImportProgress(0);
@@ -224,6 +225,20 @@ const LeadsList: React.FC = React.memo(() => {
       const data = await readExcelFile(file);
       const leads = processExcelData(data);
 
+      // --- سطر مهم للتحقق ---
+      // افتح الـ console في متصفحك لترى شكل البيانات قبل إرسالها إلى قاعدة البيانات
+      // تأكد من وجود حقل "contacts" كـ array وحقل "description" كنص
+      console.log('Leads object to be sent to API:', leads);
+      // -----------------------------
+
+      if (!leads || leads.length === 0) {
+        toast.info('No new valid leads to import from the file.');
+        setIsImporting(false);
+        setImportProgress(0);
+        setShowImportModal(false);
+        return;
+      }
+      
       let successCount = 0;
       let errorCount = 0;
 
@@ -233,7 +248,7 @@ const LeadsList: React.FC = React.memo(() => {
           successCount++;
         } catch (error) {
           errorCount++;
-          console.error('Error importing lead:', error);
+          console.error('Error importing lead:', error, 'Lead data:', leads[i]);
         }
 
         // Update progress
@@ -246,7 +261,7 @@ const LeadsList: React.FC = React.memo(() => {
         toast.success(`Successfully imported ${successCount} leads${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
       }
       if (errorCount > 0) {
-        toast.error(`Failed to import ${errorCount} leads`);
+        toast.error(`Failed to import ${errorCount} leads. Check the console for details.`);
       }
 
     } catch (error) {
@@ -259,141 +274,269 @@ const LeadsList: React.FC = React.memo(() => {
     }
   };
 
-  const readExcelFile = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-          // Remove header row and convert to objects
-          const headers = jsonData[0] as string[];
-          const rows = jsonData.slice(1) as any[][];
-
-          const result = rows.map(row => {
-            const obj: any = {};
-            headers.forEach((header, index) => {
-              obj[header] = row[index];
-            });
-            return obj;
-          });
-
-          resolve(result);
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      reader.onerror = () => reject(new Error('Failed to read file'));
-      reader.readAsArrayBuffer(file);
-    });
-  };
-
   const processExcelData = (data: any[]): Partial<Lead>[] => {
     const processedData = data
-      .filter(row => {
-        // Check for phone number in various possible column names
-        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
-          row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
-          row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
-          row['PhoneNumber'] || row['Phone_Number'] ||
-          row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
-          row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
-          row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
-          row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'];
-        return phoneNumber && phoneNumber.toString().trim() !== '';
-      })
       .map(row => {
-        // Get phone number from various possible column names
+        // --- Get Primary Phone Number (Required) ---
         const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
           row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
           row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
           row['PhoneNumber'] || row['Phone_Number'] ||
-          row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
-          row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
-          row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
-          row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'] || '';
+          row['phone number'];
 
-        // Get Arabic name from various possible column names
-        const arabicName = row['Arabic Name'] || row['nameAr'] || row['Name (Arabic)'] ||
-          row['الاسم العربي'] || row['اسم عربي'] || row['الاسم'] ||
-          row['arabic_name'] || row['arabicName'] || row['ARABIC_NAME'] ||
-          row['ArabicName'] || row['Arabic_Name'] ||
-          row['Arabic Name'] || row['Name (Arabic)'] || row['الاسم العربي'] ||
-          row['اسم عربي'] || row['الاسم'] || row['arabic_name'] ||
-          row['arabicName'] || row['ARABIC_NAME'] || row['ArabicName'] ||
-          row['Arabic_Name'] || '';
+        // If no primary phone number, skip this row entirely
+        if (!phoneNumber || phoneNumber.toString().trim() === '') {
+          return null;
+        }
 
-        // Get English name from various possible column names
-        const englishName = row['English Name'] || row['nameEn'] || row['Name (English)'] ||
-          row['الاسم الإنجليزي'] || row['اسم إنجليزي'] || row['الاسم الانجليزي'] ||
-          row['english_name'] || row['englishName'] || row['ENGLISH_NAME'] ||
-          row['EnglishName'] || row['English_Name'] ||
-          row['English Name'] || row['Name (English)'] || row['الاسم الإنجليزي'] ||
-          row['اسم إنجليزي'] || row['الاسم الانجليزي'] || row['english_name'] ||
-          row['englishName'] || row['ENGLISH_NAME'] || row['EnglishName'] ||
-          row['English_Name'] || '';
+        // --- Get Other Phones (Optional) ---
+        const otherPhonesRaw = row['Other Phones'] || row['otherPhones'] || row['other_phones'] ||
+          row['أرقام أخرى'] || row['هواتف أخرى'] || row['otherPohones'];
 
-        // Get email from various possible column names
-        const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] ||
-          row['email_address'] || row['emailAddress'] || row['EMAIL'] ||
-          row['EmailAddress'] || row['Email_Address'] || '';
+        // --- Get Notes for Description (Optional) ---
+        const notes = row['Notes'] || row['notes'] || row['ملاحظات'] ||
+          row['Description'] || row['description'] || row['الوصف'];
 
-        // Get budget from various possible column names
-        const budget = row['Budget'] || row['budget'] || row['الميزانية'] ||
-          row['budget_amount'] || row['budgetAmount'] || row['BUDGET'] ||
-          row['BudgetAmount'] || row['Budget_Amount'] || 0;
+        // --- Get other fields ---
+        const arabicName = row['Arabic Name'] || row['nameAr'] || row['الاسم العربي'] || '';
+        const englishName = row['English Name'] || row['nameEn'] || row['الاسم الإنجليزي'] || '';
+        const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] || '';
+        const budget = row['Budget'] || row['budget'] || row['الميزانية'] || 0;
+        const source = row['Source'] || row['source'] || row['المصدر'] || 'Data Sheet';
+        
+        // --- Clean and Process Data ---
+        const cleanPhone = (phone: any) => String(phone || '').replace(/[\s\-\(\)]/g, '');
+        
+        const primaryCleanPhone = cleanPhone(phoneNumber);
 
-        // Get source from various possible column names
-        const source = row['Source'] || row['source'] || row['المصدر'] ||
-          row['lead_source'] || row['leadSource'] || row['SOURCE'] ||
-          row['LeadSource'] || row['Lead_Source'] || 'Data Sheet';
+        // Safely process other phones: convert to string, split, clean, and filter
+        const otherCleanPhones = String(otherPhonesRaw || '')
+          .split(/[,;\n]/) // Split by comma, semicolon, or new line
+          .map(phone => cleanPhone(phone.trim()))
+          .filter(phone => phone && phone.length >= 10); // Validate and filter empty strings
 
-        // Clean phone number (remove spaces, dashes, etc.)
-        const cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)]/g, '');
+        // Combine all phone numbers into the 'contacts' array, ensuring no duplicates and filtering out empty values
+        const allContacts = [...new Set([primaryCleanPhone, ...otherCleanPhones])].filter(Boolean);
 
-        // Parse budget as number
         const parsedBudget = typeof budget === 'string' ? parseFloat(budget.replace(/[^\d.]/g, '')) || 0 : Number(budget) || 0;
 
         return {
-          nameAr: arabicName.toString().trim(),
-          nameEn: englishName.toString().trim(),
-          contact: cleanPhone,
-          contacts: [cleanPhone],
-          email: email.toString().trim(),
-          source: source.toString().trim(),
-          status: LeadStatus.FOLLOW_UP, // Default status as requested
+          nameAr: String(arabicName).trim(),
+          nameEn: String(englishName).trim(),
+          contact: primaryCleanPhone,
+          contacts: allContacts, // ✅ هذا الحقل هو مصفوفة الأرقام التي سترسل
+          email: String(email).trim(),
+          source: String(source).trim(),
+          status: LeadStatus.FOLLOW_UP, 
           budget: parsedBudget,
+          description: String(notes || '').trim(), // ✅ هذا الحقل هو الملاحظات التي سترسل
           assignedToId: user?.id || '',
           ownerId: user?.id || '',
           createdBy: user?.name || 'System',
           createdAt: new Date().toISOString(),
         };
       })
-      .filter(lead => lead.contact && lead.contact.length >= 10); // Filter out invalid phone numbers
+      .filter(lead => lead && lead.contact && lead.contact.length >= 10); // Filter out null rows and invalid leads
 
-    // Remove duplicates based on phone number
-    const uniqueLeads = processedData.filter((lead, index, self) =>
-      index === self.findIndex(l => l.contact === lead.contact) ||
-      index === self.findIndex(l => l.contacts?.includes(lead.contact))
-    );
+    if (!processedData) return [];
 
-    // Check for existing leads in database
+    // --- Deduplication logic against existing leads in the database ---
     const existingPhones = new Set(leads.map(lead => lead.contact));
-    const newLeads = uniqueLeads.filter(lead => !existingPhones.has(lead.contact));
+    // Also consider other contacts for deduplication
+    leads.forEach(lead => {
+        if (lead.contacts) {
+            lead.contacts.forEach(c => existingPhones.add(c));
+        }
+    });
 
-    if (uniqueLeads.length !== newLeads.length) {
-      const duplicateCount = uniqueLeads.length - newLeads.length;
-      toast.warning(`${duplicateCount} leads with duplicate phone numbers were skipped`);
+    const newLeads = processedData.filter(lead => {
+        // Check if any of the new lead's contacts already exist
+        return !lead!.contacts.some(c => existingPhones.has(c));
+    });
+
+    if (processedData.length > newLeads.length) {
+      const duplicateCount = processedData.length - newLeads.length;
+      toast.warning(`${duplicateCount} leads were skipped because their phone numbers already exist.`);
     }
 
-    return newLeads;
+    return newLeads as Partial<Lead>[];
   };
+
+   const readExcelFile = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          let workbook;
+          
+          // التحقق من نوع الملف: إذا كان CSV، يتم قراءته كنص بترميز UTF-8
+          if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+            const text = e.target?.result as string;
+            // مكتبة XLSX يمكنها تحليل النص مباشرة
+            workbook = XLSX.read(text, { type: 'string' });
+          } else {
+            // بالنسبة لملفات الإكسل الأخرى، يتم قراءتها كـ ArrayBuffer
+            const data = new Uint8Array(e.target?.result as ArrayBuffer);
+            workbook = XLSX.read(data, { type: 'array' });
+          }
+
+          const sheetName = workbook.SheetNames[0];
+          if (!sheetName) {
+            return reject(new Error('No sheets found in the workbook.'));
+          }
+
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+
+          if (jsonData.length < 1) {
+            return resolve([]); // Handle empty file
+          }
+
+          // إزالة الصفوف الفارغة تماماً
+          const nonEmptyRows = jsonData.filter(row => (row as any[]).some(cell => cell !== null && cell !== ''));
+          
+          if (nonEmptyRows.length < 2) {
+             return resolve([]); // Handle file with only a header or no data
+          }
+
+          // الحصول على أسماء الأعمدة من الصف الأول
+          const headers = nonEmptyRows[0] as string[];
+          const rows = nonEmptyRows.slice(1) as any[][];
+
+          const result = rows.map(row => {
+            const obj: any = {};
+            headers.forEach((header, index) => {
+              // التأكد من أن اسم العمود هو نص قبل استخدامه كمفتاح
+              const key = header ? String(header).trim() : `column_${index}`;
+              obj[key] = row[index];
+            });
+            return obj;
+          });
+
+          resolve(result);
+        } catch (error) {
+          console.error("Error parsing the file:", error);
+          reject(error);
+        }
+      };
+
+      reader.onerror = (error) => {
+        console.error("Error reading the file:", error);
+        reject(new Error('Failed to read the file.'));
+      };
+
+      // تحديد طريقة قراءة الملف بناءً على نوعه
+      if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        // إجبار المتصفح على قراءة ملفات CSV كنص بترميز UTF-8
+        reader.readAsText(file, 'UTF-8');
+      } else {
+        // قراءة الملفات الثنائية (xlsx, xls) كـ ArrayBuffer
+        reader.readAsArrayBuffer(file);
+      }
+    });
+  };
+
+  // const processExcelData = (data: any[]): Partial<Lead>[] => {
+  //   const processedData = data
+  //     .filter(row => {
+  //       // Check for phone number in various possible column names
+  //       const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
+  //         row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+  //         row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+  //         row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+  //         row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'];
+  //       return phoneNumber && phoneNumber.toString().trim() !== '';
+  //     })
+  //     .map(row => {
+  //       // Get phone number from various possible column names
+  //       const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
+  //         row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+  //         row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+  //         row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+  //         row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'] || '';
+
+  //       // Get Arabic name from various possible column names
+  //       const arabicName = row['Arabic Name'] || row['nameAr'] || row['Name (Arabic)'] ||
+  //         row['الاسم العربي'] || row['اسم عربي'] || row['الاسم'] ||
+  //         row['arabic_name'] || row['arabicName'] || row['ARABIC_NAME'] ||
+  //         row['ArabicName'] || row['Arabic_Name'] ||
+  //         row['Arabic Name'] || row['Name (Arabic)'] || row['الاسم العربي'] ||
+  //         row['اسم عربي'] || row['الاسم'] || row['arabic_name'] ||
+  //         row['arabicName'] || row['ARABIC_NAME'] || row['ArabicName'] ||
+  //         row['Arabic_Name'] || '';
+
+  //       // Get English name from various possible column names
+  //       const englishName = row['English Name'] || row['nameEn'] || row['Name (English)'] ||
+  //         row['الاسم الإنجليزي'] || row['اسم إنجليزي'] || row['الاسم الانجليزي'] ||
+  //         row['english_name'] || row['englishName'] || row['ENGLISH_NAME'] ||
+  //         row['EnglishName'] || row['English_Name'] ||
+  //         row['English Name'] || row['Name (English)'] || row['الاسم الإنجليزي'] ||
+  //         row['اسم إنجليزي'] || row['الاسم الانجليزي'] || row['english_name'] ||
+  //         row['englishName'] || row['ENGLISH_NAME'] || row['EnglishName'] ||
+  //         row['English_Name'] || '';
+
+  //       // Get email from various possible column names
+  //       const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] ||
+  //         row['email_address'] || row['emailAddress'] || row['EMAIL'] ||
+  //         row['EmailAddress'] || row['Email_Address'] || '';
+
+  //       // Get budget from various possible column names
+  //       const budget = row['Budget'] || row['budget'] || row['الميزانية'] ||
+  //         row['budget_amount'] || row['budgetAmount'] || row['BUDGET'] ||
+  //         row['BudgetAmount'] || row['Budget_Amount'] || 0;
+
+  //       // Get source from various possible column names
+  //       const source = row['Source'] || row['source'] || row['المصدر'] ||
+  //         row['lead_source'] || row['leadSource'] || row['SOURCE'] ||
+  //         row['LeadSource'] || row['Lead_Source'] || 'Data Sheet';
+
+  //       // Clean phone number (remove spaces, dashes, etc.)
+  //       const cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)]/g, '');
+
+  //       // Parse budget as number
+  //       const parsedBudget = typeof budget === 'string' ? parseFloat(budget.replace(/[^\d.]/g, '')) || 0 : Number(budget) || 0;
+
+  //       return {
+  //         nameAr: arabicName.toString().trim(),
+  //         nameEn: englishName.toString().trim(),
+  //         contact: cleanPhone,
+  //         contacts: [cleanPhone],
+  //         email: email.toString().trim(),
+  //         source: source.toString().trim(),
+  //         status: LeadStatus.FOLLOW_UP, // Default status as requested
+  //         budget: parsedBudget,
+  //         assignedToId: user?.id || '',
+  //         ownerId: user?.id || '',
+  //         createdBy: user?.name || 'System',
+  //         createdAt: new Date().toISOString(),
+  //       };
+  //     })
+  //     .filter(lead => lead.contact && lead.contact.length >= 10); // Filter out invalid phone numbers
+
+  //   // Remove duplicates based on phone number
+  //   const uniqueLeads = processedData.filter((lead, index, self) =>
+  //     index === self.findIndex(l => l.contact === lead.contact) ||
+  //     index === self.findIndex(l => l.contacts?.includes(lead.contact))
+  //   );
+
+  //   // Check for existing leads in database
+  //   const existingPhones = new Set(leads.map(lead => lead.contact));
+  //   const newLeads = uniqueLeads.filter(lead => !existingPhones.has(lead.contact));
+
+  //   if (uniqueLeads.length !== newLeads.length) {
+  //     const duplicateCount = uniqueLeads.length - newLeads.length;
+  //     toast.warning(`${duplicateCount} leads with duplicate phone numbers were skipped`);
+  //   }
+
+  //   return newLeads;
+  // };
 
   const handleGenerateAdvice = async () => {
     setIsAdviceLoading(true);

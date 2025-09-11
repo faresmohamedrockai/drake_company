@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { DataProvider } from './contexts/DataContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SettingsProvider, useSettings } from './contexts/SettingsContext';
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
@@ -201,14 +200,14 @@ const App: React.FC = () => {
     <BrowserRouter>
       <LanguageProvider>
         <AuthProvider>
-          <DataProvider>
+
             <SettingsProvider>
               <QueryClientProvider client={queryClient}>
                 <AppContent />
                 <ToastContainer />
               </QueryClientProvider>
             </SettingsProvider>
-          </DataProvider>
+         
         </AuthProvider>
       </LanguageProvider>
     </BrowserRouter>

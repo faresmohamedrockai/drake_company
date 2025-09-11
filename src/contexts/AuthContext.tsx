@@ -38,8 +38,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const foundUser = await axiosInterceptor.post('/auth/login', { email, password });
       if (foundUser.data.user) {
-        // In a real app, you would verify the password here
-        // For demo purposes, we'll accept any user from the mock list
         setUser(foundUser.data.user);
         setIsAuthenticated(true);
         localStorage.setItem('token', foundUser.data.access_token);

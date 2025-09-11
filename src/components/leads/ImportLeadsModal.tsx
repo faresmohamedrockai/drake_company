@@ -88,13 +88,13 @@ const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
   const downloadTemplate = () => {
     // Create a sample Excel template
     const templateData = [
-      ['Phone Number', 'Arabic Name', 'English Name', 'Email', 'Budget', 'Source'],
-      ['+971501234567', 'أحمد محمد', 'Ahmed Mohamed', 'ahmed@example.com', '500000', 'Website'],
-      ['+971507654321', 'فاطمة علي', 'Fatima Ali', 'fatima@example.com', '750000', 'Referral']
+      ['Phone Number', 'Arabic Name', 'English Name', 'Email', 'Budget', 'Source', 'Other Phones', 'Notes'],
+      ['012255669987', 'أحمد محمد', 'Ahmed Mohamed', 'ahmed@example.com', '500000', 'Website', '+0112255668877,+01224226872', 'Interested in a 3-bedroom villa'],
+     
     ];
 
     const csvContent = templateData.map(row => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -158,6 +158,8 @@ const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
                 <li>• {t('email') || 'Email'} (optional)</li>
                 <li>• {t('budget') || 'Budget'} (optional)</li>
                 <li>• {t('source') || 'Source'} (optional)</li>
+                <li>• {t('Other Phones') || 'Other Phones'} (optional)</li>
+                <li>• {t('notes') || 'Notes'} (optional)</li>
               </ul>
             </div>
           </div>
@@ -292,4 +294,4 @@ const ImportLeadsModal: React.FC<ImportLeadsModalProps> = ({
   );
 };
 
-export default ImportLeadsModal; 
+export default ImportLeadsModal;

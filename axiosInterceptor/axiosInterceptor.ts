@@ -1,5 +1,6 @@
 import axios from "axios";
-import i18n from "@/i18n"; // لو انت مستخدم i18next
+import i18n from "@/i18n"; // لو مستخدم i18next
+
 
 const axiosInstance = axios.create({
   baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
@@ -8,6 +9,7 @@ const axiosInstance = axios.create({
   },
 });
 
+// Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -15,8 +17,8 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // ضيف اللغة في الهيدر
-    const lang = i18n.language || "en"; 
+    // اللغة
+    const lang = i18n.language || "en";
     config.headers["Accept-Language"] = lang;
 
     return config;
@@ -24,9 +26,20 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error)
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // امسح الـ token
+      localStorage.removeItem("token");
+
+      // رجّع المستخدم على صفحة تسجيل الدخول
+      window.location.href = "/login"; 
+      // أو لو عندك React Router ممكن تستخدم navigate("/login")
+    }
+    return Promise.reject(error);
+  }
 );
 
 export default axiosInstance;

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import ReactConfetti from 'react-confetti';
 import { Trophy, Award, Medal } from 'lucide-react';
 
-// ... (Interfaces and useWindowSize hook remain the same)
+
 interface LeaderboardUser {
   id: string;
   name: string;
