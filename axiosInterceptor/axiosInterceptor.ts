@@ -1,18 +1,33 @@
-import axios from "axios";
+// --- START OF FILE: axiosInterceptor.ts ---
+
+import axios, { AxiosInstance } from "axios";
+import Cookies from 'js-cookie'; // 1. استيراد js-cookie
 import i18n from "@/i18n"; // لو مستخدم i18next
 
+// 2. تعريف متغير على مستوى الوحدة (module) لتخزين دالة التوجيه (navigate)
+// سيتم تعيين قيمته لاحقًا من مكون React
+let navigateFunction: (path: string) => void;
 
-const axiosInstance = axios.create({
+/**
+ * دالة لتمرير دالة `navigate` من React Router إلى هذا الملف
+ * @param navigate - دالة التوجيه القادمة من `useNavigate()`
+ */
+export const setNavigate = (navigate: (path: string) => void) => {
+  navigateFunction = navigate;
+};
+
+const axiosInterceptor: AxiosInstance = axios.create({
   baseURL: `${import.meta.env.VITE_BASE_URL}/api`,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Request interceptor
-axiosInstance.interceptors.request.use(
+// معترض الطلبات (Request interceptor)
+axiosInterceptor.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    // 3. قراءة التوكن من الـ cookie بدلًا من localStorage
+    const token = Cookies.get("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -26,20 +41,28 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
-axiosInstance.interceptors.response.use(
+// معترض الاستجابات (Response interceptor)
+axiosInterceptor.interceptors.response.use(
   (response) => response,
   (error) => {
+    // التحقق من أن الخطأ هو خطأ 401 (غير مصرح به)
     if (error.response && error.response.status === 401) {
-      // امسح الـ token
-      localStorage.removeItem("token");
+      // حذف بيانات المصادقة
+      Cookies.remove("token");
+      localStorage.removeItem("propai_user");
 
-      // رجّع المستخدم على صفحة تسجيل الدخول
-      window.location.href = "/login"; 
-      // أو لو عندك React Router ممكن تستخدم navigate("/login")
+      
+      if (navigateFunction) {
+       
+        navigateFunction("/login");
+      } else {
+      
+        console.error("Navigate function not set for axios interceptor.");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
 );
 
-export default axiosInstance;
+export default axiosInterceptor;

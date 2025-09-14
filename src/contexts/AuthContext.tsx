@@ -1,6 +1,9 @@
+// --- START OF FILE: AuthContext.tsx ---
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axiosInterceptor from '../../axiosInterceptor/axiosInterceptor';
 import { toast } from 'react-toastify';
+import Cookies from 'js-cookie'; // 1. استيراد مكتبة js-cookie
 
 export interface User {
   id: string;
@@ -32,15 +35,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(true);
     }
   }, []);
+
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simple authentication logic - you can replace this with your actual auth logic
-    // For now, we'll use a simple check against mock users
     try {
       const foundUser = await axiosInterceptor.post('/auth/login', { email, password });
       if (foundUser.data.user) {
         setUser(foundUser.data.user);
         setIsAuthenticated(true);
-        localStorage.setItem('token', foundUser.data.access_token);
+
+       
+        Cookies.set('token', foundUser.data.access_token, { expires: 30, secure: true, sameSite: 'strict' });
+        
         localStorage.setItem('propai_user', JSON.stringify(foundUser.data.user));
         return true;
       }
@@ -56,20 +61,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
     setIsAuthenticated(false);
     
-    // Clear authentication-related data
-    localStorage.removeItem('propai_user');
-    localStorage.removeItem('token');
+ 
+    Cookies.remove('token');
     
-    // Clear user-specific performance and stats data
+    // مسح باقي البيانات من localStorage
+    localStorage.removeItem('propai_user');
     localStorage.removeItem('propai_dashboard_stats');
     localStorage.removeItem('leads_kpi_stats');
-    
-    // Clear notification data
     localStorage.removeItem('propai_notification_history');
     localStorage.removeItem('propai_notification_settings');
     
-    // Clear any other performance/KPI keys that might exist
-    // These are generated dynamically in various components
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -84,8 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
-    // Refresh the system to ensure clean state
-    window.location.reload();
+    // 4. تم حذف window.location.reload()، سيتولى المعترض (interceptor) عملية التوجيه
   };
 
   return (
