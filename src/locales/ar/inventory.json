@@ -58,6 +58,9 @@
   "bedroomsPlaceholder": "مثال: 3",
   "bathroomsPlaceholder": "مثال: 2",
   "parkingPlaceholder": "مثال: 1",
+  "salesRep": "اسم المستشار العقاري",
+  "source": "المصدر",
+  "status": "الحالة",
   "amenitiesOptions": {
     "elevator": "مصعد",
     "security": "أمن",

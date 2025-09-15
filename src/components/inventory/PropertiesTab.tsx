@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Search, Plus, Edit, Trash2, MapPin, FileText } from 'lucide-react';
-import { useData } from '../../contexts/DataContext';
+// import { useData } from '../../contexts/DataContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSettings } from '../../contexts/SettingsContext';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -16,7 +16,7 @@ import { Zone } from './ZonesTab';
 import { Developer } from '../../types';
 import { Lead } from '../../types';
 import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
-// import { PhoneNumber } from '../ui/PhoneNumber';
+
  
 // Fix default marker icon for leaflet in React
 if (typeof window !== 'undefined' && L && L.Icon && L.Icon.Default) {
@@ -235,6 +235,7 @@ const PropertiesTab: React.FC = () => {
   const [showAmenitiesOther, setShowAmenitiesOther] = useState(false);
   const [zoneModal, setZoneModal] = useState<Zone | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showPrintPage, setShowPrintPage] = useState(false);
   const [reportStep, setReportStep] = useState<'input' | 'preview'>("input");
   const [reportPhone, setReportPhone] = useState('');
   const [reportPhoneError, setReportPhoneError] = useState('');
@@ -556,11 +557,13 @@ const PropertiesTab: React.FC = () => {
     // Access control: Team Leader can only for their team, Sales Rep only for their own
     let found = leads?.find(l => l.contact === reportPhone);
  
+ 
+  
     if (!found) {
       setReportError('No client found with this number. Please check and try again.');
       return;
     }
-    if (user?.role === 'sales_rep' && found.assignedToId !== user.id) {
+    if (user?.role === 'sales_rep' && found.ownerId !== user.id) {
       setReportError('You do not have permission to generate a report for this client.');
       return;
     }
@@ -575,7 +578,1113 @@ const PropertiesTab: React.FC = () => {
  
  
   function handlePrint() {
-    window.print();
+    // Ensure the modal is visible and content is loaded
+    if (!showReportModal || !reportLead) {
+      console.error('Report not ready for printing');
+      return;
+    }
+
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      console.error('Could not open print window');
+      return;
+    }
+
+    // Get the project and payment plan data - using the same logic as preview
+    const project = projects?.find(p => p.id === reportProperty?.projectId) || {} as Project;
+    const paymentPlan = paymentPlanMode === 'custom' ? customPlan : (project?.paymentPlans?.[reportProperty?.paymentPlanIndex || 0]);
+
+    // Debug: Log the data being used for print
+    console.log('Print Data:', {
+      paymentPlanMode,
+      customPlan,
+      paymentPlan,
+      reportProperty,
+      project
+    });
+
+    // Generate the print content
+    const printContent = generatePrintHTML(project, paymentPlan);
+    
+    // Write content to the new window
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  }
+
+  function handleClosePrintPage() {
+    setShowPrintPage(false);
+  }
+
+  // Unified payment schedule generation function (moved to component level)
+  const generateUnifiedPaymentSchedule = (totalPrice: number, plan: any, language: string = 'en'): Array<{
+    no: number;
+    dueDate: string;
+    amount: number;
+    label: string;
+    type?: string;
+    typeAr?: string;
+    percentage?: number;
+  }> => {
+    try {
+      const schedule: Array<{
+        no: number;
+        dueDate: string;
+        amount: number;
+        label: string;
+        type?: string;
+        typeAr?: string;
+        percentage?: number;
+      }> = [];
+      
+      // Validate inputs
+      if (!plan || totalPrice <= 0) {
+        console.warn('Invalid payment plan or price data:', { plan, totalPrice });
+        return schedule;
+      }
+
+      // Create safe plan with consistent structure
+      const safePlan = {
+        downpayment: Math.max(0, Math.min(100, Number(plan.downpayment) || 0)),
+        delivery: Math.max(0, Math.min(100, Number(plan.delivery) || 0)),
+        yearsToPay: Math.max(0.1, Number(plan.yearsToPay) || 1),
+        firstInstallmentDate: plan.firstInstallmentDate || new Date().toISOString().slice(0, 10),
+        deliveryDate: plan.deliveryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+        // Handle both installmentPeriod and paymentFrequency
+        installmentPeriod: plan.installmentPeriod || (plan.paymentFrequency === 12 ? 'yearly' : 
+                                                    plan.paymentFrequency === 3 ? 'quarterly' : 
+                                                    plan.paymentFrequency === 6 ? 'semi-annually' : 'monthly'),
+        installmentMonthsCount: plan.installmentMonthsCount || (plan.paymentFrequency || 1)
+      };
+
+      // Calculate periods and interval based on installment period
+      let periods = 0;
+      let intervalMonths = 1;
+      
+      if (safePlan.installmentPeriod === 'monthly') {
+        periods = safePlan.yearsToPay * 12;
+        intervalMonths = 1;
+      } else if (safePlan.installmentPeriod === 'quarterly') {
+        periods = safePlan.yearsToPay * 4;
+        intervalMonths = 3;
+      } else if (safePlan.installmentPeriod === 'yearly') {
+        periods = safePlan.yearsToPay;
+        intervalMonths = 12;
+      } else if (safePlan.installmentPeriod === 'custom') {
+        periods = Math.floor((safePlan.yearsToPay * 12) / safePlan.installmentMonthsCount);
+        intervalMonths = safePlan.installmentMonthsCount;
+      } else {
+        // Fallback to paymentFrequency
+        periods = Math.ceil(safePlan.yearsToPay * 12 / safePlan.installmentMonthsCount);
+        intervalMonths = safePlan.installmentMonthsCount;
+      }
+
+      if (!periods || !safePlan.firstInstallmentDate) {
+        console.warn('Cannot calculate periods or missing first installment date');
+        return schedule;
+      }
+
+      // Calculate amounts
+      const downPaymentAmount = Math.round((safePlan.downpayment / 100) * totalPrice);
+      const deliveryAmount = Math.round((safePlan.delivery / 100) * totalPrice);
+      const installmentTotal = totalPrice - downPaymentAmount - deliveryAmount;
+      const installmentAmount = Math.round(installmentTotal / periods);
+
+      // Down Payment
+      if (downPaymentAmount > 0) {
+        schedule.push({
+          no: 0,
+          dueDate: safePlan.firstInstallmentDate,
+          amount: downPaymentAmount,
+          label: language === 'ar' ? `الدفعة الأولى (${safePlan.downpayment}%)` : `Down Payment (${safePlan.downpayment}%)`,
+          type: 'Down Payment',
+          typeAr: 'دفعة أولى',
+          percentage: safePlan.downpayment
+        });
+      }
+
+      // Generate Installments
+      let currentDate = new Date(safePlan.firstInstallmentDate);
+      currentDate.setMonth(currentDate.getMonth() + intervalMonths); // Start after down payment
+      
+      for (let i = 1; i <= periods; i++) {
+        const installmentLabel = language === 'ar' ? `القسط ${i}` : `Installment ${i}`;
+        
+        schedule.push({
+          no: i,
+          dueDate: currentDate.toISOString().slice(0, 10),
+          amount: installmentAmount,
+          label: installmentLabel,
+          type: `Installment ${i}`,
+          typeAr: `قسط ${i}`,
+          percentage: totalPrice > 0 ? (installmentTotal / totalPrice) * 100 / periods : 0
+        });
+        
+        currentDate.setMonth(currentDate.getMonth() + intervalMonths);
+      }
+
+      // Delivery Payment
+      if (deliveryAmount > 0 && safePlan.deliveryDate) {
+        const deliveryRow = {
+          no: schedule.length,
+          dueDate: safePlan.deliveryDate,
+          amount: deliveryAmount,
+          label: language === 'ar' ? `دفعة التسليم (${safePlan.delivery}%)` : `Delivery (${safePlan.delivery}%)`,
+          type: 'Delivery Payment',
+          typeAr: 'دفعة التسليم',
+          percentage: safePlan.delivery
+        };
+
+        // Check if delivery date matches any installment date
+        const existingIndex = schedule.findIndex(row => row.dueDate === deliveryRow.dueDate);
+        if (existingIndex !== -1) {
+          // Merge with existing installment
+          schedule[existingIndex] = {
+            ...schedule[existingIndex],
+            amount: schedule[existingIndex].amount + deliveryRow.amount,
+            label: `${schedule[existingIndex].label} + ${deliveryRow.label}`
+          };
+        } else {
+          schedule.push(deliveryRow);
+        }
+      }
+
+      // Sort by due date
+      schedule.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+      
+      // Reassign sequential numbers after sorting
+      schedule.forEach((item, index) => {
+        item.no = index;
+      });
+
+      console.log('Unified Payment Schedule Generated:', schedule);
+      return schedule;
+    } catch (error) {
+      console.error('Error in generateUnifiedPaymentSchedule:', error);
+      return [];
+    }
+  };
+
+  function generatePrintHTML(project: Project, paymentPlan: any) {
+    const lead = reportLead;
+    const property = reportProperty;
+    const totalPrice = property.price || 0;
+    
+    // Get lead name based on language
+    const getLeadName = () => {
+      if (language === 'ar') {
+        return lead.nameAr || lead.nameEn;
+      }
+      return lead.nameEn || lead.nameAr;
+    };
+
+    // Get project name based on language
+    const getProjectName = () => {
+      if (language === 'ar') {
+        return project.nameAr || project.nameEn;
+      }
+      return project.nameEn || project.nameAr;
+    };
+
+    // Get property name based on language
+    const getPropertyName = () => {
+      if (language === 'ar') {
+        return property.nameAr || property.nameEn;
+      }
+      return property.nameEn || property.nameAr;
+    };
+
+    // Generate payment schedule for print (using unified function)
+    const generatePaymentSchedule = (): Array<{
+      type: string;
+      typeAr: string;
+      amount: number;
+      dueDate: string;
+      percentage: number;
+    }> => {
+      const price = Number(property?.price) || 0;
+      const plan = paymentPlan;
+      
+      if (!plan || price <= 0) {
+        return [];
+      }
+
+      const unifiedSchedule = generateUnifiedPaymentSchedule(price, plan, language);
+      
+      // Convert to print format
+      return unifiedSchedule.map(item => ({
+        type: item.type || item.label,
+        typeAr: item.typeAr || item.label,
+        amount: item.amount,
+        dueDate: item.dueDate,
+        percentage: item.percentage || 0
+      }));
+    };
+
+    const paymentSchedule = generatePaymentSchedule();
+
+    const formatCurrency = (amount: number) => {
+      try {
+        const safeAmount = Number(amount) || 0;
+        return new Intl.NumberFormat('en-US', {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0
+        }).format(safeAmount) + ' EGP';
+      } catch (error) {
+        console.warn('Error formatting currency:', error);
+        return '0 EGP';
+      }
+    };
+
+    const formatDate = (dateString: string) => {
+      try {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid date string:', dateString);
+          return '';
+        }
+        return date.toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US');
+      } catch (error) {
+        console.warn('Error formatting date:', error);
+        return '';
+      }
+    };
+
+    return `
+      <!DOCTYPE html>
+      <html dir="${language === 'ar' ? 'rtl' : 'ltr'}" lang="${language}">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${language === 'ar' ? 'تقرير تفاصيل العقار' : 'Property Details Report'}</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+            color: #1f2937;
+            background: #f9fafb;
+            padding: 20px;
+          }
+          
+          .print-page {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+          }
+          
+          .header {
+            background: #1f2937;
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+          }
+          
+          .logo {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+          }
+          
+          .report-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            opacity: 0.95;
+          }
+          
+          .report-subtitle {
+            font-size: 16px;
+            opacity: 0.8;
+            font-weight: 400;
+          }
+          
+          .company-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 20px;
+            margin-top: 20px;
+          }
+          
+          .company-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+          }
+          
+          .company-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+          }
+          
+          .company-detail {
+            text-align: center;
+            font-size: 13px;
+            opacity: 0.9;
+          }
+          
+          .company-detail-label {
+            display: block;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+            opacity: 0.7;
+            font-weight: 500;
+          }
+          
+          .section {
+            margin-bottom: 32px;
+            page-break-inside: avoid;
+            padding: 0 30px;
+          }
+          
+          .first-page-sections {
+            page-break-after: always;
+            background: #f9fafb;
+            padding: 30px;
+          }
+          
+          .payment-schedule-section {
+            page-break-before: always;
+            padding: 30px;
+          }
+          
+          .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e5e7eb;
+            position: relative;
+          }
+          
+          .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 40px;
+            height: 2px;
+            background: #3b82f6;
+          }
+          
+          .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+          }
+          
+          .info-item {
+            background: white;
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            border-left: 3px solid #3b82f6;
+          }
+          
+          .info-label {
+            font-weight: 500;
+            color: #6b7280;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            display: block;
+          }
+          
+          .info-value {
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.4;
+          }
+          
+          .payment-plan-card {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+          }
+          
+          .plan-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 20px;
+            text-align: center;
+          }
+          
+          .plan-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+          }
+          
+          .plan-item {
+            text-align: center;
+            padding: 16px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+          }
+          
+          .plan-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+          }
+          
+          .plan-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2937;
+            line-height: 1.2;
+          }
+          
+          .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 6px;
+            overflow: hidden;
+            background: white;
+            border: 1px solid #e5e7eb;
+          }
+          
+          .schedule-table th {
+            background: #f8fafc;
+            color: #374151;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          
+          .schedule-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f3f4f6;
+            background: white;
+            font-size: 14px;
+          }
+          
+          .schedule-table tbody tr:nth-child(even) {
+            background: #f9fafb;
+          }
+          
+          .payment-type {
+            font-weight: 500;
+            color: #1f2937;
+          }
+          
+          .down-payment {
+            color: #3b82f6;
+            font-weight: 600;
+          }
+          
+          .delivery-payment {
+            color: #f59e0b;
+            font-weight: 600;
+          }
+          
+          .delivery-row {
+            background: #fef3c7 !important;
+          }
+          
+          .delivery-row .delivery-payment {
+            color: #f59e0b;
+            font-weight: 600;
+          }
+          
+          .delivery-row .delivery-date {
+            color: #f59e0b;
+            font-weight: 500;
+          }
+          
+          .delivery-row .delivery-amount {
+            color: #f59e0b;
+            font-weight: 600;
+          }
+          
+          .amount-cell {
+            font-weight: 600;
+            color: #1f2937;
+            font-size: 14px;
+          }
+          
+          .down-amount {
+            color: #3b82f6;
+            font-weight: 600;
+          }
+          
+          .date-cell {
+            color: #6b7280;
+            font-weight: 500;
+          }
+          
+          .summary-section {
+            margin-top: 24px;
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+          }
+          
+          .summary-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 16px;
+            text-align: center;
+          }
+          
+          .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+          }
+          
+          .summary-item {
+            text-align: center;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+          }
+          
+          .summary-label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          
+          .summary-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+          }
+          
+          @media print {
+            body {
+              background: white;
+              padding: 0;
+            }
+            
+            .print-page {
+              box-shadow: none;
+              border-radius: 0;
+              max-width: none;
+            }
+            
+            .header {
+              background: #1f2937 !important;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+            
+            .section-title::after {
+              background: #3b82f6 !important;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+            
+            .info-item {
+              border-left-color: #3b82f6 !important;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+            
+            .schedule-table th {
+              background: #f8fafc !important;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+            
+            .delivery-row {
+              background: #fef3c7 !important;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+          }
+          
+          .total-price {
+            color: #3b82f6;
+          }
+          
+          .down-payment-summary {
+            color: #10b981;
+          }
+          
+          .installments-summary {
+            color: #f59e0b;
+          }
+          
+          .developer-name {
+            color: #667eea;
+          }
+          
+          .footer {
+            margin-top: 50px;
+            padding: 30px;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border-radius: 20px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+          }
+          
+          .footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #f5576c);
+          }
+          
+          .confidential {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 16px;
+            padding: 25px;
+            margin-top: 20px;
+            text-align: center;
+            color: #92400e;
+            font-weight: 700;
+            font-size: 16px;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.2);
+            position: relative;
+            overflow: hidden;
+          }
+          
+          .confidential::before {
+            content: '🔒';
+            position: absolute;
+            top: 15px;
+            left: 20px;
+            font-size: 20px;
+          }
+          
+          .confidential::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+          }
+          
+          .generation-date {
+            margin-top: 20px;
+            color: #6b7280;
+            font-size: 14px;
+            font-weight: 500;
+          }
+          
+          .ai-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 15px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+          }
+          
+          @media print {
+            body {
+              padding: 0;
+            }
+            
+            .section {
+              page-break-inside: avoid;
+              margin-bottom: 20px;
+            }
+            
+            .first-page-sections {
+              page-break-after: always;
+            }
+            
+            .payment-schedule-section {
+              page-break-before: always;
+            }
+            
+            .schedule-table {
+              page-break-inside: auto;
+            }
+            
+            .schedule-table thead {
+              display: table-header-group;
+            }
+            
+            .schedule-table tbody tr {
+              page-break-inside: avoid;
+            }
+            
+            .payment-plan-card {
+              page-break-inside: avoid;
+            }
+            
+            .header {
+              page-break-after: avoid;
+            }
+            
+            .footer {
+              page-break-before: avoid;
+            }
+          }
+          
+          /* RTL Support */
+          [dir="rtl"] {
+            text-align: right;
+          }
+          
+          [dir="rtl"] .info-item {
+            flex-direction: row-reverse;
+          }
+          
+          [dir="rtl"] .schedule-table th,
+          [dir="rtl"] .schedule-table td {
+            text-align: right;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-page">
+          <!-- Header -->
+          <div class="header">
+            <div class="logo">PROPAI CRM</div>
+            <div class="report-title">
+              ${language === 'ar' ? 'تقرير تفاصيل العقار' : 'Property Details Report'}
+            </div>
+            <div class="report-subtitle">
+              ${language === 'ar' ? 'تقرير شامل للعقار والعميل' : 'Comprehensive Property & Client Report'}
+            </div>
+            <div class="company-info">
+              <div class="company-name">
+                ${settings?.companyName || (language === 'ar' ? 'بروباي العقارية' : 'Propai Real Estate')}
+              </div>
+              <div class="company-details">
+                ${settings?.companyAddress ? `
+                  <div class="company-detail">
+                    <span class="company-detail-label">${language === 'ar' ? 'العنوان' : 'Address'}</span>
+                    ${settings.companyAddress}
+                  </div>
+                ` : ''}
+                ${settings?.companyPhone ? `
+                  <div class="company-detail">
+                    <span class="company-detail-label">${language === 'ar' ? 'الهاتف' : 'Phone'}</span>
+                    ${settings.companyPhone}
+                  </div>
+                ` : ''}
+                ${settings?.companyEmail ? `
+                  <div class="company-detail">
+                    <span class="company-detail-label">${language === 'ar' ? 'البريد الإلكتروني' : 'Email'}</span>
+                    ${settings.companyEmail}
+                  </div>
+                ` : ''}
+                ${settings?.companyWebsite ? `
+                  <div class="company-detail">
+                    <span class="company-detail-label">${language === 'ar' ? 'الموقع الإلكتروني' : 'Website'}</span>
+                    ${settings.companyWebsite}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+
+          <!-- First Page: Lead, Property, and Payment Plan Information -->
+          <div class="first-page-sections">
+            <!-- Lead Information -->
+            <div class="section">
+              <div class="section-title">
+                ${language === 'ar' ? 'معلومات العميل' : 'Lead Information'}
+              </div>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'الاسم' : 'Name'}:</span>
+                  <span class="info-value">${getLeadName()}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'الهاتف' : 'Phone'}:</span>
+                  <span class="info-value">${lead.contact || lead.phone || '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Email:</span>
+                  <span class="info-value">${lead.email || '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'المصدر' : 'Source'}:</span>
+                  <span class="info-value">${lead.source || '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'مندوب المبيعات' : 'Sales Rep'}:</span>
+                  <span class="info-value">${lead.owner?.name || lead.owner?.nameEn || lead.owner?.nameAr || 'Unassigned'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Budget:</span>
+                  <span class="info-value">${lead.budget ? formatCurrency(lead.budget) : '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">Status:</span>
+                  <span class="info-value">${lead.status || '-'}</span>
+                </div>
+              </div>
+              ${reportNotes ? `
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'ملاحظات' : 'Notes'}:</span>
+                  <span class="info-value">${reportNotes}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Property Information -->
+            <div class="section">
+              <div class="section-title">
+                ${language === 'ar' ? 'معلومات العقار' : 'Property Information'}
+              </div>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'اسم العقار' : 'Property Name'}:</span>
+                  <span class="info-value">${getPropertyName()}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'المشروع' : 'Project'}:</span>
+                  <span class="info-value">${getProjectName()}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'النوع' : 'Type'}:</span>
+                  <span class="info-value">${property.type || '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'المساحة' : 'Area'}:</span>
+                  <span class="info-value">${property.area ? `${property.area} ${language === 'ar' ? 'م²' : 'm²'}` : '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'الطابق' : 'Floor'}:</span>
+                  <span class="info-value">${property.floor || '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'عدد الغرف' : 'Rooms'}:</span>
+                  <span class="info-value">${property.rooms || '-'}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'السعر' : 'Price'}:</span>
+                  <span class="info-value">${formatCurrency(totalPrice)}</span>
+                </div>
+                <div class="info-item">
+                  <span class="info-label">${language === 'ar' ? 'الحالة' : 'Status'}:</span>
+                  <span class="info-value">${property.status || '-'}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Plan -->
+            <div class="section">
+              <div class="section-title">
+                ${language === 'ar' ? 'خطة الدفع' : 'Payment Plan'}
+              </div>
+              <div class="payment-plan-card">
+                <div class="plan-title">
+                  ${language === 'ar' ? 'تفاصيل خطة الدفع' : 'Payment Plan Details'}
+                </div>
+                <div class="plan-details">
+                  <div class="plan-item">
+                    <div class="plan-label">${language === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}</div>
+                    <div class="plan-value">${paymentPlan?.downpayment || 0}%</div>
+                  </div>
+                  <div class="plan-item">
+                    <div class="plan-label">${language === 'ar' ? 'دفعة التسليم' : 'Delivery Payment'}</div>
+                    <div class="plan-value">${paymentPlan?.delivery || 0}%</div>
+                  </div>
+                  <div class="plan-item">
+                    <div class="plan-label">${language === 'ar' ? 'سنوات الدفع' : 'Payment Years'}</div>
+                    <div class="plan-value">${paymentPlan?.yearsToPay || 0}</div>
+                  </div>
+                  <div class="plan-item">
+                    <div class="plan-label">${language === 'ar' ? 'تكرار الدفع' : 'Payment Frequency'}</div>
+                    <div class="plan-value">
+                      ${paymentPlan?.paymentFrequency === 1 ? (language === 'ar' ? 'شهري' : 'Monthly') :
+                        paymentPlan?.paymentFrequency === 3 ? (language === 'ar' ? 'ربعي' : 'Quarterly') :
+                        paymentPlan?.paymentFrequency === 12 ? (language === 'ar' ? 'سنوي' : 'Yearly') :
+                        `${paymentPlan?.paymentFrequency || 1} ${language === 'ar' ? 'شهر' : 'months'}`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Schedule (Separate Page) -->
+          <div class="section payment-schedule-section">
+            <div class="section-title">
+              ${language === 'ar' ? 'جدول الدفع' : 'Payment Schedule'}
+            </div>
+            <table class="schedule-table">
+              <thead>
+                <tr>
+                  <th>${language === 'ar' ? 'الدفعة' : 'Payment'}</th>
+                  <th>${language === 'ar' ? 'التاريخ' : 'Date'}</th>
+                  <th>${language === 'ar' ? 'المبلغ' : 'Amount'}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${paymentSchedule.map((payment, index) => {
+                  const isDelivery = payment.type.includes('Delivery') || payment.typeAr.includes('التسليم');
+                  const isDownPayment = payment.type.includes('Down') || payment.typeAr.includes('أولى');
+                  
+                  return `
+                    <tr ${isDelivery ? 'class="delivery-row"' : ''}>
+                      <td class="payment-type ${isDownPayment ? 'down-payment' : isDelivery ? 'delivery-payment' : ''}">
+                        ${language === 'ar' ? payment.typeAr : payment.type}
+                      </td>
+                      <td class="date-cell ${isDelivery ? 'delivery-date' : ''}">
+                        ${payment.dueDate}
+                      </td>
+                      <td class="amount-cell ${isDownPayment ? 'down-amount' : isDelivery ? 'delivery-amount' : ''}">
+                        ${formatCurrency(payment.amount)}
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+            
+            <!-- Summary Section -->
+            <div class="summary-section">
+              <div class="summary-title">
+                ${language === 'ar' ? 'ملخص المدفوعات' : 'Payment Summary'}
+              </div>
+              <div class="summary-grid">
+                <div class="summary-item">
+                  <div class="summary-label">${language === 'ar' ? 'السعر الإجمالي' : 'Total Price'}</div>
+                  <div class="summary-value total-price">${formatCurrency(totalPrice)}</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">${language === 'ar' ? 'الدفعة الأولى' : 'Down Payment'}</div>
+                  <div class="summary-value down-payment-summary">${formatCurrency(paymentSchedule.find(p => p.type.includes('Down') || p.typeAr.includes('أولى'))?.amount || 0)}</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">${language === 'ar' ? 'الأقساط' : 'Installments'}</div>
+                  <div class="summary-value installments-summary">${formatCurrency(paymentSchedule.filter(p => p.type.includes('Installment') || p.typeAr.includes('قسط')).reduce((sum, p) => sum + p.amount, 0))}</div>
+                </div>
+                <div class="summary-item">
+                  <div class="summary-label">${language === 'ar' ? 'المطور' : 'Developer'}</div>
+                  <div class="summary-value developer-name">${getProjectName()}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Images Section -->
+          ${(() => {
+            // Get property and project images
+            const propertyImages = reportProperty?.images || [];
+            const projectImages = project?.images || [];
+            const allImages = [...propertyImages, ...projectImages];
+
+            if (allImages.length > 0) {
+              return `
+                <div class="section">
+                  <div class="section-title">
+                    ${language === 'ar' ? 'الصور' : 'Images'}
+                  </div>
+                  
+                  ${propertyImages.length > 0 ? `
+                    <div style="margin-bottom: 20px;">
+                      <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">
+                        ${language === 'ar' ? 'صور العقار' : 'Property Images'}
+                      </h4>
+                      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+                        ${propertyImages.map((img, idx) => `
+                          <img 
+                            src="${img}" 
+                            alt="${language === 'ar' ? 'صورة العقار' : 'Property Image'} ${idx + 1}"
+                            style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb;"
+                          />
+                        `).join('')}
+                      </div>
+                    </div>
+                  ` : ''}
+
+                  ${projectImages.length > 0 ? `
+                    <div>
+                      <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 10px;">
+                        ${language === 'ar' ? 'صور المشروع' : 'Project Images'}
+                      </h4>
+                      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+                        ${projectImages.map((img, idx) => `
+                          <img 
+                            src="${img}" 
+                            alt="${language === 'ar' ? 'صورة المشروع' : 'Project Image'} ${idx + 1}"
+                            style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb;"
+                          />
+                        `).join('')}
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }
+            return '';
+          })()}
+
+          <!-- Footer -->
+          <div class="footer">
+            <div class="confidential">
+              ${language === 'ar' ? 'هذا التقرير سري ومخصص للاستخدام الداخلي فقط' : 'This report is confidential and for internal use only'}
+            </div>
+            <div class="generation-date">
+              ${language === 'ar' ? 'تم إنشاء التقرير في' : 'Report generated on'} ${new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
+            </div>
+            <div class="ai-badge">
+              ${language === 'ar' ? 'مدعوم بالذكاء الاصطناعي' : 'AI-Powered'}
+            </div>
+          </div>
+        </div>
+        <script>
+          // Auto-print when window loads
+          window.onload = function() {
+            window.print();
+            window.onafterprint = function() {
+              window.close();
+            };
+          };
+        </script>
+      </body>
+      </html>
+    `;
   }
  
   // Helper to get selected project's payment plans
@@ -1114,7 +2223,7 @@ const PropertiesTab: React.FC = () => {
  
                     const safePlan = {
                       ...plan,
-                      firstInstallmentDate: createSafeDate(plan.firstInstallmentDate, "2024-12-01"),
+                      firstInstallmentDate: new Date().toISOString().slice(0, 10),
                       deliveryDate: createSafeDate(plan.deliveryDate, "2026-12-01"),
                       downpayment: Number(plan.downpayment) || 0,
                       delivery: Number(plan.delivery) || 0,
@@ -1122,12 +2231,12 @@ const PropertiesTab: React.FC = () => {
                       installmentMonthsCount: Number(plan.installmentMonthsCount) || 1
                     };
  
-                    // Generate schedule with safe plan and comprehensive error handling
+                    // Generate schedule with unified function for consistency
                     let schedule: any[] = [];
                     try {
-                      // Additional validation before calling generatePaymentSchedule
+                      // Use unified payment schedule generation
                       if (safePlan.firstInstallmentDate && safePlan.deliveryDate && safePlan.yearsToPay > 0 && price > 0) {
-                        schedule = generatePaymentSchedule(price, safePlan);
+                        schedule = generateUnifiedPaymentSchedule(price, safePlan, language);
                       }
                     } catch (error) {
                       console.error('Error generating payment schedule for report:', error);
@@ -1267,8 +2376,8 @@ const PropertiesTab: React.FC = () => {
  
       {/* Report Modal */}
       {showReportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:static">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative print:max-h-none print:overflow-visible print:shadow-none print:border-0">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:static print-container">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-3xl max-h-[90vh] overflow-y-auto relative print:max-h-none print:overflow-visible print:shadow-none print:border-0 print:rounded-none print:p-4">
             {/* Exit Button (styled, but not fixed) */}
             <button
               className="absolute top-2 right-2 z-50 text-white bg-red-500 hover:bg-red-700 shadow-lg rounded-full w-10 h-10 flex items-center justify-center text-3xl font-bold transition-all duration-200 border-4 border-white focus:outline-none focus:ring-2 focus:ring-red-400 print:hidden"
@@ -1311,61 +2420,21 @@ const PropertiesTab: React.FC = () => {
               </form>
             )}
             {reportStep === 'preview' && reportLead && (
-              <div id="report-preview" className="bg-white p-4 print:p-0 print:bg-white print:shadow-none">
- 
-                {/* Helper Function for Custom Payment Schedule */}
+              <div id="report-preview" className="bg-white p-4 print:p-0 print:bg-white print:shadow-none print:overflow-visible">
+                <div className="print-content">
+                  {/* Helper Function for Custom Payment Schedule */}
                 {(() => {
-                  // Function to generate custom payment schedule
+                  // Function to generate custom payment schedule (using unified logic)
                   window.generateCustomPaymentSchedule = (price, plan, language) => {
-                    const schedule = [];
-                    const downPaymentAmount = price * (plan.downpayment / 100);
-                    const deliveryAmount = price * (plan.delivery / 100);
-                    const installmentTotal = price - downPaymentAmount - deliveryAmount;
- 
-                    // Down Payment
-                    if (downPaymentAmount > 0) {
-                      const today = new Date();
-                      schedule.push({
-                        label: language === 'ar' ? 'الدفعة الأولى' : 'Down Payment',
-                        amount: downPaymentAmount,
-                        dueDate: today.toISOString().slice(0, 10)
-                      });
-                    }
- 
-                    // Installments
-                    if (installmentTotal > 0) {
-                      const frequency = plan.paymentFrequency || 1;
-                      const totalInstallments = Math.ceil(plan.yearsToPay * 12 / frequency);
-                      const installmentAmount = installmentTotal / totalInstallments;
- 
-                      const firstInstallmentDate = new Date(plan.firstInstallmentDate);
- 
-                      for (let i = 0; i < totalInstallments; i++) {
-                        const dueDate = new Date(firstInstallmentDate);
-                        dueDate.setMonth(dueDate.getMonth() + (i * frequency));
- 
-                        const installmentLabel = language === 'ar'
-                          ? `القسط ${i + 1}`
-                          : `Installment ${i + 1}`;
- 
-                        schedule.push({
-                          label: installmentLabel,
-                          amount: installmentAmount,
-                          dueDate: dueDate.toISOString().slice(0, 10)
-                        });
-                      }
-                    }
- 
-                    // Delivery Payment
-                    if (deliveryAmount > 0) {
-                      schedule.push({
-                        label: language === 'ar' ? 'دفعة التسليم' : 'Delivery Payment',
-                        amount: deliveryAmount,
-                        dueDate: plan.deliveryDate
-                      });
-                    }
- 
-                    return schedule;
+                    // Use the same unified function for consistency
+                    const unifiedSchedule = generateUnifiedPaymentSchedule(price, plan, language);
+                    
+                    // Convert to preview format
+                    return unifiedSchedule.map(item => ({
+                      label: item.label,
+                      amount: item.amount,
+                      dueDate: item.dueDate
+                    }));
                   };
  
                   return null;
@@ -1400,7 +2469,35 @@ const PropertiesTab: React.FC = () => {
                         name="paymentPlanMode"
                         value="custom"
                         checked={paymentPlanMode === 'custom'}
-                        onChange={(e) => setPaymentPlanMode(e.target.value)}
+                        onChange={(e) => {
+                          setPaymentPlanMode(e.target.value);
+                          if (e.target.value === 'custom') {
+                            try {
+                              const project = reportProperty?.project && typeof reportProperty.project === 'object'
+                                ? reportProperty.project
+                                : projects?.find(p => p.id === reportProperty?.projectId);
+                              const idx = typeof reportProperty?.paymentPlanIndex === 'number' ? reportProperty.paymentPlanIndex : 0;
+                              const basePlan: any = project && Array.isArray(project.paymentPlans) ? project.paymentPlans[idx] : null;
+                              if (basePlan) {
+                                const frequency = basePlan.installmentPeriod === 'monthly' ? 1
+                                  : basePlan.installmentPeriod === 'quarterly' ? 3
+                                  : basePlan.installmentPeriod === 'yearly' ? 12
+                                  : (Number(basePlan.installmentMonthsCount) || 1);
+                                setCustomPlan({
+                                  downpayment: Number(basePlan.downpayment) || 0,
+                                  delivery: Number(basePlan.delivery) || 0,
+                                  yearsToPay: Number(basePlan.yearsToPay) || 1,
+                                  deliveryDate: basePlan.deliveryDate ? String(basePlan.deliveryDate).slice(0, 10) : '',
+                                  firstInstallmentDate: basePlan.firstInstallmentDate ? String(basePlan.firstInstallmentDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
+                                  installmentMonthsCount: Number(basePlan.yearsToPay) * 12,
+                                  paymentFrequency: frequency
+                                });
+                              }
+                            } catch (err) {
+                              // Fail silently; keep existing defaults
+                            }
+                          }
+                        }}
                         className="mr-2"
                       />
                       <span className="text-sm font-medium text-gray-700">
@@ -1620,6 +2717,37 @@ const PropertiesTab: React.FC = () => {
                   </div>
                 </div>
  
+                {/* Lead Info */}
+                {reportLead && (
+                  <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                      {language === 'ar' ? 'معلومات العميل' : 'Lead Information'}
+                    </h3>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {(() => {
+                        const leadName = language === 'ar'
+                          ? (reportLead.nameAr || reportLead.nameEn || reportLead.name)
+                          : (reportLead.nameEn || reportLead.nameAr || reportLead.name);
+                        const leadPhone = reportLead.contact || (Array.isArray(reportLead.contacts) ? reportLead.contacts[0] : reportLead.phone);
+                        const leadEmail = reportLead.email;
+                        return (
+                          <>
+                            <div><span className="font-medium">{t('name') || 'Name'}:</span> {leadName || '-'}</div>
+                            <div><span className="font-medium">{t('phone') || 'Phone'}:</span> {leadPhone || '-'}</div>
+                            <div><span className="font-medium">Email:</span> {leadEmail || '-'}</div>
+                            <div><span className="font-medium">{t('source') || 'Source'}:</span> {reportLead.source || '-'}</div>
+                            <div><span className="font-medium">{t('salesRep') || 'Sales Rep'}:</span> {reportLead.owner?.name || reportLead.owner?.nameEn || reportLead.owner?.nameAr || 'Unassigned'}</div>
+                            <div><span className="font-medium">Budget:</span> {reportLead.budget || '-'}</div>
+                            <div><span className="font-medium">Status:</span> {reportLead.status || '-'}</div>
+                            
+                          </>
+                        );
+                      })()}
+                      {reportNotes && <div className="col-span-2"><span className="font-medium">{t('notes') || 'Notes'}:</span> {reportNotes}</div>}
+                    </div>
+                  </div>
+                )}
+ 
                 {/* Property Info */}
                 {reportProperty && (
                   <>
@@ -1683,7 +2811,7 @@ const PropertiesTab: React.FC = () => {
  
                   const safePlan = {
                     ...plan,
-                    firstInstallmentDate: createSafeDate(plan.firstInstallmentDate, "2024-12-01"),
+                    firstInstallmentDate: new Date().toISOString().slice(0, 10),
                     deliveryDate: createSafeDate(plan.deliveryDate, "2026-12-01"),
                     downpayment: Number(plan.downpayment) || 0,
                     delivery: Number(plan.delivery) || 0,
@@ -1700,18 +2828,11 @@ const PropertiesTab: React.FC = () => {
                   let schedule: any[] = [];
                   try {
                     if (safePlan.firstInstallmentDate && safePlan.deliveryDate && safePlan.yearsToPay > 0 && price > 0) {
-                      // استخدام generatePaymentSchedule الأصلية
-                      schedule = generatePaymentSchedule(price, safePlan);
- 
-                      // لو مش شغالة أو فاضية، نعمل schedule manual للـ custom plans
-                      if (paymentPlanMode === 'custom' && (!schedule || schedule.length === 0)) {
-                        schedule = window.generateCustomPaymentSchedule(price, safePlan, language);
-                      }
- 
-                      // Debug log للـ schedule
-                      if (paymentPlanMode === 'custom') {
-                        console.log('Generated Schedule:', schedule);
-                      }
+                      // Use unified payment schedule generation for consistency
+                      schedule = generateUnifiedPaymentSchedule(price, safePlan, language);
+
+                      // Debug log for the schedule
+                      console.log('Generated Unified Schedule:', schedule);
                     }
                   } catch (error) {
                     console.error('Error generating payment schedule for report:', error);
@@ -1916,6 +3037,7 @@ const PropertiesTab: React.FC = () => {
                     {language === 'ar' ? 'طباعة' : 'Print'}
                   </button>
                 </div>
+                </div>
               </div>
             )}
           </div>
@@ -1965,5 +3087,5 @@ const PropertiesTab: React.FC = () => {
     </div>
   );
 };
- 
+
 export default PropertiesTab;
