@@ -1662,14 +1662,11 @@ const PropertiesTab: React.FC = () => {
 
           <!-- Footer -->
           <div class="footer">
-            <div class="confidential">
-              ${language === 'ar' ? 'هذا التقرير سري ومخصص للاستخدام الداخلي فقط' : 'This report is confidential and for internal use only'}
-            </div>
             <div class="generation-date">
-              ${language === 'ar' ? 'تم إنشاء التقرير في' : 'Report generated on'} ${new Date().toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
+              ${language === 'ar' ? 'تم إنشاء التقرير في' : 'Report generated on'} ${new Date().toLocaleDateString(language === 'ar' ? 'en-US' : 'en-US')}
             </div>
             <div class="ai-badge">
-              ${language === 'ar' ? 'مدعوم بالذكاء الاصطناعي' : 'AI-Powered'}
+              ${language === 'ar' ? 'مدعوم بالذكاء الاصطناعي من Rockai Dev' : 'AI-Powered by Rockai Dev'}
             </div>
           </div>
         </div>
