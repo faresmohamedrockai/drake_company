@@ -3,51 +3,146 @@
 @tailwind utilities;
 
 @media print {
-  /* 1. إخفاء كل شيء في الصفحة بشكل افتراضي */
-  body > *:not(.print-container) {
-    display: none !important;
+  /* Reset everything for print */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
-  /* 2. إعداد الحاوية الرئيسية للطباعة */
-  .print-container {
+  /* Hide everything except the print page */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the print page content */
+  .print-page,
+  .print-page * {
+    visibility: visible !important;
+  }
+
+  /* Print page styling */
+  .print-page {
     position: absolute !important;
-    top: 0 !important;
     left: 0 !important;
+    top: 0 !important;
     width: 100% !important;
     height: auto !important;
-    max-height: none !important;
-    overflow: visible !important; /* أهم خاصية هنا */
+    background: white !important;
+    padding: 20px !important;
+    margin: 0 !important;
     box-shadow: none !important;
     border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
+    overflow: visible !important;
+    max-height: none !important;
+    min-height: auto !important;
+    page-break-inside: auto !important;
   }
 
-  /* 3. إخفاء العناصر غير المرغوب فيها داخل التقرير */
-  .no-print {
+  /* Hide elements that shouldn't print */
+  .print\\:hidden,
+  .no-print,
+  button,
+  .fixed,
+  .absolute {
     display: none !important;
   }
 
-  /* 4. التحكم في تقسيم الصفحات */
+  /* Typography for print */
+  .print-page h1,
+  .print-page h2,
+  .print-page h3 {
+    page-break-after: avoid !important;
+    margin-top: 0 !important;
+    margin-bottom: 10px !important;
+  }
+
+  .print-page p {
+    page-break-inside: avoid !important;
+    margin: 5px 0 !important;
+  }
+
+  /* Table styling for print */
+  .print-page table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    margin: 10px 0 !important;
+  }
+
+  .print-page th,
+  .print-page td {
+    border: 1px solid #333 !important;
+    padding: 8px !important;
+    text-align: left !important;
+    vertical-align: top !important;
+  }
+
+  .print-page th {
+    background-color: #f5f5f5 !important;
+    font-weight: bold !important;
+  }
+
+  .print-page thead {
+    display: table-header-group !important;
+  }
+
+  .print-page tbody tr {
+    page-break-inside: avoid !important;
+  }
+
+  /* Grid layout for print */
+  .print-page .grid {
+    display: block !important;
+  }
+
+  .print-page .grid > * {
+    display: block !important;
+    margin-bottom: 5px !important;
+  }
+
+  /* Section spacing */
+  .print-page > div {
+    margin-bottom: 20px !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Payment plan cards */
+  .print-page .bg-blue-50,
+  .print-page .bg-green-50,
+  .print-page .bg-orange-50 {
+    background-color: #f0f0f0 !important;
+    border: 1px solid #ccc !important;
+    padding: 10px !important;
+    margin: 5px 0 !important;
+    display: inline-block !important;
+  }
+
+  /* Ensure proper page breaks */
   .page-break {
-    page-break-before: always !important; /* ابدأ صفحة جديدة قبل هذا العنصر */
+    page-break-before: always !important;
   }
 
   .page-break-inside-avoid {
-    page-break-inside: avoid !important; /* حاول ألا تقسم هذا العنصر بين صفحتين */
+    page-break-inside: avoid !important;
   }
 
-  /* 5. ضمان أن الجداول تظهر بشكل جيد */
-  table {
-    width: 100% !important;
-    border-collapse: collapse !important;
+  /* Header styling */
+  .print-page .text-2xl {
+    font-size: 24px !important;
+    font-weight: bold !important;
   }
-  th, td {
-    border: 1px solid #ddd !important;
-    padding: 8px !important;
+
+  .print-page .text-lg {
+    font-size: 18px !important;
+    font-weight: bold !important;
   }
-  thead {
-    display: table-header-group !important; /* تكرار رأس الجدول في كل صفحة */
+
+  .print-page .text-sm {
+    font-size: 12px !important;
+  }
+
+  .print-page .text-xs {
+    font-size: 10px !important;
   }
 }
 

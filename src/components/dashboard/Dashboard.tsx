@@ -198,9 +198,6 @@ const useLeadFiltering = (leads: Lead[], users: UserType[], user: any, selectedM
 };
 
 
-
-
-
 // KPI Cards Component
 const KPICards: React.FC<{ 
   totalProspects: number; 

@@ -59,7 +59,6 @@ export const AdviceModal: React.FC<AdviceModalProps> = ({
                 </button>
 
                 <div className="flex items-center mb-4">
-                    {/* ✨ 1. تغيير لون الأيقونة الرئيسي */}
                     <Sparkles className="text-[#803FC5]" size={28} />
                     <h2 className="text-lg font-semibold text-gray-900 mx-3">{t('aiSalesCoach')}</h2>
                 </div>

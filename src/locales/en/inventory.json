@@ -58,6 +58,9 @@
   "bedroomsPlaceholder": "e.g., 3",
   "bathroomsPlaceholder": "e.g., 2",
   "parkingPlaceholder": "e.g., 1",
+  "salesRep": "Sales Rep",
+  "source": "Source",
+  "status": "Status",
   "amenitiesOptions": {
     "elevator": "Elevator",
     "security": "Security",
