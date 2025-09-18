@@ -36,15 +36,13 @@ const AppContent: React.FC = () => {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // -- START: تصحيح الـ Query --
   const { data: notifications, dataUpdatedAt } = useQuery<Notification[]>({
-    queryKey: ['notificationData'], // المفتاح الصحيح والموحد
+    queryKey: ['notificationData'],
     queryFn: getNotificationData,
     staleTime: 1000 * 60 * 5,
     enabled: !!isAuthenticated,
-    refetchInterval: 1000 * 30, // تقليل المدة لزيادة سرعة التحديث
+    refetchInterval: 1000 * 30,
   });
-  // -- END: تصحيح الـ Query --
 
   const [hasNewNotifications, setHasNewNotifications] = useState(false);
   const unreadCount = notifications?.filter(n => !n.isSeen).length || 0;
@@ -59,13 +57,10 @@ const AppContent: React.FC = () => {
   const markAsSeenMutation = useMutation({
     mutationFn: (notificationId: string) => markNotificationAsSeen(notificationId),
     onSuccess: (updatedNotification) => {
-      // -- START: تحديث فوري للواجهة --
-      // هذا الكود يضمن تغير العداد فورًا بعد الضغط على الإشعار
       queryClient.setQueryData<Notification[]>(['notificationData'], (oldData) => {
         if (!oldData) return [];
         return oldData.map(n => n.id === updatedNotification.id ? { ...n, isSeen: true } : n);
       });
-      // -- END: تحديث فوري للواجهة --
     },
     onError: (error) => {
       console.error("Failed to mark notification as seen:", error);
@@ -107,10 +102,7 @@ const AppContent: React.FC = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      // -- START: تصحيح الـ Prefetching --
-      // الآن هذا السطر سيقوم بتحميل الإشعارات مسبقًا بشكل صحيح
-      queryClient.prefetchQuery({ queryKey: ['notificationData'], queryFn: getNotificationData, staleTime: 1000 * 60 * 5 });
-      // -- END: تصحيح الـ Prefetching --
+      queryClient.invalidateQueries({ queryKey: ['notificationData'] });
       
       queryClient.prefetchQuery({ queryKey: ['developers'], queryFn: getDevelopers, staleTime: 1000 * 60 * 5 });
       queryClient.prefetchQuery({ queryKey: ['zones'], queryFn: getZones, staleTime: 1000 * 60 * 5 });
