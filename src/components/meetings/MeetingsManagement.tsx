@@ -54,6 +54,7 @@ const MeetingsManagement: React.FC = () => {
     onSuccess: () => {
       toast.success(t('meetingAdded'));
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationData'] });
       setShowForm(false);
       setForm({
         title: '',
@@ -85,6 +86,7 @@ const MeetingsManagement: React.FC = () => {
     onSuccess: () => {
       toast.success(t('meetingUpdated'));
       queryClient.invalidateQueries({ queryKey: ['meetings'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationData'] });
       setShowForm(false);
       setEditId(null);
       setForm({

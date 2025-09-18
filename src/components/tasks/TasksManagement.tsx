@@ -48,7 +48,6 @@ const TasksManagement: React.FC = () => {
   const { isRTL, rtlPosition } = useLanguage();
   const queryClient = useQueryClient();
 
-  // State management
   const [filters, setFilters] = useState<TaskFilters>({
     page: 1,
     limit: 10
@@ -60,21 +59,19 @@ const TasksManagement: React.FC = () => {
   const [sortBy, setSortBy] = useState<'dueDate' | 'priority' | 'status' | 'createdAt'>('dueDate');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Modal states
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [taskDetailsModalOpen, setTaskDetailsModalOpen] = useState(false);
   const [bulkActionsModalOpen, setBulkActionsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
 
-  // Queries
   const { data: tasks = [], isLoading: tasksLoading, error: tasksError } = useQuery({
     queryKey: ['tasks', filters, viewMode],
     queryFn: () => viewMode === 'my' ? getMyTasks(filters) : getTasks(filters),
     enabled: !!user,
     retry: 3,
     retryDelay: 1000,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false
   });
 
@@ -84,27 +81,14 @@ const TasksManagement: React.FC = () => {
     enabled: !!user,
     retry: 3,
     retryDelay: 1000,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false
   });
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log('Tasks data:', tasks);
-    console.log('Statistics data:', statistics);
-    console.log('User:', user);
-    console.log('Tasks loading:', tasksLoading);
-    console.log('Statistics loading:', statisticsLoading);
-  }, [tasks, statistics, user, tasksLoading, statisticsLoading]);
-
-  // Helper function to get the due date from task
   const getTaskDueDate = (task: Task) => {
-    // Check if dueDate exists and is valid
     if (task.dueDate) {
       try {
-        // Handle case where dueDate might be an empty object {}
         if (typeof task.dueDate === 'object' && Object.keys(task.dueDate).length === 0) {
-          console.log('dueDate is empty object, skipping');
         } else {
           const dueDate = new Date(task.dueDate);
           if (!isNaN(dueDate.getTime())) {
@@ -116,12 +100,9 @@ const TasksManagement: React.FC = () => {
       }
     }
     
-    // Fallback to createdAt if dueDate is not available or invalid
     if (task.createdAt) {
       try {
-        // Handle case where createdAt might be an empty object {}
         if (typeof task.createdAt === 'object' && Object.keys(task.createdAt).length === 0) {
-          console.log('createdAt is empty object, skipping');
         } else {
           const createdDate = new Date(task.createdAt);
           if (!isNaN(createdDate.getTime())) {
@@ -133,18 +114,11 @@ const TasksManagement: React.FC = () => {
       }
     }
     
-    // Final fallback: use current date if no valid date is found
-    // This ensures the analysis can still work even with invalid dates
-    console.log('No valid date found for task, using current date as fallback');
     return new Date();
   };
 
-  // Analysis and insights
   const taskAnalysis = React.useMemo(() => {
-    console.log('Computing task analysis with tasks:', tasks);
-    
     if (!tasks || tasks.length === 0) {
-      console.log('No tasks available for analysis');
       return null;
     }
 
@@ -173,33 +147,32 @@ const TasksManagement: React.FC = () => {
         (tasks.filter(task => task.status === 'completed').length / tasks.length) * 100 : 0
     };
 
-    console.log('Task analysis computed:', analysis);
     return analysis;
   }, [tasks, user?.id]);
 
-  // Error handling
   const handleError = (error: any) => {
     console.error('Task operation error:', error);
     toast.error(error?.response?.data?.message || 'An error occurred. Please try again.');
   };
 
-  // Mutations with better error handling
-  const createTaskMutation = useMutation({
+  const { mutate: createTaskMutation, isPending: isCreatingTask } = useMutation({
     mutationFn: createTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['taskStatistics'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationData'] });
       toast.success(t('notifications.taskCreated'));
       setTaskModalOpen(false);
     },
     onError: handleError
   });
 
-  const updateTaskMutation = useMutation({
+  const { mutate: updateTaskMutation, isPending: isUpdatingTask } = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateTaskDto> }) => updateTask(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['taskStatistics'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationData'] });
       toast.success(t('notifications.taskUpdated'));
       setTaskModalOpen(false);
       setEditingTask(null);
@@ -228,14 +201,13 @@ const TasksManagement: React.FC = () => {
     onError: handleError
   });
 
-  // Handlers
   const handleCreateTask = (taskData: CreateTaskDto) => {
-    createTaskMutation.mutate(taskData);
+    createTaskMutation(taskData);
   };
 
   const handleUpdateTask = (taskData: Partial<CreateTaskDto>) => {
     if (editingTask) {
-      updateTaskMutation.mutate({ id: editingTask.id, data: taskData });
+      updateTaskMutation({ id: editingTask.id, data: taskData });
     }
   };
 
@@ -289,7 +261,6 @@ const TasksManagement: React.FC = () => {
     }
   };
 
-  // Filter and sort tasks
   const filteredTasks = tasks.filter(task => {
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
@@ -307,7 +278,6 @@ const TasksManagement: React.FC = () => {
 
     switch (sortBy) {
       case 'dueDate':
-        // Check if dates are fallback dates (no original date was valid)
         const aHasValidDate = a.dueDate && !(typeof a.dueDate === 'object' && Object.keys(a.dueDate).length === 0) ||
                              a.createdAt && !(typeof a.createdAt === 'object' && Object.keys(a.createdAt).length === 0);
         const bHasValidDate = b.dueDate && !(typeof b.dueDate === 'object' && Object.keys(b.dueDate).length === 0) ||
@@ -345,7 +315,6 @@ const TasksManagement: React.FC = () => {
     }
   });
 
-  // Priority colors
   const getPriorityColor = (priority: Task['priority']) => {
     switch (priority) {
       case 'urgent': return 'bg-red-100 text-red-800 border-red-200';
@@ -356,7 +325,6 @@ const TasksManagement: React.FC = () => {
     }
   };
 
-  // Status colors
   const getStatusColor = (status: Task['status']) => {
     switch (status) {
       case 'pending': return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -368,7 +336,6 @@ const TasksManagement: React.FC = () => {
     }
   };
 
-  // Task type icons
   const getTaskTypeIcon = (type: Task['type']) => {
     switch (type) {
       case 'follow_up': return '📞';
@@ -384,7 +351,6 @@ const TasksManagement: React.FC = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -410,23 +376,11 @@ const TasksManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Task Analysis & Insights */}
       {(taskAnalysis || tasks.length > 0) && (
         <div className="mb-6 bg-white rounded-lg shadow-sm border p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">{t('analysis.title')}</h3>
           
-          {/* Debug info - remove in production */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-sm text-yellow-800">
-                <strong>{t('debug.debugInfo')}:</strong> {t('debug.tasks')}: {tasks.length}, {t('debug.analysis')}: {taskAnalysis ? t('debug.available') : t('debug.notAvailable')}, 
-                {t('debug.loading')}: {tasksLoading ? t('debug.yes') : t('debug.no')}, {t('debug.error')}: {tasksError ? t('debug.yes') : t('debug.no')}
-              </p>
-            </div>
-          )}
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Always show at least one insight card if there are tasks */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -438,7 +392,6 @@ const TasksManagement: React.FC = () => {
               <p className="text-sm text-blue-700 mt-2">{t('analysis.tasksInSystem')}</p>
             </div>
 
-            {/* Show pending tasks count */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -452,7 +405,6 @@ const TasksManagement: React.FC = () => {
               <p className="text-sm text-gray-700 mt-2">{t('analysis.awaitingAction')}</p>
             </div>
 
-            {/* Show in progress tasks count */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -466,7 +418,6 @@ const TasksManagement: React.FC = () => {
               <p className="text-sm text-blue-700 mt-2">{t('analysis.currentlyBeingWorkedOn')}</p>
             </div>
 
-            {/* Show completed tasks count */}
             <div className="bg-green-50 border border-green-200 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -537,7 +488,6 @@ const TasksManagement: React.FC = () => {
             )}
           </div>
           
-          {/* Quick Actions */}
           <div className="mt-6 pt-6 border-t border-gray-200">
             <h4 className="text-sm font-medium text-gray-700 mb-3">{t('quickActions.title')}</h4>
             <div className="flex flex-wrap gap-2">
@@ -605,7 +555,6 @@ const TasksManagement: React.FC = () => {
         </div>
       )}
 
-      {/* Filters and Search */}
       <div className="mb-6 bg-white rounded-lg shadow-sm border">
         <div className="p-4">
           <div className="flex items-center justify-between mb-4">
@@ -663,7 +612,6 @@ const TasksManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Tasks Table */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -722,34 +670,15 @@ const TasksManagement: React.FC = () => {
               {tasksLoading ? (
                 [...Array(5)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-gray-200 rounded w-4"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-gray-200 rounded w-20"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-6 bg-gray-200 rounded-full w-16"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-6 bg-gray-200 rounded-full w-20"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-gray-200 rounded w-16"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-gray-200 rounded w-24"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-gray-200 rounded w-20"></div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="h-4 bg-gray-200 rounded w-16"></div>
-                    </td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-4"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded mb-2"></div><div className="h-3 bg-gray-200 rounded w-3/4"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-6 bg-gray-200 rounded-full w-16"></div></td>
+                    <td className="px-6 py-4"><div className="h-6 bg-gray-200 rounded-full w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded w-16"></div></td>
                   </tr>
                 ))
               ) : tasksError ? (
@@ -824,7 +753,6 @@ const TasksManagement: React.FC = () => {
                       <div className="text-sm text-gray-900">
                         {(() => {
                           const dueDate = getTaskDueDate(task);
-                          // Check if this is a fallback date (no original date was valid)
                           const isFallback = !task.dueDate || 
                             (typeof task.dueDate === 'object' && Object.keys(task.dueDate).length === 0) ||
                             !task.createdAt || 
@@ -839,7 +767,6 @@ const TasksManagement: React.FC = () => {
                       <div className="text-sm text-gray-500">
                         {(() => {
                           const dueDate = getTaskDueDate(task);
-                          // Check if this is a fallback date
                           const isFallback = !task.dueDate || 
                             (typeof task.dueDate === 'object' && Object.keys(task.dueDate).length === 0) ||
                             !task.createdAt || 
@@ -938,7 +865,6 @@ const TasksManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Modals */}
       <TaskModal
         isOpen={taskModalOpen}
         onClose={() => {
@@ -947,6 +873,7 @@ const TasksManagement: React.FC = () => {
         }}
         onSubmit={editingTask ? handleUpdateTask : handleCreateTask}
         task={editingTask}
+        isSubmitting={isCreatingTask || isUpdatingTask}
       />
 
       <TaskDetailsModal
@@ -973,4 +900,4 @@ const TasksManagement: React.FC = () => {
   );
 };
 
-export default TasksManagement; 
+export default TasksManagement;

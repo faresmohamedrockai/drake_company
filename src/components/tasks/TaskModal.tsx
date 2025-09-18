@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { X, Calendar, Clock, User, Building2, Users, FileText } from 'lucide-react';
+import { X, Calendar, Clock, User, Building2, Users, FileText, Loader2 } from 'lucide-react';
 import { Task, CreateTaskDto } from '../../types';
 import { getUsers, getLeads, getProjects, getProperties } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
@@ -11,13 +11,13 @@ interface TaskModalProps {
   onClose: () => void;
   onSubmit: (taskData: CreateTaskDto) => void;
   task?: Task | null;
+  isSubmitting: boolean;
 }
 
-const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }) => {
+const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task, isSubmitting }) => {
   const { t } = useTranslation('tasks');
   const { user } = useAuth();
 
-  // Form state
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
@@ -48,86 +48,29 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
     inventoryId: ''
   });
 
-  // Queries for dropdowns
-  const { data: users = [] } = useQuery({
-    queryKey: ['users'],
-    queryFn: getUsers,
-    enabled: !!user && (user.role === 'admin' || user.role === 'sales_admin')
-  });
+  const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: getUsers, enabled: !!user && (user.role === 'admin' || user.role === 'sales_admin') });
+  const { data: leads = [] } = useQuery({ queryKey: ['leads'], queryFn: getLeads, enabled: !!user });
+  const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: getProjects, enabled: !!user });
+  const { data: properties = [] } = useQuery({ queryKey: ['properties'], queryFn: getProperties, enabled: !!user });
 
-  const { data: leads = [] } = useQuery({
-    queryKey: ['leads'],
-    queryFn: getLeads,
-    enabled: !!user
-  });
-
-  const { data: projects = [] } = useQuery({
-    queryKey: ['projects'],
-    queryFn: getProjects,
-    enabled: !!user
-  });
-
-  const { data: properties = [] } = useQuery({
-    queryKey: ['properties'],
-    queryFn: getProperties,
-    enabled: !!user
-  });
-
-  // Initialize form data when editing
   React.useEffect(() => {
     if (task) {
-      // Helper function to get valid date string from task date field
       const getValidDateString = (dateField: any): string => {
-        if (!dateField) return '';
-        
-        // Handle empty object case
-        if (typeof dateField === 'object' && Object.keys(dateField).length === 0) {
-          return '';
-        }
-        
-        // Handle null case
-        if (dateField === null) {
-          return '';
-        }
-        
+        if (!dateField || typeof dateField === 'object' && Object.keys(dateField).length === 0 || dateField === null) return '';
         try {
           const date = new Date(dateField);
-          if (!isNaN(date.getTime())) {
-            return date.toISOString().split('T')[0];
-          }
-        } catch (error) {
-          console.error('Error parsing date:', dateField, error);
-        }
-        
+          if (!isNaN(date.getTime())) return date.toISOString().split('T')[0];
+        } catch (error) { console.error('Error parsing date:', dateField, error); }
         return '';
       };
-
-      // Helper function to get valid datetime string for reminder time
       const getValidDateTimeString = (dateField: any): string => {
-        if (!dateField) return '';
-        
-        // Handle empty object case
-        if (typeof dateField === 'object' && Object.keys(dateField).length === 0) {
-          return '';
-        }
-        
-        // Handle null case
-        if (dateField === null) {
-          return '';
-        }
-        
+        if (!dateField || typeof dateField === 'object' && Object.keys(dateField).length === 0 || dateField === null) return '';
         try {
           const date = new Date(dateField);
-          if (!isNaN(date.getTime())) {
-            return date.toISOString().slice(0, 16);
-          }
-        } catch (error) {
-          console.error('Error parsing reminder time:', dateField, error);
-        }
-        
+          if (!isNaN(date.getTime())) return date.toISOString().slice(0, 16);
+        } catch (error) { console.error('Error parsing reminder time:', dateField, error); }
         return '';
       };
-
       setFormData({
         title: task.title,
         description: task.description || '',
@@ -144,21 +87,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
         inventoryId: task.inventoryId || ''
       });
     } else {
-      // Reset form for new task
       setFormData({
-        title: '',
-        description: '',
-        time: '',
-        dueDate: '',
-        priority: 'medium',
-        status: 'pending',
-        type: 'general',
-        reminder: true,
-        reminderTime: '',
-        assignedToId: '',
-        leadId: '',
-        projectId: '',
-        inventoryId: ''
+        title: '', description: '', time: '', dueDate: '', priority: 'medium', status: 'pending', type: 'general', reminder: true, reminderTime: '', assignedToId: '', leadId: '', projectId: '', inventoryId: ''
       });
     }
   }, [task, isOpen]);
@@ -169,32 +99,20 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation
-    if (!formData.title.trim()) {
-      alert('Title is required');
-      return;
-    }
-    if (!formData.dueDate) {
-      alert('Due date is required');
-      return;
-    }
-    if (!formData.type) {
-      alert('Task type is required');
-      return;
-    }
-const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
+    if (isSubmitting) return;
 
-    // Prepare data for submission
+    if (!formData.title.trim()) { alert('Title is required'); return; }
+    if (!formData.dueDate) { alert('Due date is required'); return; }
+    if (!formData.type) { alert('Task type is required'); return; }
+
+    const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
+
     const submitData: any = {
       ...formData,
-      // Send dueDate as an object if it's a valid date, otherwise as empty object
-      dueDate: dueDateTime ,
-      // Send reminderTime as an object if it exists and reminder is enabled, otherwise as null
+      dueDate: dueDateTime,
       reminderTime: formData.reminder && formData.reminderTime ? new Date(formData.reminderTime) : null,
-      // Ensure all optional fields are properly handled
       assignedToId: formData.assignedToId || null,
-      createdById: user?.id || null, // Add current user ID as creator
+      createdById: user?.id || null,
       leadId: formData.leadId || null,
       projectId: formData.projectId || null,
       inventoryId: formData.inventoryId || null
@@ -208,7 +126,6 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-semibold text-gray-900">
             {task ? t('editTask') : t('createTask')}
@@ -216,14 +133,13 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
+            disabled={isSubmitting}
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {t('form.title')} *
@@ -238,7 +154,6 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
             />
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {t('form.description')}
@@ -252,42 +167,38 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
             />
           </div>
 
-          {/* Due Date and Time */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      {t('form.dueDate')} *
-    </label>
-    <div className="relative">
-      <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-      <input
-        type="date"
-        value={formData.dueDate}
-        onChange={(e) => handleInputChange('dueDate', e.target.value)}
-        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        required
-      />
-    </div>
-  </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('form.dueDate')} *
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="date"
+                  value={formData.dueDate}
+                  onChange={(e) => handleInputChange('dueDate', e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t('form.dueTime')}
+              </label>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="time"
+                  value={formData.time}
+                  onChange={(e) => handleInputChange('time', e.target.value)}
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
 
-  <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">
-      {t('form.dueTime')}
-    </label>
-    <div className="relative">
-      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-      <input
-        type="time"
-        value={formData.time}
-        onChange={(e) => handleInputChange('time', e.target.value)}
-        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
-    </div>
-  </div>
-</div>
-
-
-          {/* Priority and Type */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -325,7 +236,6 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
             </div>
           </div>
 
-          {/* Status (only for editing) */}
           {task && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -344,7 +254,6 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
             </div>
           )}
 
-          {/* Assign To */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               {t('form.assignTo')}
@@ -359,14 +268,13 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
                 <option value="">{t('form.assignToPlaceholder')}</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>
-                    {user.name}
+                    {user.name} ({user.role})
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          {/* Related Items */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -430,7 +338,6 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
             </div>
           </div>
 
-          {/* Reminder Settings */}
           <div className="space-y-4">
             <div className="flex items-center">
               <input
@@ -460,20 +367,28 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
             )}
           </div>
 
-          {/* Form Actions */}
           <div className="flex items-center justify-end space-x-3 pt-6 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              disabled={isSubmitting}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              disabled={isSubmitting}
+              className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {task ? 'Update Task' : 'Create Task'}
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                task ? 'Update Task' : 'Create Task'
+              )}
             </button>
           </div>
         </form>
@@ -482,4 +397,4 @@ const dueDateTime = new Date(`${formData.dueDate}T${formData.time || '00:00'}`);
   );
 };
 
-export default TaskModal; 
+export default TaskModal;

@@ -56,6 +56,7 @@ const EditLeadModal: React.FC<EditLeadModalProps> = ({ isOpen, onClose, lead }) 
     onSuccess: () => {
       toast.success(t('leadUpdated'));
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationData'] });
       onClose();
 
     },

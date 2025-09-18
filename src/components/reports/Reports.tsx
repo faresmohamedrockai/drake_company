@@ -41,35 +41,43 @@ import { exportTeamLeaderReport, exportSalesReport, exportUserPerformanceReport,
 import { toast } from 'react-toastify';
 import { PhoneNumber } from '../ui/PhoneNumber';
 
-interface UserPerformance {
+export interface UserPerformance {
   id: string;
   name: string;
   role: string;
   teamId?: string;
+
   totalLeads: number;
-  assignedLeads: number;
-  completedCalls: number;
   totalCalls: number;
-  completedMeetings: number;
   totalMeetings: number;
-  totalFollowUps: number;
-  completedFollowUps: number;
-  closedDeals: number;
-  openDeals: number;
-  conversionRate: number;
-  callCompletionRate: number;
-  meetingCompletionRate: number;
-  followUpCompletionRate: number;
-  totalRevenue: number;
-  averageDealSize: number;
-  lastActivity: string;
-  score: number;
-  calls: Array<{ leadId: string; leadName: string; date: string; duration: string; outcome: string; notes: string; }>;
-  followUps: Array<{ leadId: string; leadName: string; date: string; type: string; status: string; notes: string; }>;
-  leads: Lead[];
-  meetings: Meeting[];
-  contracts: Contract[];
+  totalVisits: number;
+  closedDealsCount: number;
+
+  calls: {
+    completed: number;
+    total: number;
+  };
+
+  meetings: {
+    completed: number;
+    total: number;
+  };
+
+  visits: {
+    completed: number;
+    total: number;
+  };
+
+  deals: {
+    closed: number;
+  };
+
+  conversion: number;
+  totalScore: number;
+  lastActivityDate: string | null;
+  rank: number;
 }
+
 
 // --- INTERFACE UPDATED: visits removed ---
 interface PerformanceMetrics {
@@ -88,6 +96,12 @@ interface DateRange {
 }
 
 const Reports: React.FC = () => {
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month' | 'last7days' | 'last30days' | 'last3months' | 'last6months' | 'yearToDate' | 'custom'>('yearToDate');
+  const [activityFilter, setActivityFilter] = useState<'all' | 'calls' | 'visits' | 'meetings' | 'deals'>('all');
+  
+  const [sortBy, setSortBy] = useState<'name' | 'performance' | 'activity'>('performance');
+  // 🔽 1. ADDED a new state for the role filter
+  const [selectedRole, setSelectedRole] = useState<string>('');
   const { data: leads = [], isLoading: leadsLoading, error: leadsError } = useQuery({
     queryKey: ['leads'],
     queryFn: async () => {
@@ -105,6 +119,11 @@ const Reports: React.FC = () => {
   });
 
 
+  const { data: userData = [], isLoading: UserDataLOading, error: userDataError } = useQuery<UserStat[]>({
+    queryKey: ['userStats', selectedTimeframe, activityFilter,sortBy,selectedRole],
+    queryFn: () => getUsersStatus(selectedTimeframe, activityFilter,sortBy,selectedRole),
+
+  });
 
   const { data: dashoarddata, isLoading: dashboardLoading } = useQuery({
     queryKey: ['dashboard'],
@@ -115,13 +134,7 @@ const Reports: React.FC = () => {
   });
   console.log("Report Data ", dashoarddata)
 
-  const { data: userData = [], isLoading: UserDataLOading } = useQuery({
-    queryKey: ['userData'],
-    queryFn: async () => {
-      const UserStatusData = await getUsersStatus();
-      return UserStatusData;
-    }
-  });
+
   // console.log("User Data ",userData)
 
 
@@ -166,15 +179,15 @@ const Reports: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [viewMode, setViewMode] = useState<'dashboard' | 'detailed'>('dashboard');
 
-  const [sortBy, setSortBy] = useState<'name' | 'performance' | 'activity'>('performance');
+  
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showActivityFeed, setShowActivityFeed] = useState(false);
-  const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month' | 'last7days' | 'last30days' | 'last3months' | 'last6months' | 'yearToDate' | 'custom'>('month');
+
   const [customDateRange, setCustomDateRange] = useState({
     startDate: '',
     endDate: ''
   });
-  const [activityFilter, setActivityFilter] = useState<'all' | 'calls' | 'visits' | 'meetings' | 'deals'>('all');
+
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const [showTeamLeaderView, setShowTeamLeaderView] = useState(false);
   const [selectedTeamMember, setSelectedTeamMember] = useState<string>('');
@@ -549,7 +562,7 @@ const Reports: React.FC = () => {
     return teamProgress.find(member => member.user.id === selectedTeamMember);
   };
 
-    const generateSalesMemberReport = (userId: string): SalesMemberReport | null => {
+  const generateSalesMemberReport = (userId: string): SalesMemberReport | null => {
     const user = users.find(u => u.id === userId);
     if (!user) return null;
 
@@ -600,7 +613,7 @@ const Reports: React.FC = () => {
     const leadConversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
 
     // Activity Metrics - Calls
-    const allCalls = userLeads.flatMap(l => l.calls?.map(c => ({...c, leadName: l.nameEn || l.nameAr || 'N/A'})) || []);
+    const allCalls = userLeads.flatMap(l => l.calls?.map(c => ({ ...c, leadName: l.nameEn || l.nameAr || 'N/A' })) || []);
     const totalCalls = allCalls.length;
     const completedCalls = allCalls.filter(c => c.outcome === 'Interested' || c.outcome === 'Done').length;
     const missedCalls = totalCalls - completedCalls;
@@ -610,7 +623,7 @@ const Reports: React.FC = () => {
 
 
     // Activity Metrics - Visits (assuming visits are stored in a similar way or within leads)
-    const allVisits = userLeads.flatMap(l => l.visits?.map(v => ({...v, leadName: l.nameEn || l.nameAr || 'N/A'})) || []);
+    const allVisits = userLeads.flatMap(l => l.visits?.map(v => ({ ...v, leadName: l.nameEn || l.nameAr || 'N/A' })) || []);
     const totalVisits = allVisits.length;
     const completedVisits = allVisits.filter(v => v.status === 'Completed').length;
     const scheduledVisits = totalVisits - completedVisits;
@@ -647,7 +660,7 @@ const Reports: React.FC = () => {
     const closedDeals = userLeads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length;
     const openDeals = userLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length;
     const totalDeals = closedDeals + openDeals;
-    
+
     // Overall Conversion Rate
     const conversionRate = totalLeads > 0 ? (closedDeals / totalLeads) * 100 : 0;
 
@@ -689,7 +702,7 @@ const Reports: React.FC = () => {
 
 
     // Dummy data for fields not available in the provided context
-    const averageResponseTime = 'N/A'; 
+    const averageResponseTime = 'N/A';
     const customerSatisfactionScore = 0;
 
     // Construct the final report object matching the interface
@@ -778,7 +791,7 @@ const Reports: React.FC = () => {
         case 'user':
           filename = exportUserPerformanceReport(users, leads, meetings, contracts, currentDateRange);
           break;
-     
+
           // Generate reports for all accessible sales members
           const allSalesMembers = getAccessibleUsers().filter(user => user.role === 'sales_rep' || user.role === 'team_leader');
           const allReports = await Promise.all(
@@ -1206,57 +1219,63 @@ const Reports: React.FC = () => {
   const getFilteredPerformances = () => {
     let performances: UserPerformance[] = [];
 
-    // Prioritize using the new `userData` if it's available and contains data
     if (userData && userData.length > 0) {
       performances = userData.map((user: any): UserPerformance => {
-        // Aggregate all activities from all leads for the user
         const allUserCalls = user.leads.flatMap((lead: any) => lead.calls || []);
         const allUserMeetings = user.leads.flatMap((lead: any) => lead.meetings || []);
         const allUserVisits = user.leads.flatMap((lead: any) => lead.visits || []);
 
-        // Calculate call metrics
         const totalCalls = allUserCalls.length;
         const completedCalls = allUserCalls.filter(
-          (call: any) => call.outcome && call.outcome.toLowerCase() !== 'no answer' && call.outcome.toLowerCase() !== 'not answered'
+          (call: any) =>
+            call.outcome &&
+            call.outcome.toLowerCase() !== "no answer" &&
+            call.outcome.toLowerCase() !== "not answered"
         ).length;
 
-        // Calculate visit metrics (assuming all logged visits are completed as status is missing)
         const totalVisits = allUserVisits.length;
         const completedVisits = totalVisits;
 
-        // Calculate meeting metrics
         const totalMeetings = allUserMeetings.length;
-        const completedMeetings = allUserMeetings.filter((meeting: any) => meeting.status === 'Completed').length;
+        const completedMeetings = allUserMeetings.filter(
+          (meeting: any) => meeting.status === "Completed"
+        ).length;
 
-        // Calculate deal metrics from the leads array
-        const closedDeals = user.leads.filter((lead: any) => lead.status === 'closed_deal').length;
-        const openDeals = user.leads.filter((lead: any) => lead.status === 'open_deal').length;
+        const closedDeals = user.leads.filter(
+          (lead: any) => lead.status === "closed_deal"
+        ).length;
+        const openDeals = user.leads.filter(
+          (lead: any) => lead.status === "open_deal"
+        ).length;
 
-        // Calculate completion rates
-        const callCompletionRate = totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
-        const visitCompletionRate = totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0; // Assuming 100% for now
-        const meetingCompletionRate = totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
+        const callCompletionRate =
+          totalCalls > 0 ? (completedCalls / totalCalls) * 100 : 0;
+        const visitCompletionRate =
+          totalVisits > 0 ? (completedVisits / totalVisits) * 100 : 0;
+        const meetingCompletionRate =
+          totalMeetings > 0 ? (completedMeetings / totalMeetings) * 100 : 0;
 
-        // Determine the last activity date
         const allActivityDates = [
           ...allUserCalls.map((c: any) => new Date(c.createdAt)),
           ...allUserMeetings.map((m: any) => new Date(m.createdAt)),
           ...allUserVisits.map((v: any) => new Date(v.createdAt)),
-        ].filter(date => !isNaN(date.getTime()));
+        ].filter((date) => !isNaN(date.getTime()));
 
-        const lastActivity = allActivityDates.length > 0
-          ? new Date(Math.max.apply(null, allActivityDates.map(d => d.getTime()))).toLocaleDateString()
-          : 'No activity';
+        const lastActivity =
+          allActivityDates.length > 0
+            ? new Date(
+              Math.max.apply(null, allActivityDates.map((d) => d.getTime()))
+            ).toLocaleDateString()
+            : "No activity";
 
-        // Construct the performance object matching the UserPerformance interface
         return {
           id: user.id,
           name: user.name,
           role: user.role,
           totalLeads: user.totalLeads,
           assignedLeads: user.totalLeads,
-          conversionRate: user.conversion, // Use pre-calculated conversion
-          score: user.totalScore, // Use pre-calculated score
+          conversionRate: user.conversion,
+          score: user.totalScore,
           completedCalls,
           totalCalls,
           completedVisits,
@@ -1269,13 +1288,12 @@ const Reports: React.FC = () => {
           visitCompletionRate: Math.round(visitCompletionRate * 10) / 10,
           meetingCompletionRate: Math.round(meetingCompletionRate * 10) / 10,
           lastActivity,
-          // Fill in default/empty values for fields not present in userData
           totalFollowUps: 0,
           completedFollowUps: 0,
           followUpCompletionRate: 0,
           totalRevenue: 0,
           averageDealSize: 0,
-          teamId: users.find(u => u.id === user.id)?.teamId,
+          teamId: users.find((u) => u.id === user.id)?.teamId,
           calls: [],
           visits: [],
           followUps: [],
@@ -1284,37 +1302,36 @@ const Reports: React.FC = () => {
           contracts: [],
         };
       });
-    } else {
-      // Fallback to the original calculation method if userData is not available
-      const currentDateRange = getDateRange();
-      performances = getAccessibleUsers().map(user => calculateUserPerformance(user, currentDateRange));
     }
 
-
-    // Filter by search term
+    // Apply filters
     if (searchTerm) {
-      performances = performances.filter(p =>
-        (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (p.role && p.role.toLowerCase().includes(searchTerm.toLowerCase()))
+      performances = performances.filter(
+        (p) =>
+          (p.name && p.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+          (p.role && p.role.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Filter by selected user
     if (selectedUser) {
-      performances = performances.filter(p => p.id === selectedUser);
+      performances = performances.filter((p) => p.id === selectedUser);
+    }
+    
+    // 🔽 2. ADDED logic to filter by the selected role
+    if (selectedRole) {
+      performances = performances.filter(p => p.role === selectedRole);
     }
 
-    // Filter by activity type
-    if (activityFilter !== 'all') {
-      performances = performances.filter(p => {
+    if (activityFilter !== "all") {
+      performances = performances.filter((p) => {
         switch (activityFilter) {
-          case 'calls':
+          case "calls":
             return p.totalCalls > 0;
-          case 'visits':
+          case "visits":
             return p.totalVisits > 0;
-          case 'meetings':
+          case "meetings":
             return p.totalMeetings > 0;
-          case 'deals':
+          case "deals":
             return p.closedDeals > 0;
           default:
             return true;
@@ -1327,15 +1344,15 @@ const Reports: React.FC = () => {
       let aValue: any, bValue: any;
 
       switch (sortBy) {
-        case 'name':
+        case "name":
           aValue = a.name;
           bValue = b.name;
           break;
-        case 'performance':
+        case "performance":
           aValue = a.conversionRate;
           bValue = b.conversionRate;
           break;
-        case 'activity':
+        case "activity":
           const aDate = new Date(a.lastActivity).getTime();
           const bDate = new Date(b.lastActivity).getTime();
           aValue = isNaN(aDate) ? 0 : aDate;
@@ -1346,7 +1363,7 @@ const Reports: React.FC = () => {
           bValue = b.conversionRate;
       }
 
-      if (sortOrder === 'asc') {
+      if (sortOrder === "asc") {
         if (aValue < bValue) return -1;
         if (aValue > bValue) return 1;
         return 0;
@@ -1359,6 +1376,7 @@ const Reports: React.FC = () => {
 
     return performances;
   };
+
 
   // Helper function to translate user roles
   const translateUserRole = (role: string) => {
@@ -1375,10 +1393,6 @@ const Reports: React.FC = () => {
   const performances = getFilteredPerformances();
   const metrics = calculateOverallMetrics();
 
-  // --- START: AGENT LEADERBOARD LOGIC ---
-  // Sort the data based on the 'score' from the performance object
-  const leaderboardData = [...performances]
-    .sort((a, b) => b.score - a.score);
 
 
 
@@ -1501,7 +1515,7 @@ const Reports: React.FC = () => {
                 <option value="team">{t('export.reportTypes.teamLeader')}</option>
                 <option value="sales">{t('export.reportTypes.sales')}</option>
                 <option value="user">{t('export.reportTypes.userPerformance')}</option>
-       
+
               </select>
               <button
                 onClick={handleExport}
@@ -1559,7 +1573,7 @@ const Reports: React.FC = () => {
                   <option value="last3months">Last 3 Months</option>
                   <option value="last6months">Last 6 Months</option>
                   <option value="yearToDate">{t('additionalLabels.yearToDate')}</option>
-                  <option value="custom">{t('timeframes.customRange') || 'Custom Range'}</option>
+                  {/* <option value="custom">{t('timeframes.customRange') || 'Custom Range'}</option> */}
                 </select>
 
                 {/* Activity Type Filter */}
@@ -1576,7 +1590,7 @@ const Reports: React.FC = () => {
                 </select>
 
                 {/* Custom Date Range Picker */}
-                {selectedTimeframe === 'custom' && (
+                {/* {selectedTimeframe === 'custom' && (
                   <div className="flex flex-col sm:flex-row items-center gap-2 bg-white border border-gray-300 rounded-lg px-3 py-2">
                     <CalendarDays className="h-4 w-4 text-gray-400" />
                     <input
@@ -1595,7 +1609,7 @@ const Reports: React.FC = () => {
                       placeholder="End Date"
                     />
                   </div>
-                )}
+                )} */}
               </div>
 
               {/* Quick Action Buttons */}
@@ -1615,6 +1629,8 @@ const Reports: React.FC = () => {
                     setActivityFilter('all');
                     setSearchTerm('');
                     setSelectedUser('');
+                    // 🔽 4. ADDED state reset for the role filter
+                    setSelectedRole('');
                   }}
                   className="px-3 py-2 rounded-lg text-sm bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors flex items-center gap-1"
                   title="Reset all filters"
@@ -1656,26 +1672,32 @@ const Reports: React.FC = () => {
             </div>
 
             {/* Advanced Filters (Expandable) */}
-            {isFilterExpanded && (
+           {isFilterExpanded && (
               <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                 <h4 className="text-sm font-medium text-gray-900 mb-3">Advanced Filters</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {/* Performance Threshold Filter */}
-                  <div>
+                  {/* <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Min Conversion Rate (%)</label>
                     <input
                       type="number"
                       min="0"
+                      
                       max="100"
                       className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="e.g., 20"
                     />
-                  </div>
+                  </div> */}
 
                   {/* Role Filter */}
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Role</label>
-                    <select className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    {/* 🔽 3. CONNECTED the select input to the state */}
+                    <select 
+                      className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value)}
+                    >
                       <option value="">All Roles</option>
                       <option value="sales_rep">Sales Rep</option>
                       <option value="team_leader">Team Leader</option>
@@ -1684,16 +1706,7 @@ const Reports: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Activity Level Filter */}
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Activity Level</label>
-                    <select className="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="">Any Level</option>
-                      <option value="high">{t('additionalLabels.highActivity')}</option>
-                      <option value="medium">{t('additionalLabels.mediumActivity')}</option>
-                      <option value="low">{t('additionalLabels.lowActivity')}</option>
-                    </select>
-                  </div>
+               
                 </div>
               </div>
             )}
@@ -2729,6 +2742,7 @@ const Reports: React.FC = () => {
           </div>
         </>
       ) : (
+
         /* Detailed View */
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Desktop Table View */}
@@ -2748,7 +2762,13 @@ const Reports: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {performances.map((performance) => (
+
+
+
+
+                {
+                  
+                performances.map((performance) => (
                   <tr key={performance.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -2800,6 +2820,15 @@ const Reports: React.FC = () => {
               </tbody>
             </table>
           </div>
+
+
+
+
+
+
+
+
+
 
           {/* Mobile Card View */}
           <div className="lg:hidden">

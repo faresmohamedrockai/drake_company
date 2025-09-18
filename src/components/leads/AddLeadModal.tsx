@@ -79,6 +79,7 @@ const AddLeadModal: React.FC<AddLeadModalProps> = ({ isOpen, onClose }) => {
     mutationFn: (lead: Lead) => addLead(lead),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['notificationData'] });
       toast.success("Lead added successfully");
       setFormData({
         nameEn: '',

@@ -4,14 +4,9 @@ import axios, { AxiosInstance } from "axios";
 import Cookies from 'js-cookie'; // 1. استيراد js-cookie
 import i18n from "@/i18n"; // لو مستخدم i18next
 
-// 2. تعريف متغير على مستوى الوحدة (module) لتخزين دالة التوجيه (navigate)
-// سيتم تعيين قيمته لاحقًا من مكون React
 let navigateFunction: (path: string) => void;
 
-/**
- * دالة لتمرير دالة `navigate` من React Router إلى هذا الملف
- * @param navigate - دالة التوجيه القادمة من `useNavigate()`
- */
+
 export const setNavigate = (navigate: (path: string) => void) => {
   navigateFunction = navigate;
 };

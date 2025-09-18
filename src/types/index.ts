@@ -356,3 +356,26 @@ export interface TaskFilters {
   page?: number;
   limit?: number;
 }
+
+export interface SimpleUser {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface Notification {
+  id: string;
+  notificationData: {
+    data?: any; // To keep it simple for now, you can replace 'any' with the detailed interfaces from before
+    route: string;
+    meetingId?: string;
+  };
+  title: string;
+  body: string;
+  isSeen: boolean;
+  createdAt: string; // ISO Date string
+  createdById: string;
+  assignToId: string;
+  createdBy: SimpleUser;
+  assignTo: SimpleUser;
+}

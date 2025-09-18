@@ -15,7 +15,7 @@ export const getZones = async () => {
 
 export const getLeads = async () => {
     const response = await axiosInterceptor.get('/leads');
-    
+
     // Handle different possible response structures
     if (response.data.leads) {
         return response.data.leads as Lead[];
@@ -63,10 +63,10 @@ export const createLead = async (lead: Partial<Lead>) => {
 
 export const bulkUpdateLeads = async (leadIds: string[], updateData: Partial<Lead>) => {
     // Since there's no bulk endpoint, we'll update each lead individually
-    const promises = leadIds.map(leadId => 
-        axiosInterceptor.post(`/transfer/`, {...updateData,leadId:leadId})
+    const promises = leadIds.map(leadId =>
+        axiosInterceptor.post(`/transfer/`, { ...updateData, leadId: leadId })
     );
-    
+
     const responses = await Promise.all(promises);
     getLeads()
     return { success: true, updated: responses.length };
@@ -91,7 +91,7 @@ export const bulkUpdateLeads = async (leadIds: string[], updateData: Partial<Lea
 
 export const getUsers = async () => {
     const response = await axiosInterceptor.get('/auth/users');
-    
+
     // Handle different possible response structures
     if (response.data.users) {
         return response.data.users as User[];
@@ -112,7 +112,7 @@ export const getProperties = async () => {
 
 export const getMeetings = async () => {
     const response = await axiosInterceptor.get('/meetings');
-    
+
     // Handle different possible response structures
     if (response.data.meetings) {
         return response.data.meetings as Meeting[];
@@ -132,13 +132,16 @@ export const getContracts = async () => {
 }
 export const getDashboardData = async () => {
     const response = await axiosInterceptor.get('/leads/dashboard-data');
-    return response.data.data ;
+    return response.data.data;
 }
 
-export const getUsersStatus = async () => {
-    const response = await axiosInterceptor.get('auth/users-data');
-    return response.data ;
-}
+export const getUsersStatus = async (timeframe: string = 'last30days', activity: string = 'all', sort: string = "performance", role: string = '') => {
+    const response = await axiosInterceptor.get('auth/users-data', {
+        params: { timeframe, activity, sort, role },
+    });
+    return response.data;
+};
+
 
 export const addContract = async (contract: Contract) => {
     const response = await axiosInterceptor.post('/contracts', contract);
@@ -168,7 +171,7 @@ export const getLogs = async () => {
 // Task Management Queries
 export const getTasks = async (filters?: TaskFilters) => {
     const params = new URLSearchParams();
-    
+
     if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
@@ -176,14 +179,14 @@ export const getTasks = async (filters?: TaskFilters) => {
             }
         });
     }
-    
+
     const response = await axiosInterceptor.get(`/tasks?${params.toString()}`);
     return response.data as Task[];
 }
 
 export const getMyTasks = async (filters?: Omit<TaskFilters, 'assignedToId' | 'createdById'>) => {
     const params = new URLSearchParams();
-    
+
     if (filters) {
         Object.entries(filters).forEach(([key, value]) => {
             if (value !== undefined && value !== null && value !== '') {
@@ -191,7 +194,7 @@ export const getMyTasks = async (filters?: Omit<TaskFilters, 'assignedToId' | 'c
             }
         });
     }
-    
+
     const response = await axiosInterceptor.get(`/tasks/my-tasks?${params.toString()}`);
     return response.data as Task[];
 }
@@ -210,6 +213,19 @@ export const getTaskStatistics = async () => {
     const response = await axiosInterceptor.get('/tasks/statistics');
     return response.data as TaskStatistics;
 }
+
+export const getNotificationData = async () => {
+    const response = await axiosInterceptor.get('/notificationData');
+    return response.data as TaskStatistics;
+}
+export const markNotificationAsSeen = async (notificationId: string): Promise<Notification> => {
+  console.log("Before Edit", notificationId);
+  const response = await axiosInterceptor.patch(`/notificationData/${notificationId}`, {
+    isSeen: true,
+  });
+  return response.data;
+}
+
 
 export const getTask = async (id: string) => {
     const response = await axiosInterceptor.get(`/tasks/${id}`);
@@ -277,7 +293,7 @@ export const populateLeadsWithCallsAndVisits = async (leads: Lead[]): Promise<Le
                             lead.calls ? Promise.resolve(lead.calls) : getCallsByLead(lead.id!).catch(() => []),
                             lead.visits ? Promise.resolve(lead.visits) : getVisitsByLead(lead.id!).catch(() => [])
                         ]);
-                        
+
                         return {
                             ...lead,
                             calls: calls || [],
