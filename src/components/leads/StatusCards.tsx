@@ -6,6 +6,8 @@ interface StatusCardsProps {
   leads: Lead[];
   user: User | null;
   activeCard: string;
+  myLeadsCount: number;
+  TotalLeads: number;
   onCardClick: (key: string) => void;
   showAllCards: boolean;
   onToggleShowAll: (value: boolean) => void;
@@ -44,19 +46,28 @@ function getCardLabel(key: string, t: (k: string) => string) {
 export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
   leads,
   user,
+  myLeadsCount,
+  TotalLeads,
   activeCard,
   onCardClick,
   showAllCards,
   onToggleShowAll,
   t
 }) => {
+
+
+
+
+
   const dashboardCards = useMemo(() => [
-    { key: 'my_leads', count: leads.filter(lead => lead.owner?.id === user?.id).length },
+    { key: 'my_leads', count: myLeadsCount},
     { key: 'scheduled_visit', count: leads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
-    { key: 'all', count: leads.length },
-    { key: 'duplicate', count: leads.filter((lead, idx, arr) => 
-      arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contacts && l.contacts.includes(lead.contact as any)) || (l.email && l.email === lead.email)) !== idx
-    ).length },
+    { key: 'all', count: TotalLeads },
+    {
+      key: 'duplicate', count: leads.filter((lead, idx, arr) =>
+        arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contacts && l.contacts.includes(lead.contact as any)) || (l.email && l.email === lead.email)) !== idx
+      ).length
+    },
     { key: 'fresh_lead', count: leads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
     { key: 'cold_call', count: leads.filter(lead => lead.source === 'Cold Call').length },
     { key: 'follow_up', count: leads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length },
@@ -77,11 +88,11 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
     'cold_call',
     'follow_up',
   ];
-  
+
   const compactCards = compactCardKeys
     .map(key => dashboardCards.find(card => card.key === key))
     .filter(Boolean);
-  
+
   const fullCards = dashboardCards;
 
   return (
@@ -94,7 +105,7 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
         <div className="flex flex-wrap gap-1 bg-white rounded-lg p-1 border">
           {compactCards.map((card, idx) => {
             if (!card) return null;
-            
+
             // If this is the last card in the compact row and there are more cards, show the Show More button instead
             if (idx === compactCards.length - 1 && fullCards.length > compactCards.length) {
               return (
@@ -113,7 +124,7 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
                 </button>
               );
             }
-            
+
             // Render normal card
             const isActive = activeCard === card.key;
             return (
@@ -137,7 +148,7 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
             );
           })}
         </div>
-        
+
         {/* Second row: rest of the cards, only if showAllCards is true */}
         {showAllCards && fullCards.length > compactCards.length && (
           <div className="flex flex-wrap gap-1 bg-white rounded-lg p-1 border mt-2">

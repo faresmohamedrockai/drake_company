@@ -1,5 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { Eye, Edit, Trash2, ArrowLeftRight, Facebook, Instagram, Phone as PhoneIcon, MessageCircle as WhatsAppIcon, Globe, Mail, Link as LinkIcon, Megaphone, User as UserIcon } from 'lucide-react';
+import React, { useMemo, useEffect } from 'react';
+import { Eye, Edit, Trash2, ArrowLeftRight, Facebook, Instagram, Phone as PhoneIcon, MessageCircle as WhatsAppIcon, Globe, Mail, Link as LinkIcon, Megaphone, User as UserIcon, Loader2 } from 'lucide-react';
 import { Interest, Lead, LeadStatus, Property, Tier, User } from '../../types';
 import { PhoneNumber } from '../ui/PhoneNumber';
 import { Badge } from "../ui/badge";
@@ -7,6 +7,8 @@ import { Badge } from "../ui/badge";
 interface LeadsTableProps {
   leads: Lead[];
   isLoading: boolean;
+  isFetching: boolean;
+
   properties: Property[];
   users: User[];
   selectedLeads: Set<string>;
@@ -20,9 +22,14 @@ interface LeadsTableProps {
   t: (key: string) => string;
   i18n: any;
   searchTerm: string;
+  currentPage: number;
+  totalPages: number;
+  totalLeads: number;
+  rowsPerPage: number;
+  onPageChange: (page: number) => void;
+  onRowsPerPageChange: (limit: number) => void;
 }
 
-// User color mapping
 const USER_COLORS = [
   'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-orange-500',
   'bg-red-500', 'bg-indigo-500', 'bg-pink-500', 'bg-teal-500',
@@ -30,50 +37,27 @@ const USER_COLORS = [
 ];
 
 export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
-  leads,
-  isLoading,
-  properties,
-  users,
-  selectedLeads,
-  isSelectAllChecked,
-  onSelectLead,
-  onSelectAll,
-  onLeadClick,
-  onEditLead,
-  onTransferLead,
-  onDeleteLead,
-  t,
-  i18n,
-  searchTerm
+  leads, isLoading, isFetching, properties, users, selectedLeads, isSelectAllChecked,
+  onSelectLead, onSelectAll, onLeadClick, onEditLead, onTransferLead,
+  onDeleteLead, t, i18n, searchTerm, currentPage, totalPages, totalLeads,
+  rowsPerPage, onPageChange, onRowsPerPageChange
 }) => {
   const getUserColor = useMemo(() => (userName: string) => {
     const userIndex = users?.findIndex(user => user.name === userName);
     return userIndex !== undefined && userIndex >= 0 ? USER_COLORS[userIndex % USER_COLORS.length] : 'bg-gray-500';
   }, [users]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
 
-  // Sort leads from newest to oldest based on createdAt
   const sortedLeads = useMemo(() => {
     return [...leads].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return dateB - dateA; // Newest first
+      return dateB - dateA;
     });
   }, [leads]);
 
-  const totalPages = Math.ceil(sortedLeads.length / rowsPerPage);
-  // البيانات اللي هتتعرض
-  const paginatedLeads = sortedLeads.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  // دالة توليد الصفحات مع "..."
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisible = 5;
-
     if (totalPages <= maxVisible) {
       for (let i = 1; i <= totalPages; i++) pages.push(i);
     } else {
@@ -88,62 +72,21 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     return pages;
   };
 
-  // const project = leads.map((lead) => lead.inventoryInterest?.project.nameAr)
-
-  // const meetings = leads.map((lead) => {
-  //   if (!lead.meetings || lead.meetings.length === 0) {
-  //     return null; // لو مفيش اجتماعات
-  //   }
-  //   const lastMeeting = lead.meetings[lead.meetings.length - 1]; // آخر اجتماع
-  //   return lastMeeting.date;
-  // });
-
-
-  // console.log(meettings);
-
-
-
   const getUserInitials = useMemo(() => (userName: string) => {
-    return userName
-      .split(' ')
-      .map(name => name.charAt(0))
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return userName.split(' ').map(name => name.charAt(0)).join('').toUpperCase().slice(0, 2);
   }, []);
 
-
-
-
   const getDisplayName = useMemo(() => (lead: Lead) => {
-    if (i18n.language === 'ar') {
-      return lead.nameAr || lead.nameEn || '';
-    } else {
-      return lead.nameEn || lead.nameAr || '';
-    }
+    return i18n.language === 'ar' ? (lead.nameAr || lead.nameEn || '') : (lead.nameEn || lead.nameAr || '');
   }, [i18n.language]);
 
   const projectName = (lead: Lead) => {
     if (i18n.language === 'ar') {
-      return (
-        lead.projectInterest?.nameAr ||
-        lead.projectInterest?.nameEn ||
-        lead?.otherProject ||
-        'لا يوجد'
-      );
+      return lead.projectInterest?.nameAr || lead.projectInterest?.nameEn || lead?.otherProject || 'لا يوجد';
     } else {
-      return (
-        lead.projectInterest?.nameEn ||
-        lead.projectInterest?.nameAr ||
-        lead?.otherProject ||
-        'Not Found'
-      );
+      return lead.projectInterest?.nameEn || lead.projectInterest?.nameAr || lead?.otherProject || 'Not Found';
     }
   };
-
-
-
-
 
   const getStatusColor = useMemo(() => (status: string) => {
     switch (status) {
@@ -166,7 +109,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
       case Interest.UNDER_DECISION: return 'bg-blue-100 text-blue-800';
       case Interest.HOT: return 'bg-yellow-100 text-yellow-800';
       case Interest.WARM: return 'bg-purple-100 text-purple-800';
-
       default: return 'bg-gray-100 text-gray-800';
     }
   }, []);
@@ -177,469 +119,152 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
       case Tier.GOLD: return 'bg-yellow-100 text-yellow-800';
       case Tier.PLATINUM: return 'bg-purple-100 text-purple-800';
       case Tier.SILVER: return 'bg-green-100 text-green-800';
-
       default: return 'bg-gray-100 text-gray-800';
     }
   }, []);
 
-  const handleSelectLead = (leadId: string) => {
-    onSelectLead(leadId);
-  };
-
-  const handleSelectAll = () => {
-    onSelectAll();
-  };
-
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const newRowsPerPage = parseInt(event.target.value);
-    setRowsPerPage(newRowsPerPage);
-    setCurrentPage(1); // Reset to first page when changing rows per page
+    onRowsPerPageChange(parseInt(event.target.value));
   };
-  // import { useEffect } from "react";
-
-  // ...
 
   useEffect(() => {
-    if (totalPages <= 1 && currentPage !== 1) {
-      setCurrentPage(1);
+    if (currentPage > totalPages && totalPages > 0) {
+      onPageChange(totalPages);
     }
-    // كمان لو عدد الصفحات قل وبقي أقل من الصفحة الحالية يرجعك لأول صفحة
-    if (currentPage > totalPages) {
-      setCurrentPage(1);
-    }
-  }, [totalPages, currentPage, setCurrentPage]);
+  }, [totalPages, currentPage, onPageChange]);
 
   const getSourceIcon = useMemo(() => (source: string) => {
     const key = (source || '').toLowerCase().trim();
     const iconClass = "w-4 h-4 text-gray-600";
     switch (key) {
-      case 'whatsapp':
-        return <WhatsAppIcon className={iconClass} />;
-      case 'phone':
-      case 'call':
-        return <PhoneIcon className={iconClass} />;
-      case 'facebook':
-        return <Facebook className={iconClass} />;
-      case 'instagram':
-        return <Instagram className={iconClass} />;
-      case 'website':
-      case 'web':
-        return <Globe className={iconClass} />;
-      case 'email':
-        return <Mail className={iconClass} />;
-      case 'referral':
-        return <UserIcon className={iconClass} />;
-      case 'campaign':
-      case 'ads':
-        return <Megaphone className={iconClass} />;
-      default:
-        return <LinkIcon className={iconClass} />;
+      case 'whatsapp': return <WhatsAppIcon className={iconClass} />;
+      case 'phone': case 'call': return <PhoneIcon className={iconClass} />;
+      case 'facebook': return <Facebook className={iconClass} />;
+      case 'instagram': return <Instagram className={iconClass} />;
+      case 'website': case 'web': return <Globe className={iconClass} />;
+      case 'email': return <Mail className={iconClass} />;
+      case 'referral': return <UserIcon className={iconClass} />;
+      case 'campaign': case 'ads': return <Megaphone className={iconClass} />;
+      default: return <LinkIcon className={iconClass} />;
     }
   }, []);
 
-  return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        {/* Mobile cards */}
-        <div className="block sm:hidden p-2 space-y-3">
-          {isLoading ? (
-            <div className="text-center text-gray-500 py-6">Loading leads...</div>
-          ) : (
-            paginatedLeads?.map((lead) => (
-              <div key={lead.id} className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:shadow transition">
-                <div className="flex items-start justify-between gap-2">
-                  <button
-                    onClick={() => onLeadClick(lead)}
-                    className="text-blue-600 hover:text-blue-800 font-medium text-sm truncate text-left"
-                    title={getDisplayName(lead)}
-                    aria-label={`View details for ${getDisplayName(lead)}`}
-                  >
-                    {getDisplayName(lead)}
-                  </button>
-                  <input
-                    type="checkbox"
-                    checked={selectedLeads.has(lead.id!)}
-                    onChange={() => handleSelectLead(lead.id!)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    aria-label={`Select ${getDisplayName(lead)}`}
-                  />
-                </div>
-                <div className="mt-2">
-                  <PhoneNumber phone={lead.contact} className="text-sm" />
-                </div>
-                <div className="mt-2 flex items-center gap-2 text-xs text-gray-700">
-                  {getSourceIcon(lead.source)}
-                  <span className="truncate">{lead.source}</span>
-                </div>
-                <div className="mt-2">
-                  <Badge className={`${getStatusColor(lead.status)} border-0`}>{lead.status}</Badge>
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  {lead.owner ? (
-                    <>
-                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-semibold ${getUserColor(lead.owner.name)}`}>
-                        {getUserInitials(lead.owner.name)}
-                      </span>
-                      <span className="text-sm text-gray-900 truncate" title={lead.owner.name}>
-                        {lead.owner?.name}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-sm text-gray-400">{t('unassigned')}</span>
-                  )}
-                </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  {t('lastCall')}: {lead.calls?.[lead.calls.length - 1]?.date || '-'}
-                </div>
-                {/* Mobile actions */}
-                <div className="mt-3 flex items-center justify-end gap-3">
-                  <button
-                    onClick={() => onLeadClick(lead)}
-                    className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                    title={t('viewDetails')}
-                    aria-label={`View details for ${getDisplayName(lead)}`}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onEditLead(lead)}
-                    className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
-                    title={t('editLead')}
-                    aria-label={`Edit ${getDisplayName(lead)}`}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => onTransferLead(lead)}
-                    className="p-1 rounded hover:bg-purple-50 transition-colors"
-                    title={t('transferLead') || 'Transfer Lead'}
-                    aria-label={`Transfer ${getDisplayName(lead)}`}
-                  >
-                    <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
-                  </button>
-                  <button
-                    onClick={() => onDeleteLead(lead)}
-                    className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                    title={t('deleteLead')}
-                    aria-label={`Delete ${getDisplayName(lead)}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center p-10">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        <span className="ml-2 text-gray-600">{t('loadingLeads')}...</span>
+      </div>
+    );
+  }
 
-        {/* Desktop table */}
+  return (
+    <div className="relative bg-white rounded-lg shadow-sm overflow-hidden">
+      {isFetching && (
+        <div className="absolute inset-0 bg-white bg-opacity-60 flex items-center justify-center z-20 transition-opacity">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+        </div>
+      )}
+      <div className="overflow-x-auto">
+        <div className="block sm:hidden p-2 space-y-3">
+          {sortedLeads?.map((lead) => (
+            <div key={lead.id} className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm hover:shadow transition">
+              <div className="flex items-start justify-between gap-2">
+                <button onClick={() => onLeadClick(lead)} className="text-blue-600 hover:text-blue-800 font-medium text-sm truncate text-left" title={getDisplayName(lead)} aria-label={`View details for ${getDisplayName(lead)}`}>
+                  {getDisplayName(lead)}
+                </button>
+                <input type="checkbox" checked={selectedLeads.has(lead.id!)} onChange={() => onSelectLead(lead.id!)} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" aria-label={`Select ${getDisplayName(lead)}`} />
+              </div>
+              <div className="mt-2">
+                <PhoneNumber phone={lead.contact} className="text-sm" />
+              </div>
+              <div className="mt-2 flex items-center gap-2 text-xs text-gray-700">
+                {getSourceIcon(lead.source)}
+                <span className="truncate">{lead.source}</span>
+              </div>
+              <div className="mt-2">
+                <Badge className={`${getStatusColor(lead.status)} border-0`}>{lead.status}</Badge>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                {lead.owner ? (
+                  <>
+                    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-white text-xs font-semibold ${getUserColor(lead.owner.name)}`}>
+                      {getUserInitials(lead.owner.name)}
+                    </span>
+                    <span className="text-sm text-gray-900 truncate" title={lead.owner.name}>{lead.owner?.name}</span>
+                  </>
+                ) : (<span className="text-sm text-gray-400">{t('unassigned')}</span>)}
+              </div>
+              <div className="mt-2 text-xs text-gray-500">{t('lastCall')}: {lead.calls?.[lead.calls.length - 1]?.date || '-'}</div>
+              <div className="mt-3 flex items-center justify-end gap-3">
+                <button onClick={() => onLeadClick(lead)} className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors" title={t('viewDetails')} aria-label={`View details for ${getDisplayName(lead)}`}><Eye className="h-4 w-4" /></button>
+                <button onClick={() => onEditLead(lead)} className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors" title={t('editLead')} aria-label={`Edit ${getDisplayName(lead)}`}><Edit className="h-4 w-4" /></button>
+                <button onClick={() => onTransferLead(lead)} className="p-1 rounded hover:bg-purple-50 transition-colors" title={t('transferLead') || 'Transfer Lead'} aria-label={`Transfer ${getDisplayName(lead)}`}><ArrowLeftRight className="h-4 w-4 text-[#803FC5]" /></button>
+                <button onClick={() => onDeleteLead(lead)} className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors" title={t('deleteLead')} aria-label={`Delete ${getDisplayName(lead)}`}><Trash2 className="h-4 w-4" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
         <table className="w-full min-w-full hidden sm:table border-separate border-spacing-y-3 border-spacing-x-0 bg-gray-100">
           <thead className="bg-blue-900 sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left w-6 sm:w-8">
-                <input
-                  type="checkbox"
-                  checked={isSelectAllChecked}
-                  onChange={handleSelectAll}
-                  className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                  aria-label={t('selectAll') || 'Select all leads'}
-                />
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20 sm:w-24">
-                {t('name')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 sm:table-cell">
-                {t('phone')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-32 hidden md:table-cell">
-                {t('IntersName')}
-              </th>
-
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 hidden lg:table-cell">
-                {t('interestProperty')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">
-                {t('project')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20 sm:w-28">
-                {t('source')}
-              </th>
-
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 hidden md:table-cell">
-                {t('assignedTo')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
-                {t('lastCall')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">
-                {t('lastVisit')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20">
-                {t('meetting')}
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-8 sm:w-12">
-                {t('actions')}
-              </th>
+              <th className="px-4 py-3 text-left w-6 sm:w-8"><input type="checkbox" checked={isSelectAllChecked} onChange={onSelectAll} className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" aria-label={t('selectAll') || 'Select all leads'} /></th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20 sm:w-24">{t('name')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 sm:table-cell">{t('phone')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-32 hidden md:table-cell">{t('IntersName')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 hidden lg:table-cell">{t('interestProperty')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-24 hidden md:table-cell">{t('project')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20 sm:w-28">{t('source')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20 hidden md:table-cell">{t('assignedTo')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">{t('lastCall')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-12 sm:w-16 hidden lg:table-cell">{t('lastVisit')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-16 sm:w-20">{t('meetting')}</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-8 sm:w-12">{t('actions')}</th>
             </tr>
           </thead>
           <tbody className="bg-white">
-            {isLoading ? (
-              <tr>
-                <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 sm:h-7 sm:w-7 border-b-2 border-blue-600 mr-2"></div>
-                    <span className="text-sm sm:text-base">Loading leads...</span>
-                  </div>
-                </td>
+            {sortedLeads?.map((lead) => (
+              <tr key={lead.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50 rounded-md shadow-sm">
+                <td className="px-4 py-3"><input type="checkbox" checked={selectedLeads.has(lead.id!)} onChange={() => onSelectLead(lead.id!)} className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" aria-label={`Select ${getDisplayName(lead)}`} /></td>
+                <td className="px-4 py-3"><button onClick={() => onLeadClick(lead)} className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-xs sm:text-sm truncate block w-full text-left" title={getDisplayName(lead)} aria-label={`View details for ${getDisplayName(lead)}`}>{getDisplayName(lead)}</button></td>
+                <td className="px-4 py-3 sm:table-cell"><PhoneNumber phone={lead.contact} className="text-xs sm:text-sm" /></td>
+                <td className="px-4 py-3 hidden md:table-cell"><div className="flex flex-wrap items-center gap-1.5"><Badge className={`${getStatusColorInterst(lead.interest)} border-0`} size="sm">{lead.interest}</Badge><Badge className={`${getStatusColorTier(lead.tier)} border-0`} size="sm">{lead.tier}</Badge><Badge variant="muted" size="sm">{typeof lead.budget === 'number' ? lead.budget.toLocaleString() : Number(lead.budget).toLocaleString()}</Badge></div></td>
+                <td className="px-4 py-3 hidden lg:table-cell"><span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.inventoryInterestId}>{properties?.find(property => property.id === lead.inventoryInterestId)?.titleEn}</span></td>
+                <td className="px-4 py-3 hidden md:table-cell"><span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toLocaleString()}>{projectName(lead)}</span></td>
+                <td className="px-4 py-3"><div className="flex items-center gap-2 text-sm text-gray-900 truncate" title={lead.source}>{getSourceIcon(lead.source)}<span className="truncate">{lead.source}</span></div><div className="mt-1"><Badge className={`${getStatusColor(lead.status)} border-0`}>{lead.status}</Badge></div></td>
+                <td className="px-4 py-3 hidden md:table-cell">{lead.owner ? (<div className="flex items-center space-x-2 min-w-0"><span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0 ${getUserColor(lead.owner.name)}`}>{getUserInitials(lead.owner.name)}</span><span className="text-sm text-gray-900 truncate block" title={lead.owner.name}>{lead.owner?.name}</span></div>) : (<span className="text-sm text-gray-400">{t('unassigned')}</span>)}</td>
+                <td className="px-4 py-3 hidden lg:table-cell"><span className="text-sm text-gray-900 truncate block" title={lead.calls?.[lead.calls.length - 1]?.date}>{lead.calls?.[lead.calls.length - 1]?.date}</span></td>
+                <td className="px-4 py-3 hidden lg:table-cell"><span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>{lead.visits?.[lead.visits.length - 1]?.date}</span></td>
+                <td className="px-4 py-3">{lead.meetings && lead.meetings.length > 0 ? (() => { const lastMeeting = [...lead.meetings].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]; const formatTime = (timeStr: string) => { if (!timeStr) return ""; const [hours, minutes] = timeStr.split(":").map(Number); const date = new Date(); date.setHours(hours, minutes); return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }); }; return (<div><div>{new Date(lastMeeting.date).toLocaleDateString()}</div><div className="text-md text-gray-500">{formatTime(lastMeeting.time)}</div></div>); })() : (<span className="text-gray-400">No Meetings</span>)}</td>
+                <td className="px-4 py-3"><div className="flex items-center space-x-2"><button onClick={() => onLeadClick(lead)} className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors" title={t('viewDetails')} aria-label={`View details for ${getDisplayName(lead)}`}><Eye className="h-4 w-4" /></button><button onClick={() => onEditLead(lead)} className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors" title={t('editLead')} aria-label={`Edit ${getDisplayName(lead)}`}><Edit className="h-4 w-4" /></button><button onClick={() => onTransferLead(lead)} className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors" title={t('editLead')} aria-label={`Edit ${getDisplayName(lead)}`}><ArrowLeftRight className="h-4 w-4 text-[#803FC5]" /></button><button onClick={() => onDeleteLead(lead)} className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors" title={t('deleteLead')} aria-label={`Delete ${getDisplayName(lead)}`}><Trash2 className="h-4 w-4" /></button></div></td>
               </tr>
-            ) : (
-              paginatedLeads?.map((lead) => (
-                <tr key={lead.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50 rounded-md shadow-sm">
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedLeads.has(lead.id!)}
-                      onChange={() => handleSelectLead(lead.id!)}
-                      className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      aria-label={`Select ${getDisplayName(lead)}`}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() => onLeadClick(lead)}
-                      className="text-blue-600 hover:text-blue-800 font-medium hover:scale-105 transition-transform text-xs sm:text-sm truncate block w-full text-left"
-                      title={getDisplayName(lead)}
-                      aria-label={`View details for ${getDisplayName(lead)}`}
-                    >
-                      {getDisplayName(lead)}
-                    </button>
-                  </td>
-                  <td className="px-4 py-3 sm:table-cell">
-                    <PhoneNumber
-                      phone={lead.contact}
-                      className="text-xs sm:text-sm"
-                    />
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge className={`${getStatusColorInterst(lead.interest)} border-0`} size="sm">{lead.interest}</Badge>
-                      <Badge className={`${getStatusColorTier(lead.tier)} border-0`} size="sm">{lead.tier}</Badge>
-                      <Badge variant="muted" size="sm">{typeof lead.budget === 'number' ? lead.budget.toLocaleString() : Number(lead.budget).toLocaleString()}</Badge>
-                    </div>
-                  </td>
-
-
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.inventoryInterestId}>
-                      {properties?.find(property => property.id === lead.inventoryInterestId)?.titleEn}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.budget.toLocaleString()}>
-                      {projectName(lead)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2 text-sm text-gray-900 truncate" title={lead.source}>
-                      {getSourceIcon(lead.source)}
-                      <span className="truncate">{lead.source}</span>
-                    </div>
-                    <div className="mt-1">
-                      <Badge className={`${getStatusColor(lead.status)} border-0`}>{lead.status}</Badge>
-                    </div>
-                  </td>
-
-
-
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    {lead.owner ? (
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-xs font-semibold flex-shrink-0 ${getUserColor(lead.owner.name)}`}>
-                          {getUserInitials(lead.owner.name)}
-                        </span>
-                        <span className="text-sm text-gray-900 truncate block" title={lead.owner.name}>
-                          {lead.owner?.name}
-                        </span>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-400">{t('unassigned')}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.calls?.[lead.calls.length - 1]?.date}>
-                      {lead.calls?.[lead.calls.length - 1]?.date}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    <span className="text-sm text-gray-900 truncate block" title={lead.lastVisitDate}>
-                      {lead.visits?.[lead.visits.length - 1]?.date}
-                    </span>
-                  </td>
-
-                  <td className="px-4 py-3">
-                    {lead.meetings && lead.meetings.length > 0 ? (
-                      (() => {
-                        const lastMeeting = [...lead.meetings].sort(
-                          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-                        )[0];
-
-                        // ✅ صياغة الوقت من "HH:mm" → "hh:mm AM/PM"
-                        const formatTime = (timeStr: string) => {
-                          if (!timeStr) return "";
-                          const [hours, minutes] = timeStr.split(":").map(Number);
-                          const date = new Date();
-                          date.setHours(hours, minutes);
-                          return date.toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                          });
-                        };
-
-                        return (
-                          <div>
-                            {/* عرض التاريخ */}
-                            <div>{new Date(lastMeeting.date).toLocaleDateString()}</div>
-
-                            {/* عرض الوقت بالصياغة الجديدة */}
-                            <div className="text-md text-gray-500">
-                              {formatTime(lastMeeting.time)}
-                            </div>
-                          </div>
-                        );
-                      })()
-                    ) : (
-                      <span className="text-gray-400">No Meetings</span>
-                    )}
-                  </td>
-
-
-
-
-                  <td className="px-4 py-3">
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => onLeadClick(lead)}
-                        className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                        title={t('viewDetails')}
-                        aria-label={`View details for ${getDisplayName(lead)}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => onEditLead(lead)}
-                        className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
-                        title={t('editLead')}
-                        aria-label={`Edit ${getDisplayName(lead)}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-
-
-
-
-
-
-
-
-                      <button
-                        onClick={() => onTransferLead(lead)}
-                        className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
-                        title={t('editLead')}
-                        aria-label={`Edit ${getDisplayName(lead)}`}
-                      >
-                        <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
-                      </button>
-
-
-
-                      <button
-                        onClick={() => onDeleteLead(lead)}
-                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                        title={t('deleteLead')}
-                        aria-label={`Delete ${getDisplayName(lead)}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+            ))}
+            {sortedLeads?.length === 0 && !isFetching && (
+              <tr><td colSpan={12} className="px-6 py-8 text-center text-gray-500">{searchTerm ? t('noLeadsFound') : t('noLeadsAvailable')}</td></tr>
             )}
-            {sortedLeads?.length === 0 && !isLoading && (
-              <tr>
-                <td colSpan={12} className="px-6 py-8 text-center text-gray-500">
-                  {searchTerm ? t('noLeadsFound') : t('noLeadsAvailable')}
-                </td>
-              </tr>
-            )}
-
           </tbody>
-
         </table>
-
-
-
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 space-y-3 sm:space-y-0">
-        {/* Rows per page selector and page info */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500">Show:</span>
-            <select
-              value={rowsPerPage}
-              onChange={handleRowsPerPageChange}
-              className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={30}>30</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
+            <select value={rowsPerPage} onChange={handleRowsPerPageChange} className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value={10}>10</option><option value={20}>20</option><option value={30}>30</option><option value={50}>50</option><option value={100}>100</option>
             </select>
             <span className="text-sm text-gray-500">entries</span>
           </div>
-          <span className="text-sm text-gray-500 hidden sm:block">
-            Showing {((currentPage - 1) * rowsPerPage) + 1} to {Math.min(currentPage * rowsPerPage, sortedLeads.length)} of {sortedLeads.length} leads
-          </span>
-          <span className="text-sm text-gray-500">
-            Page {currentPage} of {totalPages}
-          </span>
+          <span className="text-sm text-gray-500 hidden sm:block">Showing {totalLeads > 0 ? ((currentPage - 1) * rowsPerPage) + 1 : 0} to {Math.min(currentPage * rowsPerPage, totalLeads)} of {totalLeads} leads</span>
+          <span className="text-sm text-gray-500">Page {currentPage} of {totalPages}</span>
         </div>
-
-        {/* Pagination */}
         <div className="flex items-center space-x-1">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-          >
-            &lt; Back
-          </button>
-
-          {getPageNumbers().map((page, idx) => (
-            <button
-              key={idx}
-              onClick={() => typeof page === "number" && setCurrentPage(page)}
-              disabled={page === "..."}
-              className={`px-3 py-1 text-sm border rounded 
-            ${page === currentPage ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-100"}
-            ${page === "..." ? "cursor-default" : ""}`}
-            >
-              {page}
-            </button>
-          ))}
-
-          <button
-            onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 text-sm border rounded disabled:opacity-50"
-          >
-            Next &gt;
-          </button>
+          <button onClick={() => onPageChange(Math.max(currentPage - 1, 1))} disabled={currentPage === 1 || isFetching} className="px-3 py-1 text-sm border rounded disabled:opacity-50">&lt; Back</button>
+          {getPageNumbers().map((page, idx) => (<button key={idx} onClick={() => typeof page === "number" && onPageChange(page)} disabled={page === "..." || isFetching} className={`px-3 py-1 text-sm border rounded ${page === currentPage ? "bg-blue-600 text-white border-blue-600" : "hover:bg-gray-100"} ${page === "..." ? "cursor-default" : ""}`}>{page}</button>))}
+          <button onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))} disabled={currentPage === totalPages || isFetching} className="px-3 py-1 text-sm border rounded disabled:opacity-50">Next &gt;</button>
         </div>
       </div>
     </div>
   );
 });
 
-LeadsTable.displayName = 'LeadsTable'; 
+LeadsTable.displayName = 'LeadsTable';

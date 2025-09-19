@@ -103,10 +103,10 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       queryClient.invalidateQueries({ queryKey: ['notificationData'] });
-      
+      queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: getLeads, staleTime: 1000 * 60 * 5 });
       queryClient.prefetchQuery({ queryKey: ['developers'], queryFn: getDevelopers, staleTime: 1000 * 60 * 5 });
       queryClient.prefetchQuery({ queryKey: ['zones'], queryFn: getZones, staleTime: 1000 * 60 * 5 });
-      queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: getLeads, staleTime: 1000 * 60 * 5 });
+      // queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: getLeads, staleTime: 1000 * 60 * 5 });
       if (user?.role === 'admin' || user?.role === 'sales_admin') {
         queryClient.prefetchQuery({ queryKey: ['users'], queryFn: getUsers, staleTime: 1000 * 60 * 5 });
       }
