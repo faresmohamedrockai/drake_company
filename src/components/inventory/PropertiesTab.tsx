@@ -16,6 +16,7 @@ import { Zone } from './ZonesTab';
 import { Developer } from '../../types';
 import { Lead } from '../../types';
 import { validatePhoneNumber, getPhoneErrorMessage } from '../../utils/phoneValidation';
+import { getAllLeads } from '@/queries/queries';
 
  
 // Fix default marker icon for leaflet in React
@@ -190,9 +191,9 @@ const PropertiesTab: React.FC = () => {
     }
   });
   const { data: leads } = useQuery<Lead[]>({
-    queryKey: ['leads'],
+    queryKey: ['Allleads'],
     staleTime: 1000 * 60 * 5, // 5 minutes
-    queryFn: () => getLeads()
+    queryFn: () => getAllLeads()
   });
   const getLeads = async () => {
     const response = await axiosInterceptor.get('/leads');

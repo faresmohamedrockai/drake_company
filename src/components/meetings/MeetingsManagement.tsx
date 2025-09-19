@@ -9,7 +9,7 @@ import { Meeting, User as UserType, Lead } from '../../types';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axiosInterceptor from '../../../axiosInterceptor/axiosInterceptor';
 import { Id, toast } from 'react-toastify';
-import { getMeetings, getUsers, getLeads } from '../../queries/queries';
+import { getMeetings, getUsers, getLeads,getAllLeads } from '../../queries/queries';
 import { CalendarPlus } from 'lucide-react';
 import { Apple } from 'lucide-react';
 import { CalendarDays } from 'lucide-react';
@@ -42,10 +42,11 @@ const MeetingsManagement: React.FC = () => {
 
 
   const { data: leads, } = useQuery<Lead[]>({
-    queryKey: ["leads"],
+    queryKey: ["Allleads"],
     staleTime: 1000 * 60 * 5, // 5 دقائق
-    queryFn: () => getLeads(),
+    queryFn: () => getAllLeads(),
   });
+
 
 
   

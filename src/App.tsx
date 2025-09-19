@@ -18,7 +18,7 @@ import './styles/rtl.css';
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
 import {
-  getNotificationData, markNotificationAsSeen, getDevelopers, getZones, getLeads,
+  getNotificationData, markNotificationAsSeen, getDevelopers, getZones, getLeads,getAllLeads,
   getUsers, getProperties, getMeetings, getContracts, getLogs, getProjects, getTaskStatistics
 } from './queries/queries';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -106,7 +106,7 @@ const AppContent: React.FC = () => {
       queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: getLeads, staleTime: 1000 * 60 * 5 });
       queryClient.prefetchQuery({ queryKey: ['developers'], queryFn: getDevelopers, staleTime: 1000 * 60 * 5 });
       queryClient.prefetchQuery({ queryKey: ['zones'], queryFn: getZones, staleTime: 1000 * 60 * 5 });
-      // queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: getLeads, staleTime: 1000 * 60 * 5 });
+      queryClient.prefetchQuery({ queryKey: ['Allleads'], queryFn: getAllLeads, staleTime: 1000 * 60 * 5 });
       if (user?.role === 'admin' || user?.role === 'sales_admin') {
         queryClient.prefetchQuery({ queryKey: ['users'], queryFn: getUsers, staleTime: 1000 * 60 * 5 });
       }

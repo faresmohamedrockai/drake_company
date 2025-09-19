@@ -239,6 +239,20 @@ export const getLeads = async (page = 1, limit = 10) => {
     }
 }
 
+export const getAllLeads = async (): Promise<Lead[]> => {
+  const response = await axiosInterceptor.get(`/leads`);
+
+  // Change the condition to check for the 'leads' property inside response.data
+  if (response.data && Array.isArray(response.data.leads)) {
+    // Return the array of leads
+    return response.data.leads as Lead[];
+  } else {
+    console.error("Unexpected leads API response structure:", response.data);
+    return [];
+  }
+};
+
+
 
 
 
