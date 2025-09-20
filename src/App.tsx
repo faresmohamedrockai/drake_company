@@ -18,7 +18,7 @@ import './styles/rtl.css';
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ToastContainer } from 'react-toastify';
 import {
-  getNotificationData, markNotificationAsSeen, getDevelopers, getZones, getLeads,getAllLeads,
+  getNotificationData, markNotificationAsSeen, getDevelopers, getZones, getLeads, getAllLeads,
   getUsers, getProperties, getMeetings, getContracts, getLogs, getProjects, getTaskStatistics
 } from './queries/queries';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -88,7 +88,7 @@ const AppContent: React.FC = () => {
         "meeting-view": "/meetings",
         tasks: "/tasks",
       };
-      
+
       const targetRouteKey = Object.keys(routesMap).find(key => route.includes(key));
       const targetRoute = targetRouteKey ? routesMap[targetRouteKey] : null;
 
@@ -106,7 +106,7 @@ const AppContent: React.FC = () => {
 <<<<<<< HEAD
       queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: getLeads, staleTime: 1000 * 60 * 5 });
 =======
-      
+
 >>>>>>> e41849a (Merge branch 'main' of https://github.com/RockaiDev/Propai-CRM-Front-End)
       queryClient.prefetchQuery({ queryKey: ['developers'], queryFn: getDevelopers, staleTime: 1000 * 60 * 5 });
       queryClient.prefetchQuery({ queryKey: ['zones'], queryFn: getZones, staleTime: 1000 * 60 * 5 });
@@ -150,29 +150,18 @@ const AppContent: React.FC = () => {
       <Sidebar />
       <main className={`flex-1 min-w-0 overflow-y-auto overflow-x-hidden transition-all relative ${rtlMargin('md:ml-[var(--sidebar-width,16rem)]', 'md:mr-[var(--sidebar-width,16rem)]')}`}>
         <div className={`hidden md:block absolute inset-y-0 ${rtlMargin('left-0', 'right-0')} w-px bg-gray-200`} />
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -30 }}
-            transition={{ duration: 0.1, ease: 'easeOut' }}
-            className="h-full"
-          >
-            <Routes>
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/leads" element={<LeadsList />} />
-              <Route path="/inventory" element={<InventoryManagement />} />
-              <Route path="/meetings" element={<MeetingsManagement />} />
-              <Route path="/tasks" element={<TasksManagement />} />
-              <Route path="/contracts" element={<ContractsManagement />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </motion.div>
-        </AnimatePresence>
+        <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/leads" element={<LeadsList />} />
+          <Route path="/inventory" element={<InventoryManagement />} />
+          <Route path="/meetings" element={<MeetingsManagement />} />
+          <Route path="/tasks" element={<TasksManagement />} />
+          <Route path="/contracts" element={<ContractsManagement />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
       </main>
 
       <NotificationBell
