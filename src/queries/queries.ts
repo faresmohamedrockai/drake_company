@@ -13,10 +13,75 @@ export const getZones = async () => {
     return response.data.zones as Zone[];
 }
 
+
+
+
+
+
+
+
+
+
+
+import { useQuery } from '@tanstack/react-query';
+
+async function fetchStreamLeads(token: string) {
+  const response = await fetch(`${process.env.VITE_BASE_URL}/leads/stream`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.body) throw new Error("No response body");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let leads: any[] = [];
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true }).trim();
+    if (!chunk) continue;
+
+    
+    for (const line of chunk.split("\n")) {
+      if (!line) continue;
+      try {
+        const parsed = JSON.parse(line);
+        leads.push(...parsed);
+      } catch (e) {
+        console.error("Failed to parse line:", line);
+      }
+    }
+  }
+
+  return leads;
+}
+
+export function useStreamLeads(token: string) {
+  return useQuery({
+    queryKey: ['leads', 'stream'],
+    queryFn: () => fetchStreamLeads(token),
+  });
+}
+
+
+
+
+
+
+
+
+
+
+
+
 export const getLeads = async () => {
     const response = await axiosInterceptor.get('/leads');
 
-    // Handle different possible response structures
+   
     if (response.data.leads) {
         return response.data.leads as Lead[];
     } else if (response.data.data) {
@@ -28,6 +93,9 @@ export const getLeads = async () => {
         return [];
     }
 }
+
+
+
 
 // Get leads with calls and visits populated
 export const getLeadsWithDetails = async () => {

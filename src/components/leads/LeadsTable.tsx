@@ -3,6 +3,7 @@ import { Eye, Edit, Trash2, ArrowLeftRight, Facebook, Instagram, Phone as PhoneI
 import { Interest, Lead, LeadStatus, Property, Tier, User } from '../../types';
 import { PhoneNumber } from '../ui/PhoneNumber';
 import { Badge } from "../ui/badge";
+import { useAuth } from '../../contexts/AuthContext'; // 🚀 الخطوة 1: استيراد useAuth
 
 interface LeadsTableProps {
   leads: Lead[];
@@ -46,6 +47,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
   i18n,
   searchTerm
 }) => {
+  // 🚀 الخطوة 2: استدعاء الـ hook للحصول على المستخدم الحالي
+  const { user: loggedInUser } = useAuth();
+
   const getUserColor = useMemo(() => (userName: string) => {
     const userIndex = users?.findIndex(user => user.name === userName);
     return userIndex !== undefined && userIndex >= 0 ? USER_COLORS[userIndex % USER_COLORS.length] : 'bg-gray-500';
@@ -88,21 +92,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     return pages;
   };
 
-  // const project = leads.map((lead) => lead.inventoryInterest?.project.nameAr)
-
-  // const meetings = leads.map((lead) => {
-  //   if (!lead.meetings || lead.meetings.length === 0) {
-  //     return null; // لو مفيش اجتماعات
-  //   }
-  //   const lastMeeting = lead.meetings[lead.meetings.length - 1]; // آخر اجتماع
-  //   return lastMeeting.date;
-  // });
-
-
-  // console.log(meettings);
-
-
-
   const getUserInitials = useMemo(() => (userName: string) => {
     return userName
       .split(' ')
@@ -111,9 +100,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
       .toUpperCase()
       .slice(0, 2);
   }, []);
-
-
-
 
   const getDisplayName = useMemo(() => (lead: Lead) => {
     if (i18n.language === 'ar') {
@@ -141,10 +127,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     }
   };
 
-
-
-
-
   const getStatusColor = useMemo(() => (status: string) => {
     switch (status) {
       case LeadStatus.FRESH_LEAD: return 'bg-blue-100 text-blue-800';
@@ -166,7 +148,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
       case Interest.UNDER_DECISION: return 'bg-blue-100 text-blue-800';
       case Interest.HOT: return 'bg-yellow-100 text-yellow-800';
       case Interest.WARM: return 'bg-purple-100 text-purple-800';
-
       default: return 'bg-gray-100 text-gray-800';
     }
   }, []);
@@ -177,7 +158,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
       case Tier.GOLD: return 'bg-yellow-100 text-yellow-800';
       case Tier.PLATINUM: return 'bg-purple-100 text-purple-800';
       case Tier.SILVER: return 'bg-green-100 text-green-800';
-
       default: return 'bg-gray-100 text-gray-800';
     }
   }, []);
@@ -193,17 +173,13 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
   const handleRowsPerPageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newRowsPerPage = parseInt(event.target.value);
     setRowsPerPage(newRowsPerPage);
-    setCurrentPage(1); // Reset to first page when changing rows per page
+    setCurrentPage(1);
   };
-  // import { useEffect } from "react";
-
-  // ...
 
   useEffect(() => {
     if (totalPages <= 1 && currentPage !== 1) {
       setCurrentPage(1);
     }
-    // كمان لو عدد الصفحات قل وبقي أقل من الصفحة الحالية يرجعك لأول صفحة
     if (currentPage > totalPages) {
       setCurrentPage(1);
     }
@@ -213,27 +189,15 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
     const key = (source || '').toLowerCase().trim();
     const iconClass = "w-4 h-4 text-gray-600";
     switch (key) {
-      case 'whatsapp':
-        return <WhatsAppIcon className={iconClass} />;
-      case 'phone':
-      case 'call':
-        return <PhoneIcon className={iconClass} />;
-      case 'facebook':
-        return <Facebook className={iconClass} />;
-      case 'instagram':
-        return <Instagram className={iconClass} />;
-      case 'website':
-      case 'web':
-        return <Globe className={iconClass} />;
-      case 'email':
-        return <Mail className={iconClass} />;
-      case 'referral':
-        return <UserIcon className={iconClass} />;
-      case 'campaign':
-      case 'ads':
-        return <Megaphone className={iconClass} />;
-      default:
-        return <LinkIcon className={iconClass} />;
+      case 'whatsapp': return <WhatsAppIcon className={iconClass} />;
+      case 'phone': case 'call': return <PhoneIcon className={iconClass} />;
+      case 'facebook': return <Facebook className={iconClass} />;
+      case 'instagram': return <Instagram className={iconClass} />;
+      case 'website': case 'web': return <Globe className={iconClass} />;
+      case 'email': return <Mail className={iconClass} />;
+      case 'referral': return <UserIcon className={iconClass} />;
+      case 'campaign': case 'ads': return <Megaphone className={iconClass} />;
+      default: return <LinkIcon className={iconClass} />;
     }
   }, []);
 
@@ -317,14 +281,20 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                   >
                     <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
                   </button>
-                  <button
-                    onClick={() => onDeleteLead(lead)}
-                    className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                    title={t('deleteLead')}
-                    aria-label={`Delete ${getDisplayName(lead)}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  
+                  {/* --- ✅✅✅ START: الإصلاح هنا لعرض الجوال ✅✅✅ --- */}
+                  {loggedInUser?.role !== 'sales_rep' && (
+                    <button
+                      onClick={() => onDeleteLead(lead)}
+                      className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                      title={t('deleteLead')}
+                      aria-label={`Delete ${getDisplayName(lead)}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                  {/* --- ✅✅✅ END: الإصلاح هنا لعرض الجوال ✅✅✅ --- */}
+
                 </div>
               </div>
             ))
@@ -426,8 +396,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       <Badge variant="muted" size="sm">{typeof lead.budget === 'number' ? lead.budget.toLocaleString() : Number(lead.budget).toLocaleString()}</Badge>
                     </div>
                   </td>
-
-
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <span className="text-xs sm:text-sm text-gray-900 truncate block" title={lead.inventoryInterestId}>
                       {properties?.find(property => property.id === lead.inventoryInterestId)?.titleEn}
@@ -447,9 +415,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       <Badge className={`${getStatusColor(lead.status)} border-0`}>{lead.status}</Badge>
                     </div>
                   </td>
-
-
-
                   <td className="px-4 py-3 hidden md:table-cell">
                     {lead.owner ? (
                       <div className="flex items-center space-x-2 min-w-0">
@@ -481,8 +446,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                         const lastMeeting = [...lead.meetings].sort(
                           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
                         )[0];
-
-                        // ✅ صياغة الوقت من "HH:mm" → "hh:mm AM/PM"
                         const formatTime = (timeStr: string) => {
                           if (!timeStr) return "";
                           const [hours, minutes] = timeStr.split(":").map(Number);
@@ -494,13 +457,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                             hour12: true,
                           });
                         };
-
                         return (
                           <div>
-                            {/* عرض التاريخ */}
                             <div>{new Date(lastMeeting.date).toLocaleDateString()}</div>
-
-                            {/* عرض الوقت بالصياغة الجديدة */}
                             <div className="text-md text-gray-500">
                               {formatTime(lastMeeting.time)}
                             </div>
@@ -511,9 +470,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       <span className="text-gray-400">No Meetings</span>
                     )}
                   </td>
-
-
-
 
                   <td className="px-4 py-3">
                     <div className="flex items-center space-x-2">
@@ -533,14 +489,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       >
                         <Edit className="h-4 w-4" />
                       </button>
-
-
-
-
-
-
-
-
                       <button
                         onClick={() => onTransferLead(lead)}
                         className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
@@ -549,17 +497,20 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       >
                         <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
                       </button>
+                      
+                      {/* --- ✅✅✅ START: الإصلاح هنا لجدول سطح المكتب ✅✅✅ --- */}
+                      {loggedInUser?.role !== 'sales_rep' && (
+                        <button
+                          onClick={() => onDeleteLead(lead)}
+                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                          title={t('deleteLead')}
+                          aria-label={`Delete ${getDisplayName(lead)}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                      {/* --- ✅✅✅ END: الإصلاح هنا لجدول سطح المكتب ✅✅✅ --- */}
 
-
-
-                      <button
-                        onClick={() => onDeleteLead(lead)}
-                        className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                        title={t('deleteLead')}
-                        aria-label={`Delete ${getDisplayName(lead)}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -572,16 +523,10 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                 </td>
               </tr>
             )}
-
           </tbody>
-
         </table>
-
-
-
       </div>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-4 py-3 space-y-3 sm:space-y-0">
-        {/* Rows per page selector and page info */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-500">Show:</span>
@@ -606,7 +551,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
           </span>
         </div>
 
-        {/* Pagination */}
         <div className="flex items-center space-x-1">
           <button
             onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
@@ -615,7 +559,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
           >
             &lt; Back
           </button>
-
           {getPageNumbers().map((page, idx) => (
             <button
               key={idx}
@@ -628,7 +571,6 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
               {page}
             </button>
           ))}
-
           <button
             onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
             disabled={currentPage === totalPages}
@@ -642,4 +584,4 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
   );
 });
 
-LeadsTable.displayName = 'LeadsTable'; 
+LeadsTable.displayName = 'LeadsTable';
