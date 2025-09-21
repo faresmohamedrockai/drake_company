@@ -103,12 +103,8 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) {
       queryClient.invalidateQueries({ queryKey: ['notificationData'] });
-<<<<<<< HEAD
       queryClient.prefetchQuery({ queryKey: ['leads'], queryFn: getLeads, staleTime: 1000 * 60 * 5 });      queryClient.prefetchQuery({ queryKey: ['developers'], queryFn: getDevelopers, staleTime: 1000 * 60 * 5 });
-=======
-      
       queryClient.prefetchQuery({ queryKey: ['developers'], queryFn: getDevelopers, staleTime: 1000 * 60 * 5 });
->>>>>>> e41849a (Merge branch 'main' of https://github.com/RockaiDev/Propai-CRM-Front-End)
       queryClient.prefetchQuery({ queryKey: ['zones'], queryFn: getZones, staleTime: 1000 * 60 * 5 });
       queryClient.prefetchQuery({ queryKey: ['Allleads'], queryFn: getAllLeads, staleTime: 1000 * 60 * 5 });
       if (user?.role === 'admin' || user?.role === 'sales_admin') {
