@@ -166,7 +166,6 @@ const AppContent: React.FC = () => {
         onClick={handleBellClick}
         notificationCount={unreadCount}
       />
-
       <AnimatePresence>
         {isModalOpen && (
           <NotificationModal
