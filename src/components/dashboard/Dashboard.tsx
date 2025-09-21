@@ -21,7 +21,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList } from 'recharts';
 
 // تم إضافة getUsersStatus لجلب بيانات لوحة الصدارة
-import { getLeads, getLogs, getMeetings, getUsers, getMyTasks, getTaskStatistics, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus, getAllLeads } from '../../queries/queries';
+import { getLeads, getLogs, getMeetings, getUsers, getMyTasks, getTaskStatistics, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus } from '../../queries/queries';
 import { Lead, Log, Meeting, User as UserType, LeadStatus, Task, TaskStatistics } from '../../types';
 import UserFilterSelect from '../leads/UserFilterSelect';
 import LeadsSummaryCards from '../leads/LeadsSummaryCards';
@@ -80,9 +80,9 @@ const useDashboardData = () => {
   });
 
   const { data: leads = [], isLoading: leadsLoading } = useQuery<Lead[]>({
-    queryKey: ['Allleads'],
+    queryKey: ['leads'],
     queryFn: async () => {
-      const leadsData = await getAllLeads();
+      const leadsData = await getLeads();
       // Try to populate with calls and visits data
       return await populateLeadsWithCallsAndVisits(leadsData);
     },

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { X, Calendar, Clock, User, Building2, Users, FileText, Loader2 } from 'lucide-react';
 import { Task, CreateTaskDto } from '../../types';
-import { getUsers, getLeads, getProjects, getProperties, getAllLeads } from '../../queries/queries';
+import { getUsers, getLeads, getProjects, getProperties } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface TaskModalProps {
@@ -49,7 +49,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSubmit, task, 
   });
 
   const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: getUsers, enabled: !!user && (user.role === 'admin' || user.role === 'sales_admin') });
-  const { data: leads = [] } = useQuery({ queryKey: ['Allleads'], queryFn: getAllLeads, enabled: !!user });
+  const { data: leads = [] } = useQuery({ queryKey: ['leads'], queryFn: getLeads, enabled: !!user });
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: getProjects, enabled: !!user });
   const { data: properties = [] } = useQuery({ queryKey: ['properties'], queryFn: getProperties, enabled: !!user });
 

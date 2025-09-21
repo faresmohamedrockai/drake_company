@@ -1,11 +1,13 @@
 import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Id, toast } from 'react-toastify';
 import * as XLSX from 'xlsx';
+
+// Components
 import LeadModal from './LeadModal';
 import AddLeadModal from './AddLeadModal';
 import EditLeadModal from './EditLeadModal';
@@ -14,18 +16,25 @@ import UserFilterSelect from './UserFilterSelect';
 import { LeadsTable } from './LeadsTable';
 import { StatusCards } from './StatusCards';
 import { CallOutcomeCards } from './CallOutcomeCards';
+// import { VisitStatusCards } from './VisitStatusCards';
 import FilterPanel from './FilterPanel';
 import { BulkActionsBar } from './BulkActionsBar';
 import { SearchAndActions } from './SearchAndActions';
 import { DeleteConfirmationModal } from './DeleteConfirmationModal';
+
+// Types and utilities
 import { Lead, LeadStatus, Property, User } from '../../types';
 import type { Project } from '../inventory/ProjectsTab';
 import { deleteLead, getLeads, getProperties, getUsers, bulkUpdateLeads, createLead, getProjects } from '../../queries/queries';
 import { useLeadsFilters } from '../../hooks/useLeadsFilters';
 import { useLeadsSelection } from '../../hooks/useLeadsSelection';
+// import { useLeadsStats } from '../../hooks/useLeadsStats';
 import TransferLeadModal from './TransferLead';
 import { AdviceModal } from './AdviceModal';
 import axiosInterceptor from "../../../axiosInterceptor/axiosInterceptor";
+// import axiosInstance from 'axiosInterceptor';
+
+// Constants
 
 const LeadsList: React.FC = React.memo(() => {
   const { user } = useAuth();
@@ -33,63 +42,89 @@ const LeadsList: React.FC = React.memo(() => {
   const location = useLocation();
   const queryClient = useQueryClient();
 
+  // State management
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [ShowtransferModal, setShowTransferModall] = useState(false);
+  // const [showAdviceModal, setShowAdviceModal] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
   const [transferModalLead, setTransferModalLead] = useState<Lead | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingLead, setDeletingLead] = useState<Lead | null>(null);
   const [toastId, setToastId] = useState<Id | null>(null);
+
+
+  // ✨ 1. تعريف الحالات الخاصة بنافذة النصيحة
   const [showAdviceModal, setShowAdviceModal] = useState(false);
   const [isAdviceLoading, setIsAdviceLoading] = useState(false);
   const [adviceData, setAdviceData] = useState<any | null>(null);
   const [adviceError, setAdviceError] = useState<string | null>(null);
+
+
+  // Import functionality state
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   const [showImportModal, setShowImportModal] = useState(false);
-  
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Custom hooks
   const {
-    searchTerm, setSearchTerm, filters, setFilters, activeFiltersCount,
-    clearAllFilters, selectedManager, setSelectedManager, selectedSalesRep,
-    setSelectedSalesRep, activeStatusCard, setActiveStatusCard,
-    activeCallOutcomeCard, setActiveCallOutcomeCard, activeVisitStatusCard,
-    setActiveVisitStatusCard, showAllCards, setShowAllCards
+    searchTerm,
+    setSearchTerm,
+    filters,
+    setFilters,
+    activeFiltersCount,
+    clearAllFilters,
+    selectedManager,
+    setSelectedManager,
+    selectedSalesRep,
+    setSelectedSalesRep,
+    activeStatusCard,
+    setActiveStatusCard,
+    activeCallOutcomeCard,
+    setActiveCallOutcomeCard,
+    activeVisitStatusCard,
+    setActiveVisitStatusCard,
+    showAllCards,
+    setShowAllCards
   } = useLeadsFilters(location);
 
   const {
-    selectedLeads, isSelectAllChecked, showBulkActions, bulkAssignToUserId,
-    setBulkAssignToUserId, handleSelectLead: handleSelectLeadBase,
-    handleSelectAll: handleSelectAllBase, clearSelection
+    selectedLeads,
+    isSelectAllChecked,
+    showBulkActions,
+    bulkAssignToUserId,
+    setBulkAssignToUserId,
+    handleSelectLead: handleSelectLeadBase,
+    handleSelectAll: handleSelectAllBase,
+    clearSelection
   } = useLeadsSelection();
 
-  const { data, isLoading: isLoadingLeads, isFetching, error: leadsError } = useQuery({
-    queryKey: ['leads', user?.id, currentPage, rowsPerPage],
-    queryFn: () => getLeads(currentPage, rowsPerPage),
-    enabled: !!user,
-    placeholderData: keepPreviousData,
-    staleTime: 1000 * 60 * 5,
+
+  // console.log(i18n);
+  
+  // API Queries
+  const { data: leads = [], isLoading: isLoadingLeads, error: leadsError } = useQuery<Lead[]>({
+    queryKey: ['leads'],
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    queryFn: getLeads,
     retry: 3,
-    retryDelay: 1000,
+    retryDelay: 1000
   });
-console.log("All Leads From Back",data);
-const TotalLeads = data?.pagination?.total
-  const leads = data?.leads || [];
-  const paginationInfo = data?.pagination;
-  const myLeadsCount = data?.myLeads;
 
   const { data: properties = [] } = useQuery<Property[]>({
-    queryKey: ['properties'], staleTime: 1000 * 60 * 5, queryFn: getProperties, retry: 3
+    queryKey: ['properties'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: getProperties,
+    retry: 3
   });
-
   const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ['projects'], staleTime: 1000 * 60 * 5, queryFn: getProjects, retry: 3
+    queryKey: ['projects'],
+    staleTime: 1000 * 60 * 5,
+    queryFn: getProjects,
+    retry: 3
   });
 
   const { data: users = [] } = useQuery<User[]>({
@@ -100,19 +135,31 @@ const TotalLeads = data?.pagination?.total
     retry: 3
   });
 
+  // Mutations
   const { mutateAsync: deleteLeadMutation, isPending: isDeletingLead } = useMutation({
     mutationFn: (leadId: string) => deleteLead(leadId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      toast.update(toastId as Id, { render: t('leadDeleted'), type: 'success', isLoading: false, autoClose: 3000 });
+      toast.update(toastId as Id, {
+        render: t('leadDeleted'),
+        type: 'success',
+        isLoading: false,
+        autoClose: 3000
+      });
     },
     onError: (error: any) => {
-      toast.update(toastId as Id, { render: error.response?.data?.message || t('errorDeletingLead'), type: 'error', isLoading: false, autoClose: 3000 });
+      toast.update(toastId as Id, {
+        render: error.response?.data?.message || t('errorDeletingLead'),
+        type: 'error',
+        isLoading: false,
+        autoClose: 3000
+      });
     }
   });
 
   const { mutateAsync: bulkUpdateLeadsMutation, isPending: isBulkUpdating } = useMutation({
-    mutationFn: ({ leadIds, updateData }: { leadIds: string[], updateData: Partial<Lead> }) => bulkUpdateLeads(leadIds, updateData),
+    mutationFn: ({ leadIds, updateData }: { leadIds: string[], updateData: Partial<Lead> }) =>
+      bulkUpdateLeads(leadIds, updateData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       toast.success(t('leadsUpdated') || 'Leads updated successfully');
@@ -133,6 +180,7 @@ const TotalLeads = data?.pagination?.total
     }
   });
 
+  // On mount, check for filterType and filterValue in query params and set active card
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
     const filterType = params.get('filterType');
@@ -152,7 +200,8 @@ const TotalLeads = data?.pagination?.total
         setActiveVisitStatusCard(filterValue);
       }
     }
-  }, [location.search, setActiveStatusCard, setActiveCallOutcomeCard, setActiveVisitStatusCard]);
+    // eslint-disable-next-line
+  }, [location.search]);
 
   useEffect(() => {
     if (isDeletingLead) {
@@ -160,10 +209,13 @@ const TotalLeads = data?.pagination?.total
     }
   }, [isDeletingLead]);
 
+  // Clear selection when filters change
   useEffect(() => {
     clearSelection();
   }, [searchTerm, activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, selectedManager, selectedSalesRep, clearSelection]);
 
+  // Excel import functionality
+   // Excel import functionality
   const handleExcelImport = async (file: File) => {
     setIsImporting(true);
     setImportProgress(0);
@@ -171,8 +223,15 @@ const TotalLeads = data?.pagination?.total
 
     try {
       const data = await readExcelFile(file);
-      const leadsToImport = processExcelData(data);
-      if (!leadsToImport || leadsToImport.length === 0) {
+      const leads = processExcelData(data);
+
+      // --- سطر مهم للتحقق ---
+      // افتح الـ console في متصفحك لترى شكل البيانات قبل إرسالها إلى قاعدة البيانات
+      // تأكد من وجود حقل "contacts" كـ array وحقل "description" كنص
+      console.log('Leads object to be sent to API:', leads);
+      // -----------------------------
+
+      if (!leads || leads.length === 0) {
         toast.info('No new valid leads to import from the file.');
         setIsImporting(false);
         setImportProgress(0);
@@ -182,24 +241,29 @@ const TotalLeads = data?.pagination?.total
       
       let successCount = 0;
       let errorCount = 0;
-      for (let i = 0; i < leadsToImport.length; i++) {
+
+      for (let i = 0; i < leads.length; i++) {
         try {
-          await createLeadMutation(leadsToImport[i]);
+          await createLeadMutation(leads[i]);
           successCount++;
         } catch (error) {
           errorCount++;
-          console.error('Error importing lead:', error, 'Lead data:', leadsToImport[i]);
+          console.error('Error importing lead:', error, 'Lead data:', leads[i]);
         }
-        const progress = Math.round(((i + 1) / leadsToImport.length) * 100);
+
+        // Update progress
+        const progress = Math.round(((i + 1) / leads.length) * 100);
         setImportProgress(progress);
       }
 
+      // Show results
       if (successCount > 0) {
         toast.success(`Successfully imported ${successCount} leads${errorCount > 0 ? ` (${errorCount} failed)` : ''}`);
       }
       if (errorCount > 0) {
         toast.error(`Failed to import ${errorCount} leads. Check the console for details.`);
       }
+
     } catch (error) {
       toast.error('Error processing Excel file');
       console.error('Excel import error:', error);
@@ -211,44 +275,74 @@ const TotalLeads = data?.pagination?.total
   };
 
   const processExcelData = (data: any[]): Partial<Lead>[] => {
-    const processedData = data.map(row => {
-      const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] || row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] || row['phone_number'] || row['phoneNumber'] || row['PHONE'] || row['PhoneNumber'] || row['Phone_Number'] || row['phone number'];
-      if (!phoneNumber || phoneNumber.toString().trim() === '') return null;
-      
-      const otherPhonesRaw = row['Other Phones'] || row['otherPhones'] || row['other_phones'] || row['أرقام أخرى'] || row['هواتف أخرى'] || row['otherPohones'];
-      const notes = row['Notes'] || row['notes'] || row['ملاحظات'] || row['Description'] || row['description'] || row['الوصف'];
-      const arabicName = row['Arabic Name'] || row['nameAr'] || row['الاسم العربي'] || '';
-      const englishName = row['English Name'] || row['nameEn'] || row['الاسم الإنجليزي'] || '';
-      const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] || '';
-      const budget = row['Budget'] || row['budget'] || row['الميزانية'] || 0;
-      const source = row['Source'] || row['source'] || row['المصدر'] || 'Data Sheet';
-      
-      const cleanPhone = (phone: any) => String(phone || '').replace(/[\s\-\(\)]/g, '');
-      const primaryCleanPhone = cleanPhone(phoneNumber);
-      const otherCleanPhones = String(otherPhonesRaw || '').split(/[,;\n]/).map(phone => cleanPhone(phone.trim())).filter(phone => phone && phone.length >= 10);
-      const allContacts = [...new Set([primaryCleanPhone, ...otherCleanPhones])].filter(Boolean);
-      const parsedBudget = typeof budget === 'string' ? parseFloat(budget.replace(/[^\d.]/g, '')) || 0 : Number(budget) || 0;
+    const processedData = data
+      .map(row => {
+        // --- Get Primary Phone Number (Required) ---
+        const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
+          row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+          row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+          row['PhoneNumber'] || row['Phone_Number'] ||
+          row['phone number'];
 
-      return {
-        nameAr: String(arabicName).trim(),
-        nameEn: String(englishName).trim(),
-        contact: primaryCleanPhone,
-        contacts: allContacts,
-        email: String(email).trim(),
-        source: String(source).trim(),
-        status: LeadStatus.FOLLOW_UP,
-        budget: parsedBudget,
-        description: String(notes || '').trim(),
-        assignedToId: user?.id || '',
-        ownerId: user?.id || '',
-        createdBy: user?.name || 'System',
-        createdAt: new Date().toISOString(),
-      };
-    }).filter(lead => lead && lead.contact && lead.contact.length >= 10);
+        // If no primary phone number, skip this row entirely
+        if (!phoneNumber || phoneNumber.toString().trim() === '') {
+          return null;
+        }
+
+        // --- Get Other Phones (Optional) ---
+        const otherPhonesRaw = row['Other Phones'] || row['otherPhones'] || row['other_phones'] ||
+          row['أرقام أخرى'] || row['هواتف أخرى'] || row['otherPohones'];
+
+        // --- Get Notes for Description (Optional) ---
+        const notes = row['Notes'] || row['notes'] || row['ملاحظات'] ||
+          row['Description'] || row['description'] || row['الوصف'];
+
+        // --- Get other fields ---
+        const arabicName = row['Arabic Name'] || row['nameAr'] || row['الاسم العربي'] || '';
+        const englishName = row['English Name'] || row['nameEn'] || row['الاسم الإنجليزي'] || '';
+        const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] || '';
+        const budget = row['Budget'] || row['budget'] || row['الميزانية'] || 0;
+        const source = row['Source'] || row['source'] || row['المصدر'] || 'Data Sheet';
+        
+        // --- Clean and Process Data ---
+        const cleanPhone = (phone: any) => String(phone || '').replace(/[\s\-\(\)]/g, '');
+        
+        const primaryCleanPhone = cleanPhone(phoneNumber);
+
+        // Safely process other phones: convert to string, split, clean, and filter
+        const otherCleanPhones = String(otherPhonesRaw || '')
+          .split(/[,;\n]/) // Split by comma, semicolon, or new line
+          .map(phone => cleanPhone(phone.trim()))
+          .filter(phone => phone && phone.length >= 10); // Validate and filter empty strings
+
+        // Combine all phone numbers into the 'contacts' array, ensuring no duplicates and filtering out empty values
+        const allContacts = [...new Set([primaryCleanPhone, ...otherCleanPhones])].filter(Boolean);
+
+        const parsedBudget = typeof budget === 'string' ? parseFloat(budget.replace(/[^\d.]/g, '')) || 0 : Number(budget) || 0;
+
+        return {
+          nameAr: String(arabicName).trim(),
+          nameEn: String(englishName).trim(),
+          contact: primaryCleanPhone,
+          contacts: allContacts, // ✅ هذا الحقل هو مصفوفة الأرقام التي سترسل
+          email: String(email).trim(),
+          source: String(source).trim(),
+          status: LeadStatus.FOLLOW_UP, 
+          budget: parsedBudget,
+          description: String(notes || '').trim(), // ✅ هذا الحقل هو الملاحظات التي سترسل
+          assignedToId: user?.id || '',
+          ownerId: user?.id || '',
+          createdBy: user?.name || 'System',
+          createdAt: new Date().toISOString(),
+        };
+      })
+      .filter(lead => lead && lead.contact && lead.contact.length >= 10); // Filter out null rows and invalid leads
 
     if (!processedData) return [];
 
+    // --- Deduplication logic against existing leads in the database ---
     const existingPhones = new Set(leads.map(lead => lead.contact));
+    // Also consider other contacts for deduplication
     leads.forEach(lead => {
         if (lead.contacts) {
             lead.contacts.forEach(c => existingPhones.add(c));
@@ -256,6 +350,7 @@ const TotalLeads = data?.pagination?.total
     });
 
     const newLeads = processedData.filter(lead => {
+        // Check if any of the new lead's contacts already exist
         return !lead!.contacts.some(c => existingPhones.has(c));
     });
 
@@ -267,59 +362,188 @@ const TotalLeads = data?.pagination?.total
     return newLeads as Partial<Lead>[];
   };
 
-  const readExcelFile = (file: File): Promise<any[]> => {
+   const readExcelFile = (file: File): Promise<any[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
+
       reader.onload = (e) => {
         try {
           let workbook;
+          
+          // التحقق من نوع الملف: إذا كان CSV، يتم قراءته كنص بترميز UTF-8
           if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
             const text = e.target?.result as string;
+            // مكتبة XLSX يمكنها تحليل النص مباشرة
             workbook = XLSX.read(text, { type: 'string' });
           } else {
+            // بالنسبة لملفات الإكسل الأخرى، يتم قراءتها كـ ArrayBuffer
             const data = new Uint8Array(e.target?.result as ArrayBuffer);
             workbook = XLSX.read(data, { type: 'array' });
           }
+
           const sheetName = workbook.SheetNames[0];
-          if (!sheetName) return reject(new Error('No sheets found in the workbook.'));
+          if (!sheetName) {
+            return reject(new Error('No sheets found in the workbook.'));
+          }
+
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
-          if (jsonData.length < 1) return resolve([]);
+
+          if (jsonData.length < 1) {
+            return resolve([]); // Handle empty file
+          }
+
+          // إزالة الصفوف الفارغة تماماً
           const nonEmptyRows = jsonData.filter(row => (row as any[]).some(cell => cell !== null && cell !== ''));
-          if (nonEmptyRows.length < 2) return resolve([]);
+          
+          if (nonEmptyRows.length < 2) {
+             return resolve([]); // Handle file with only a header or no data
+          }
+
+          // الحصول على أسماء الأعمدة من الصف الأول
           const headers = nonEmptyRows[0] as string[];
           const rows = nonEmptyRows.slice(1) as any[][];
+
           const result = rows.map(row => {
             const obj: any = {};
             headers.forEach((header, index) => {
+              // التأكد من أن اسم العمود هو نص قبل استخدامه كمفتاح
               const key = header ? String(header).trim() : `column_${index}`;
               obj[key] = row[index];
             });
             return obj;
           });
+
           resolve(result);
         } catch (error) {
           console.error("Error parsing the file:", error);
           reject(error);
         }
       };
+
       reader.onerror = (error) => {
         console.error("Error reading the file:", error);
         reject(new Error('Failed to read the file.'));
       };
+
+      // تحديد طريقة قراءة الملف بناءً على نوعه
       if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+        // إجبار المتصفح على قراءة ملفات CSV كنص بترميز UTF-8
         reader.readAsText(file, 'UTF-8');
       } else {
+        // قراءة الملفات الثنائية (xlsx, xls) كـ ArrayBuffer
         reader.readAsArrayBuffer(file);
       }
     });
   };
+
+  // const processExcelData = (data: any[]): Partial<Lead>[] => {
+  //   const processedData = data
+  //     .filter(row => {
+  //       // Check for phone number in various possible column names
+  //       const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
+  //         row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+  //         row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+  //         row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+  //         row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'];
+  //       return phoneNumber && phoneNumber.toString().trim() !== '';
+  //     })
+  //     .map(row => {
+  //       // Get phone number from various possible column names
+  //       const phoneNumber = row['Phone Number'] || row['phone'] || row['Phone'] ||
+  //         row['رقم الهاتف'] || row['هاتف'] || row['تليفون'] ||
+  //         row['phone_number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] ||
+  //         row['PhoneNumber'] || row['Phone_Number'] || row['PHONE_NUMBER'] ||
+  //         row['phone number'] || row['phoneNumber'] || row['PHONE'] ||
+  //         row['Phone'] || row['phone'] || row['تليفون'] || row['هاتف'] ||
+  //         row['رقم الهاتف'] || row['رقم الهاتف'] || row['رقم الهاتف'] || '';
+
+  //       // Get Arabic name from various possible column names
+  //       const arabicName = row['Arabic Name'] || row['nameAr'] || row['Name (Arabic)'] ||
+  //         row['الاسم العربي'] || row['اسم عربي'] || row['الاسم'] ||
+  //         row['arabic_name'] || row['arabicName'] || row['ARABIC_NAME'] ||
+  //         row['ArabicName'] || row['Arabic_Name'] ||
+  //         row['Arabic Name'] || row['Name (Arabic)'] || row['الاسم العربي'] ||
+  //         row['اسم عربي'] || row['الاسم'] || row['arabic_name'] ||
+  //         row['arabicName'] || row['ARABIC_NAME'] || row['ArabicName'] ||
+  //         row['Arabic_Name'] || '';
+
+  //       // Get English name from various possible column names
+  //       const englishName = row['English Name'] || row['nameEn'] || row['Name (English)'] ||
+  //         row['الاسم الإنجليزي'] || row['اسم إنجليزي'] || row['الاسم الانجليزي'] ||
+  //         row['english_name'] || row['englishName'] || row['ENGLISH_NAME'] ||
+  //         row['EnglishName'] || row['English_Name'] ||
+  //         row['English Name'] || row['Name (English)'] || row['الاسم الإنجليزي'] ||
+  //         row['اسم إنجليزي'] || row['الاسم الانجليزي'] || row['english_name'] ||
+  //         row['englishName'] || row['ENGLISH_NAME'] || row['EnglishName'] ||
+  //         row['English_Name'] || '';
+
+  //       // Get email from various possible column names
+  //       const email = row['Email'] || row['email'] || row['البريد الإلكتروني'] ||
+  //         row['email_address'] || row['emailAddress'] || row['EMAIL'] ||
+  //         row['EmailAddress'] || row['Email_Address'] || '';
+
+  //       // Get budget from various possible column names
+  //       const budget = row['Budget'] || row['budget'] || row['الميزانية'] ||
+  //         row['budget_amount'] || row['budgetAmount'] || row['BUDGET'] ||
+  //         row['BudgetAmount'] || row['Budget_Amount'] || 0;
+
+  //       // Get source from various possible column names
+  //       const source = row['Source'] || row['source'] || row['المصدر'] ||
+  //         row['lead_source'] || row['leadSource'] || row['SOURCE'] ||
+  //         row['LeadSource'] || row['Lead_Source'] || 'Data Sheet';
+
+  //       // Clean phone number (remove spaces, dashes, etc.)
+  //       const cleanPhone = phoneNumber.toString().replace(/[\s\-\(\)]/g, '');
+
+  //       // Parse budget as number
+  //       const parsedBudget = typeof budget === 'string' ? parseFloat(budget.replace(/[^\d.]/g, '')) || 0 : Number(budget) || 0;
+
+  //       return {
+  //         nameAr: arabicName.toString().trim(),
+  //         nameEn: englishName.toString().trim(),
+  //         contact: cleanPhone,
+  //         contacts: [cleanPhone],
+  //         email: email.toString().trim(),
+  //         source: source.toString().trim(),
+  //         status: LeadStatus.FOLLOW_UP, // Default status as requested
+  //         budget: parsedBudget,
+  //         assignedToId: user?.id || '',
+  //         ownerId: user?.id || '',
+  //         createdBy: user?.name || 'System',
+  //         createdAt: new Date().toISOString(),
+  //       };
+  //     })
+  //     .filter(lead => lead.contact && lead.contact.length >= 10); // Filter out invalid phone numbers
+
+  //   // Remove duplicates based on phone number
+  //   const uniqueLeads = processedData.filter((lead, index, self) =>
+  //     index === self.findIndex(l => l.contact === lead.contact) ||
+  //     index === self.findIndex(l => l.contacts?.includes(lead.contact))
+  //   );
+
+  //   // Check for existing leads in database
+  //   const existingPhones = new Set(leads.map(lead => lead.contact));
+  //   const newLeads = uniqueLeads.filter(lead => !existingPhones.has(lead.contact));
+
+  //   if (uniqueLeads.length !== newLeads.length) {
+  //     const duplicateCount = uniqueLeads.length - newLeads.length;
+  //     toast.warning(`${duplicateCount} leads with duplicate phone numbers were skipped`);
+  //   }
+
+  //   return newLeads;
+  // };
 
   const handleGenerateAdvice = async () => {
     setIsAdviceLoading(true);
     setAdviceError(null);
     setAdviceData(null);
     try {
+      // const lang = i18n.language.startsWith('ar') ? 'ar' : 'en';
       const response = await axiosInterceptor.get(`/ai/tip-userLead`);
       if (response.data) {
         setAdviceData(response.data);
@@ -335,31 +559,104 @@ const TotalLeads = data?.pagination?.total
     }
   };
 
+
+  // const getUserColor = (userName: string) => {
+  //   const userIndex = users?.findIndex(user => user.name === userName);
+  //   return userIndex !== undefined && userIndex >= 0 ? userColors[userIndex % userColors.length] : 'bg-gray-500';
+  // };
+
+  // const getUserInitials = (userName: string) => {
+  //   return userName
+  //     .split(' ')
+  //     .map(name => name.charAt(0))
+  //     .join('')
+  //     .toUpperCase()
+  //     .slice(0, 2);
+  // };
+
+  // // Helper function to get display name based on current language
+  // const getDisplayName = (lead: Lead) => {
+  //   if (i18n.language === 'ar') {
+  //     return lead.nameAr || lead.nameEn || '';
+  //   } else {
+  //     return lead.nameEn || lead.nameAr || '';
+  //   }
+  // };
+
+  // Helper function to get searchable name (both languages)
+
+
+
+
+
+
   const filteredLeadsManager = useMemo(() => {
     let filtered = leads;
+
     if (selectedManager && selectedSalesRep) {
-      filtered = filtered.filter(lead => lead.owner?.id === selectedSalesRep.id);
+      // حالة اختيار الاتنين: نجيب الـ Sales Rep بس (الأولوية للـ Sales Rep)
+      filtered = filtered.filter(
+        (lead) => lead.owner?.id === selectedSalesRep.id
+      );
     } else if (selectedSalesRep) {
-      filtered = filtered.filter(lead => lead.owner?.id === selectedSalesRep.id);
+      // حالة اختيار Sales Rep بس
+      filtered = filtered.filter(
+        (lead) => lead.owner?.id === selectedSalesRep.id
+      );
     } else if (selectedManager) {
-      const teamMembers = users.filter(u => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id).map(u => u.id);
-      filtered = filtered.filter(lead => lead.owner?.id === selectedManager.id || teamMembers.includes(lead.owner?.id!));
+      // حالة اختيار Manager بس
+      const teamMembers = users
+        .filter(
+          (u) => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id
+        )
+        .map((u) => u.id);
+
+      filtered = filtered.filter(
+        (lead) =>
+          lead.owner?.id === selectedManager.id || // Leads المدير نفسه
+          teamMembers.includes(lead.owner?.id!)    // Leads التيم بتاعه
+      );
     }
+
     return filtered;
   }, [leads, selectedManager, selectedSalesRep, users]);
 
+
+  // Computed values
   const filteredLeads = useMemo(() => {
     let filtered = leads;
 
+
+
     if (selectedManager && selectedSalesRep) {
-      filtered = filtered.filter(lead => lead.owner?.id === selectedSalesRep.id);
+      // حالة اختيار الاتنين: نجيب المدير + الـ Sales Rep
+      filtered = filtered.filter(
+        (lead) =>
+
+          lead.owner?.id === selectedSalesRep.id   // Leads بتاعة الـ Sales Rep
+      );
     } else if (selectedSalesRep) {
-      filtered = filtered.filter(lead => lead.owner?.id === selectedSalesRep.id);
+      // حالة اختيار Sales Rep بس
+      filtered = filtered.filter(
+        (lead) => lead.owner?.id === selectedSalesRep.id
+      );
     } else if (selectedManager) {
-      const teamMembers = users.filter(u => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id).map(u => u.id);
-      filtered = filtered.filter(lead => lead.owner?.id === selectedManager.id || teamMembers.includes(lead.owner?.id!));
+      // حالة اختيار Manager بس
+      const teamMembers = users
+        .filter(
+          (u) => u.role === "sales_rep" && u.teamLeaderId === selectedManager.id
+        )
+        .map((u) => u.id);
+
+      filtered = filtered.filter(
+        (lead) =>
+          lead.owner?.id === selectedManager.id // Leads المدير نفسه
+          || teamMembers.includes(lead.owner?.id!)    // Leads السيلز اللي تحت إيده
+      );
     }
 
+
+    // Apply search filtering
     if (searchTerm.trim()) {
       const searchLower = searchTerm.trim().toLowerCase();
       filtered = filtered.filter(lead => {
@@ -368,10 +665,16 @@ const TotalLeads = data?.pagination?.total
         const contact = lead.contact?.trim() || '';
         const familyName = lead.familyName?.toLowerCase() || '';
         const source = lead.source.toLowerCase();
-        return nameEn.includes(searchLower) || nameAr.includes(searchLower) || contact.includes(searchLower) || familyName.includes(searchLower) || source.includes(searchLower);
+
+        return nameEn.includes(searchLower) ||
+          nameAr.includes(searchLower) ||
+          contact.includes(searchLower) ||
+          familyName.includes(searchLower) ||
+          source.includes(searchLower);
       });
     }
 
+    // Apply column filters
     filtered = filtered.filter(lead => {
       const parseInputDate = (value: string | undefined | null): Date | null => {
         if (!value) return null;
@@ -390,43 +693,78 @@ const TotalLeads = data?.pagination?.total
           return isNaN(d.getTime()) ? null : d;
         }
         const str = String(raw).trim();
+        // Try native parser first
         let d = new Date(str);
         if (!isNaN(d.getTime())) return d;
+        // If contains time, split off date part
         const dateOnly = str.split(' ')[0];
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateOnly)) {
+        // dd/MM/yyyy
+        const ddmmyyyy = /^\d{2}\/\d{2}\/\d{4}$/;
+        if (ddmmyyyy.test(dateOnly)) {
           const [dd, mm, yyyy] = dateOnly.split('/').map(Number);
           d = new Date(yyyy, mm - 1, dd);
           return isNaN(d.getTime()) ? null : d;
         }
-        if (/^\d{2}-\d{2}-\d{4}$/.test(dateOnly)) {
+        // dd-MM-yyyy
+        const ddmmyyyyDash = /^\d{2}-\d{2}-\d{4}$/;
+        if (ddmmyyyyDash.test(dateOnly)) {
           const [dd, mm, yyyy] = dateOnly.split('-').map(Number);
           d = new Date(yyyy, mm - 1, dd);
           return isNaN(d.getTime()) ? null : d;
         }
-        if (/^\d{4}\/\d{2}\/\d{2}$/.test(dateOnly)) {
+        // yyyy/MM/dd
+        const yyyymmddSlash = /^\d{4}\/\d{2}\/\d{2}$/;
+        if (yyyymmddSlash.test(dateOnly)) {
           const [yyyy, mm, dd] = dateOnly.split('/').map(Number);
           d = new Date(yyyy, mm - 1, dd);
           return isNaN(d.getTime()) ? null : d;
         }
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+        // yyyy-MM-dd
+        const yyyymmddDash = /^\d{4}-\d{2}-\d{2}$/;
+        if (yyyymmddDash.test(dateOnly)) {
           const [yyyy, mm, dd] = dateOnly.split('-').map(Number);
           d = new Date(yyyy, mm - 1, dd);
           return isNaN(d.getTime()) ? null : d;
         }
         return null;
       };
-      const displayName = i18n.language === 'ar' ? (lead.nameAr || lead.nameEn || '') : (lead.nameEn || lead.nameAr || '');
-      if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) return false;
-      if (filters.gender && lead.gender?.toLowerCase() !== filters.gender.toLowerCase()) return false;
-      if (filters.contact && !lead.contact?.toLowerCase().includes(filters.contact.toLowerCase())) return false;
-      if (filters.budget && lead.budget.toString() !== filters.budget) return false;
-      if (filters.inventoryInterestId && lead.inventoryInterestId !== filters.inventoryInterestId) return false;
-      if (filters.projectInterestId && lead.projectInterestId !== filters.projectInterestId) return false;
-      if (filters.otherProject && lead.otherProject !== filters.otherProject) return false;
-      if (filters.source && lead.source.toLowerCase() !== filters.source.toLowerCase()) return false;
-      if (filters.status && lead.status.toLowerCase() !== filters.status.toLowerCase()) return false;
-      if (filters.assignedTo && lead.owner?.id !== filters.assignedTo) return false;
+      const displayName = i18n.language === 'ar' ?
+        (lead.nameAr || lead.nameEn || '') :
+        (lead.nameEn || lead.nameAr || '');
 
+      if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) {
+        return false;
+      }
+      if (filters.gender && lead.gender?.toLowerCase() !== filters.gender.toLowerCase()) {
+        return false;
+      }
+      if (filters.contact && !lead.contact?.toLowerCase().includes(filters.contact.toLowerCase())) {
+        return false;
+      }
+      if (filters.budget && lead.budget.toString() !== filters.budget) {
+        return false;
+      }
+      if (filters.inventoryInterestId && lead.inventoryInterestId !== filters.inventoryInterestId) {
+        return false;
+      }
+      if (filters.projectInterestId && lead.projectInterestId !== filters.projectInterestId) {
+        return false;
+      }
+      if (filters.otherProject && lead.otherProject !== filters.otherProject) {
+        return false;
+      }
+      if (filters.source && lead.source.toLowerCase() !== filters.source.toLowerCase()) {
+        return false;
+      }
+      if (filters.status && lead.status.toLowerCase() !== filters.status.toLowerCase()) {
+        return false;
+      }
+      if (filters.assignedTo &&
+        lead.owner?.id !== filters.assignedTo) {
+        return false;
+      }
+
+      // Created date range filter
       const startStr = (filters as any).createdAtStart?.trim?.() || filters.createdAtStart || '';
       const endStr = (filters as any).createdAtEnd?.trim?.() || filters.createdAtEnd || '';
       if (startStr || endStr) {
@@ -434,10 +772,11 @@ const TotalLeads = data?.pagination?.total
         const leadDateObj = parseLeadDate(rawCreatedAt);
         if (!leadDateObj) return false;
         const leadStamp = toDayStamp(leadDateObj);
+
         let startDate = parseInputDate(startStr);
         let endDate = parseInputDate(endStr);
         if (startDate && endDate && startDate.getTime() > endDate.getTime()) {
-          [startDate, endDate] = [endDate, startDate];
+          const tmp = startDate; startDate = endDate; endDate = tmp;
         }
         if (startDate && leadStamp < toDayStamp(startDate)) return false;
         if (endDate && leadStamp > toDayStamp(endDate)) return false;
@@ -445,29 +784,45 @@ const TotalLeads = data?.pagination?.total
       return true;
     });
 
+    // Apply card filters
     if (activeStatusCard) {
-      if (activeStatusCard === 'my_leads') {
+      if (activeStatusCard === 'all') {
+        // Show all leads - no additional filtering needed
+      } else if (activeStatusCard === 'my_leads') {
         filtered = filtered.filter(lead => lead.owner?.id === user?.id);
-      } else if (activeStatusCard === 'not_interested_now') {
+        } else if (activeStatusCard === 'not_interested_now') {
         filtered = filtered.filter(lead => lead.status === LeadStatus.NOT_INTERSTED_NOW);
       } else if (activeStatusCard === 'scheduled_visit') {
         filtered = filtered.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT);
       } else if (activeStatusCard === 'duplicate') {
-        filtered = filtered.filter((lead, idx, arr) => arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.email && l.email === lead.email)) !== idx);
+        filtered = filtered.filter((lead, idx, arr) =>
+          arr.findIndex(l =>
+            (l.contact && l.contact === lead.contact) ||
+            (l.email && l.email === lead.email)
+          ) !== idx
+        );
       } else if (activeStatusCard === 'cold_call') {
         filtered = filtered.filter(lead => lead.source === 'Cold Call');
-      } else if (activeStatusCard !== 'all') {
+      } else {
         filtered = filtered.filter(lead => lead.status === activeStatusCard);
       }
     } else if (activeCallOutcomeCard) {
-      filtered = filtered.filter(lead => (lead.calls || []).some(call => call.outcome === activeCallOutcomeCard));
+      filtered = filtered.filter(lead =>
+        (lead.calls || []).some(call => call.outcome === activeCallOutcomeCard)
+      );
     } else if (activeVisitStatusCard) {
-      filtered = filtered.filter(lead => (lead.visits || []).some(visit => visit.status === activeVisitStatusCard));
+      filtered = filtered.filter(lead =>
+        (lead.visits || []).some(visit => visit.status === activeVisitStatusCard)
+      );
     }
 
     return filtered;
-  }, [leads, users, selectedSalesRep, selectedManager, searchTerm, filters, activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, user?.id, i18n.language]);
+  }, [
+    leads, users, selectedSalesRep, selectedManager, searchTerm, filters,
+    activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, user?.id, i18n.language
+  ]);
 
+  // Event handlers
   const handleLeadClick = useCallback((lead: Lead) => {
     setSelectedLead(lead);
     setIsModalOpen(true);
@@ -477,6 +832,9 @@ const TotalLeads = data?.pagination?.total
     setEditingLead(lead);
     setShowEditModal(true);
   }, []);
+
+
+
 
   const handeltTransferLead = useCallback((lead: Lead) => {
     setTransferModalLead(lead);
@@ -500,29 +858,48 @@ const TotalLeads = data?.pagination?.total
     }
   }, [deletingLead, deleteLeadMutation]);
 
+
+
+
+
+
+
   const handleBulkAssign = useCallback(async () => {
     if (bulkAssignToUserId && selectedLeads.size > 0) {
       try {
         await bulkUpdateLeadsMutation({
           leadIds: Array.from(selectedLeads),
-          updateData: { toAgentId: bulkAssignToUserId, transferType: "With History", notes: "Get From Bulk Assign To" }
+          updateData: {
+            toAgentId: bulkAssignToUserId,
+            transferType: "With History",
+            notes: "Get From Bulk Assign To"
+          }
         });
-        getLeads(currentPage, rowsPerPage);
+        getLeads();
       } catch (error) {
         console.error('Error bulk assigning leads:', error);
       }
     }
-  }, [bulkAssignToUserId, selectedLeads, bulkUpdateLeadsMutation, currentPage, rowsPerPage]);
+  }, [bulkAssignToUserId, selectedLeads, bulkUpdateLeadsMutation]);
 
   const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['leads'] });
     toast.success(t('dataRefreshed'));
   }, [queryClient, t]);
 
-  const handleRowsPerPageChange = (newRowsPerPage: number) => {
-    setRowsPerPage(newRowsPerPage);
-    setCurrentPage(1);
-  };
+  // Clear selection when filters change
+  React.useEffect(() => {
+    clearSelection();
+  }, [searchTerm, activeStatusCard, activeCallOutcomeCard, activeVisitStatusCard, selectedManager, selectedSalesRep, clearSelection]);
+
+  // Show loading toast for delete operation
+  // React.useEffect(() => {
+  //   if (isDeletingLead) {
+  //     setToastId(toast.loading(t('deletingLead')));
+  //   }
+  // }, [isDeletingLead, t]);
+
+
 
   if (leadsError) {
     return (
@@ -531,8 +908,12 @@ const TotalLeads = data?.pagination?.total
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('errorLoadingLeads')}</h2>
           <p className="text-gray-600 mb-4">{t('errorLoadingLeadsMessage')}</p>
-          <button onClick={handleRefresh} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-            <RefreshCw className="h-4 w-4 inline mr-2" /> {t('retry')}
+          <button
+            onClick={handleRefresh}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <RefreshCw className="h-4 w-4 inline mr-2" />
+            {t('retry')}
           </button>
         </div>
       </div>
@@ -540,7 +921,11 @@ const TotalLeads = data?.pagination?.total
   }
 
   return (
-    <div className={`p-3 sm:p-4 md:p-6 bg-transparent min-h-screen ${i18n.language === 'ar' ? 'font-arabic' : ''}`} dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
+    <div
+      className={`p-3 sm:p-4 md:p-6 bg-transparent min-h-screen ${i18n.language === 'ar' ? 'font-arabic' : ''}`}
+      dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}
+    >
+      {/* Header */}
       <div className="relative overflow-hidden mb-4 sm:mb-6 md:mb-8 rounded-2xl bg-gradient-to-r from-indigo-500 via-sky-500 to-cyan-500 text-white">
         <div className="absolute -top-10 -right-10 h-40 w-40 bg-white/20 rounded-full blur-2xl" />
         <div className="absolute -bottom-12 -left-10 h-48 w-48 bg-white/10 rounded-full blur-2xl" />
@@ -551,7 +936,11 @@ const TotalLeads = data?.pagination?.total
               <p className="text-sm sm:text-base text-white/85">{t('description')}</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={handleRefresh} className="p-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors" title={t('refreshData')}>
+              <button
+                onClick={handleRefresh}
+                className="p-2 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                title={t('refreshData')}
+              >
                 <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </div>
@@ -559,41 +948,108 @@ const TotalLeads = data?.pagination?.total
         </div>
       </div>
 
+      {/* User Filter Select */}
       {user && (
         <div className="mb-4 sm:mb-6">
-          <UserFilterSelect currentUser={user as any} users={users} selectedManager={selectedManager} setSelectedManager={setSelectedManager} selectedSalesRep={selectedSalesRep} setSelectedSalesRep={setSelectedSalesRep} />
+          <UserFilterSelect
+            currentUser={user as any}
+            users={users}
+            selectedManager={selectedManager}
+            setSelectedManager={setSelectedManager}
+            selectedSalesRep={selectedSalesRep}
+            setSelectedSalesRep={setSelectedSalesRep}
+          />
         </div>
       )}
 
+      {/* Call Outcomes Cards */}
       <div className="mb-4 sm:mb-6">
-        <CallOutcomeCards leads={leads} activeCard={activeCallOutcomeCard} onCardClick={(key) => { setActiveCallOutcomeCard(prev => prev === key ? '' : key); setActiveStatusCard(''); setActiveVisitStatusCard(''); }} t={t} />
+        <CallOutcomeCards
+          leads={leads}
+          activeCard={activeCallOutcomeCard}
+          onCardClick={(key) => {
+            setActiveCallOutcomeCard(prev => prev === key ? '' : key);
+            setActiveStatusCard('');
+            setActiveVisitStatusCard('');
+          }}
+          t={t}
+        />
       </div>
 
+      {/* Lead Status Cards */}
       <div className="mb-4 sm:mb-6">
-        <StatusCards leads={filteredLeadsManager} myLeadsCount={myLeadsCount} TotalLeads={TotalLeads} user={user as any} activeCard={activeStatusCard} onCardClick={(key) => { setActiveStatusCard(prev => prev === key ? '' : key); setActiveCallOutcomeCard(''); setActiveVisitStatusCard(''); }} showAllCards={showAllCards} onToggleShowAll={setShowAllCards} t={t} />
+        <StatusCards
+          leads={filteredLeadsManager}
+          user={user as any}
+          activeCard={activeStatusCard}
+          onCardClick={(key) => {
+            setActiveStatusCard(prev => prev === key ? '' : key);
+            setActiveCallOutcomeCard('');
+            setActiveVisitStatusCard('');
+          }}
+          showAllCards={showAllCards}
+          onToggleShowAll={setShowAllCards}
+          t={t}
+        />
       </div>
 
+      {/* Search and Actions */}
       <div className="mb-4 sm:mb-6">
-        <SearchAndActions searchTerm={searchTerm} onSearchChange={setSearchTerm} activeFiltersCount={activeFiltersCount} onFilterClick={() => setShowFilters(prev => !prev)} onAddClick={() => setShowAddModal(true)} onImportClick={() => setShowImportModal(true)} onAdviceClick={() => { setAdviceData(null); setAdviceError(null); setShowAdviceModal(true); }} t={t} />
+        <SearchAndActions
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          activeFiltersCount={activeFiltersCount}
+          onFilterClick={() => setShowFilters(prev => !prev)}
+          onAddClick={() => setShowAddModal(true)}
+          onImportClick={() => setShowImportModal(true)}
+          // ✨ 3. تمرير الدالة التي تفتح النافذة
+          onAdviceClick={() => {
+            // إعادة تعيين الحالة قبل الفتح لضمان عرض الشاشة الأولية
+            setAdviceData(null);
+            setAdviceError(null);
+            setShowAdviceModal(true);
+          }}
+          t={t}
+        />
       </div>
 
       {showFilters && (
         <div className="mb-4 sm:mb-6">
-          <FilterPanel filters={filters} onFiltersChange={setFilters} onClearFilters={clearAllFilters} leads={leads} properties={properties} projects={projects} users={users} t={t} />
+          <FilterPanel
+            filters={filters}
+            onFiltersChange={setFilters}
+            onClearFilters={clearAllFilters}
+            leads={leads}
+            properties={properties}
+            projects={projects}
+            users={users}
+            t={t}
+          />
         </div>
       )}
 
+      {/* Bulk Actions Bar */}
       {showBulkActions && (
         <div className="mb-4 sm:mb-6">
-          <BulkActionsBar selectedCount={selectedLeads.size} bulkAssignToUserId={bulkAssignToUserId} onBulkAssignChange={setBulkAssignToUserId} onBulkAssign={handleBulkAssign} onClearSelection={clearSelection} isUpdating={isBulkUpdating} users={users} user={user as any} t={t} />
+          <BulkActionsBar
+            selectedCount={selectedLeads.size}
+            bulkAssignToUserId={bulkAssignToUserId}
+            onBulkAssignChange={setBulkAssignToUserId}
+            onBulkAssign={handleBulkAssign}
+            onClearSelection={clearSelection}
+            isUpdating={isBulkUpdating}
+            users={users}
+            user={user as any}
+            t={t}
+          />
         </div>
       )}
 
+      {/* Leads Table */}
       <div className="bg-white/70 backdrop-blur-md border border-white/60 rounded-xl shadow-lg overflow-hidden">
         <LeadsTable
           leads={filteredLeads}
           isLoading={isLoadingLeads}
-          isFetching={isFetching}
           properties={properties}
           users={users}
           selectedLeads={selectedLeads}
@@ -607,22 +1063,78 @@ const TotalLeads = data?.pagination?.total
           t={t}
           i18n={i18n}
           searchTerm={searchTerm}
-          currentPage={currentPage}
-          totalPages={paginationInfo?.totalPages || 1}
-          totalLeads={paginationInfo?.total || 0}
-          rowsPerPage={rowsPerPage}
-          onPageChange={setCurrentPage}
-          onRowsPerPageChange={handleRowsPerPageChange}
         />
       </div>
 
-      <AddLeadModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} />
-      <EditLeadModal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setEditingLead(null); }} lead={editingLead} />
-      <TransferLeadModal isOpen={ShowtransferModal} onClose={() => { setShowTransferModall(false); setEditingLead(null); }} lead={transferModalLead} />
-      <AdviceModal isOpen={showAdviceModal} onClose={() => setShowAdviceModal(false)} onGenerate={handleGenerateAdvice} isLoading={isAdviceLoading} advice={adviceData} error={adviceError} i18n={i18n} t={t} />
-      {selectedLead && (<LeadModal lead={selectedLead} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />)}
-      <DeleteConfirmationModal isOpen={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setDeletingLead(null); }} onConfirm={confirmDelete} lead={deletingLead} t={t} i18n={i18n} />
-      <ImportLeadsModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onImport={handleExcelImport} isImporting={isImporting} importProgress={importProgress} />
+      {/* Modals */}
+      <AddLeadModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+      />
+
+      <EditLeadModal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingLead(null);
+        }}
+        lead={editingLead}
+      />
+
+
+      <TransferLeadModal
+
+        isOpen={ShowtransferModal}
+        onClose={() => {
+          setShowTransferModall(false);
+          setEditingLead(null);
+        }}
+        lead={transferModalLead}
+
+      />
+
+
+      <AdviceModal
+        isOpen={showAdviceModal}
+        onClose={() => setShowAdviceModal(false)}
+        onGenerate={handleGenerateAdvice}
+        isLoading={isAdviceLoading}
+        advice={adviceData}
+        error={adviceError}
+        i18n={i18n}
+        t={t}
+      />
+
+
+      {selectedLead && (
+        <LeadModal
+          lead={selectedLead}
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
+
+      {/* Inline filter panel replaces modal */}
+
+      <DeleteConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => {
+          setShowDeleteConfirm(false);
+          setDeletingLead(null);
+        }}
+        onConfirm={confirmDelete}
+        lead={deletingLead}
+        t={t}
+        i18n={i18n}
+      />
+
+      <ImportLeadsModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleExcelImport}
+        isImporting={isImporting}
+        importProgress={importProgress}
+      />
     </div>
   );
 });

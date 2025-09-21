@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus, getAllLeads } from '../../queries/queries';
+import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -103,9 +103,9 @@ const Reports: React.FC = () => {
   // 🔽 1. ADDED a new state for the role filter
   const [selectedRole, setSelectedRole] = useState<string>('');
   const { data: leads = [], isLoading: leadsLoading, error: leadsError } = useQuery({
-    queryKey: ['Allleads'],
+    queryKey: ['leads'],
     queryFn: async () => {
-      const leadsData = await getAllLeads();
+      const leadsData = await getLeads();
       const populatedLeads = await populateLeadsWithCallsAndVisits(leadsData);
       return populatedLeads;
     }

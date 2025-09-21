@@ -1,11 +1,7 @@
 import axiosInterceptor from "../../axiosInterceptor/axiosInterceptor";
 import { Project } from "../components/inventory/ProjectsTab";
 import { Contract, Developer, Lead, Log, Meeting, Property, User, Zone, Task, TaskStatistics, CreateTaskDto, UpdateTaskDto, TaskFilters } from "../types";
-interface UserAuthData {
-  id: string;
-  email: string;
-  role: string;
-}
+
 export const getDevelopers = async () => {
     const response = await axiosInterceptor.get('/developers');
 
@@ -17,7 +13,21 @@ export const getZones = async () => {
     return response.data.zones as Zone[];
 }
 
+export const getLeads = async () => {
+    const response = await axiosInterceptor.get('/leads');
 
+    // Handle different possible response structures
+    if (response.data.leads) {
+        return response.data.leads as Lead[];
+    } else if (response.data.data) {
+        return response.data.data as Lead[];
+    } else if (Array.isArray(response.data)) {
+        return response.data as Lead[];
+    } else {
+        console.error('Unexpected leads API response structure:', response.data);
+        return [];
+    }
+}
 
 // Get leads with calls and visits populated
 export const getLeadsWithDetails = async () => {
@@ -58,7 +68,7 @@ export const bulkUpdateLeads = async (leadIds: string[], updateData: Partial<Lea
     );
 
     const responses = await Promise.all(promises);
-    // getLeads()
+    getLeads()
     return { success: true, updated: responses.length };
 }
 
@@ -226,40 +236,6 @@ export const createTask = async (task: CreateTaskDto) => {
     const response = await axiosInterceptor.post('/tasks', task);
     return response.data as Task;
 }
-export const getLeads = async (page = 1, limit = 10) => {
-    // The endpoint is updated to include page and limit query parameters
-    const response = await axiosInterceptor.get(`/leads/query?page=${page}&limit=${limit}`);
-
-    if (response.data && response.data.leads && response.data.pagination) {
-        return response.data as { leads: Lead[], pagination: any };
-    } else {
-        console.error('Unexpected leads API response structure:', response.data);
-        
-        return { leads: [], pagination: { total: 0, page: 1, limit: 10, totalPages: 1 } };
-    }
-}
-
-export const getAllLeads = async (): Promise<Lead[]> => {
-  const response = await axiosInterceptor.get(`/leads`);
-
-  // Change the condition to check for the 'leads' property inside response.data
-  if (response.data && Array.isArray(response.data.leads)) {
-    // Return the array of leads
-    return response.data.leads as Lead[];
-  } else {
-    console.error("Unexpected leads API response structure:", response.data);
-    return [];
-  }
-};
-
-
-
-
-
-
-
-
-
 
 export const updateTask = async (id: string, task: UpdateTaskDto) => {
     const response = await axiosInterceptor.patch(`/tasks/${id}`, task);

@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { Contract, Lead, Property } from '../../types';
-import { addContract, getAllLeads, getContracts, getLeads, getProperties, updateContract } from '../../queries/queries';
+import { addContract, getContracts, getLeads, getProperties, updateContract } from '../../queries/queries';
 import { deleteContract } from '../../queries/queries';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Id, toast } from 'react-toastify';
@@ -20,9 +20,9 @@ const ContractsManagement: React.FC = () => {
     queryFn: getContracts,
   });
   const { data: leads } = useQuery<Lead[]>({
-    queryKey: ['Allleads'],
+    queryKey: ['leads'],
     staleTime: 1000 * 60 * 5,
-    queryFn: getAllLeads,
+    queryFn: getLeads,
   });
   const { data: properties } = useQuery<Property[]>({
     queryKey: ['properties'],
