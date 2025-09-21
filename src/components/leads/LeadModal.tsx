@@ -254,14 +254,16 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   }, [lead]);
   React.useEffect(() => {
     // On refresh, get the latest lead data by ID
-    const latest = leads?.find(l => l.id === currentLead.id);
-    if (latest) setCurrentLead(latest);
+    if (Array.isArray(leads)) {
+      const latest = leads.find(l => l.id === currentLead.id);
+      if (latest) setCurrentLead(latest);
+    }
     setIsUpdating(false);
-  }, [refreshKey]);
+  }, [refreshKey, leads, currentLead.id]);
 
   const canEdit = user?.role === 'admin' || user?.role === 'sales_admin' ||
     user?.role === 'team_leader' ||
-    (user?.role === 'sales_rep' && (currentLead.assignedToId === user.id || currentLead.ownerId === user.id || currentLead.owner?.id === user.id));
+    (user?.role === 'sales_rep' && (currentLead.ownerId === user.id || currentLead.owner?.id === user.id));
 
   const [isUpdate, setIsUpdate] = useState(false);
   const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
