@@ -98,6 +98,7 @@ export interface Lead {
   interest: Interest;
   tier: Tier;
   cil?: boolean
+  isuntouched?: boolean
   status: LeadStatus;
   lastCallDate?: string;
   lastVisitDate?: string;

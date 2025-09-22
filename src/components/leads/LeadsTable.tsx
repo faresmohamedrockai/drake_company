@@ -281,7 +281,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                   >
                     <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
                   </button>
-                  
+
                   {/* --- ✅✅✅ START: الإصلاح هنا لعرض الجوال ✅✅✅ --- */}
                   {loggedInUser?.role !== 'sales_rep' && (
                     <button
@@ -363,7 +363,11 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
               </tr>
             ) : (
               paginatedLeads?.map((lead) => (
-                <tr key={lead.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50 rounded-md shadow-sm">
+                <tr key={lead.id} className={`rounded-md shadow-sm hover:shadow-md transition 
+    ${lead?.isuntouched
+                    ? "bg-yellow-50 border border-yellow-200"   // untouched: أصفر فاتح يوصل إنها لسه fresh
+                    : "odd:bg-white even:bg-gray-50/40 border border-gray-200"
+                  }`}>
                   <td className="px-4 py-3">
                     <input
                       type="checkbox"
@@ -497,8 +501,8 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                       >
                         <ArrowLeftRight className="h-4 w-4 text-[#803FC5]" />
                       </button>
-                      
-                      {/* --- ✅✅✅ START: الإصلاح هنا لجدول سطح المكتب ✅✅✅ --- */}
+
+
                       {loggedInUser?.role !== 'sales_rep' && (
                         <button
                           onClick={() => onDeleteLead(lead)}
@@ -509,7 +513,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = React.memo(({
                           <Trash2 className="h-4 w-4" />
                         </button>
                       )}
-                      {/* --- ✅✅✅ END: الإصلاح هنا لجدول سطح المكتب ✅✅✅ --- */}
+
 
                     </div>
                   </td>

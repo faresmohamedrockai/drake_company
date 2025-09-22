@@ -219,6 +219,7 @@
   "all": "All Leads",
   "duplicate": "Duplicate Leads",
   "cold_call": "Cold Calls",
+ "showUntouchedOnly": "unTouched Leads",
   "fresh_lead": "Fresh Lead",
   "follow_up": "Follow Up",
   "scheduled_visit": "Scheduled Visit",

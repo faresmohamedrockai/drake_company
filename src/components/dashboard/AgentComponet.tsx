@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactConfetti from 'react-confetti';
 import { Trophy, Award, Medal } from 'lucide-react';
+import { getUsersStatus } from '@/queries/queries';
+import { useQuery } from '@tanstack/react-query';
 
 
 interface LeaderboardUser {
@@ -31,12 +33,17 @@ const useWindowSize = () => {
 };
 
 
-const AgentLeaderboard: React.FC<AgentLeaderboardProps> = ({ data }) => {
+const AgentLeaderboard: React.FC<AgentLeaderboardProps> = () => {
+ const { data: userData = [], isLoading: UserDataLOading, error: userDataError } = useQuery<[]>({
+    queryKey: ['userStats'],
+    queryFn: () => getUsersStatus(),
+
+  });
+  
   const { t } = useTranslation(['dashboard', 'common']);
   const [width, height] = useWindowSize();
 
-  // --- START: CUSTOM DRAW FUNCTION FOR STARS ---
-  // --- بداية: دالة رسم مخصصة للنجوم ---
+
   const drawStar = (ctx: CanvasRenderingContext2D) => {
     const numPoints = 5;
     const outerRadius = 10;
@@ -56,7 +63,7 @@ const AgentLeaderboard: React.FC<AgentLeaderboardProps> = ({ data }) => {
   };
   // --- END: CUSTOM DRAW FUNCTION ---
 
-  if (!data || data.length === 0) {
+  if (!userData || userData.length === 0) {
     return null;
   }
 
@@ -118,7 +125,7 @@ const AgentLeaderboard: React.FC<AgentLeaderboardProps> = ({ data }) => {
 
       <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">{t('leaderboard.title', 'Agent Leaderboard')}</h3>
       <div className="space-y-3">
-        {data.slice(0, 5).map((user, index) => {
+        {userData.slice(0, 5).map((user, index) => {
           const rank = index + 1;
           const closedDeals = user.leads?.filter((lead) => lead.status === 'closed_deal').length ?? 0;
           const roleBadge = getRoleBadge(user.role);

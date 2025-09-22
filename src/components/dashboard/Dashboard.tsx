@@ -824,12 +824,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   ).length;
   const todayMeetings = meetings.filter(m => m.date === today).length;
   const followUpLeads = filteredLeads.filter(l => l.status === LeadStatus.FOLLOW_UP).length;
+ const { data: userDataAgend = [], isLoading: UserDataLOading, error: userDataError } = useQuery<UserStat[]>({
+    queryKey: ['userStats'],
+    queryFn: () => getUsersStatus(),
 
+  });
   // Prepare leaderboard data by sorting userData
-  const sortedLeaderboardData = useMemo(() => {
-    if (!userData) return [];
-    return [...userData].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
-  }, [userData]);
+   const sortedLeaderboardData = useMemo(() => {
+     if (!userDataAgend) return [];
+     return [...userDataAgend].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+   }, [userData]);
 
   // Calculate conversion rates with actual data
   const calculateConversionRates = () => {

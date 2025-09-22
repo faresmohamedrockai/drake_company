@@ -103,6 +103,7 @@ export const getLeadsWithDetails = async () => {
     return response.data.leads as Lead[];
 }
 
+
 export const deleteLead = async (leadId: string) => {
     const response = await axiosInterceptor.delete(`/leads/${leadId}`);
     return response.data;

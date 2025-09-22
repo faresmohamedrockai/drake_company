@@ -7,6 +7,7 @@ interface Filters {
   contact: string;
   gender: string;
   budget: string;
+  isuntouched: boolean;
   inventoryInterestId: string;
   projectInterestId: string;
   otherProject: string;
@@ -24,6 +25,7 @@ export const useLeadsFilters = (location: ReturnType<typeof useLocation>) => {
     name: '',
     contact: '',
     budget: '',
+    isuntouched: false,
     gender: '',
     inventoryInterestId: '',
     projectInterestId: '',
@@ -52,6 +54,7 @@ export const useLeadsFilters = (location: ReturnType<typeof useLocation>) => {
       contact: '',
       gender: '',
       budget: '',
+      isuntouched: false,
       projectInterestId:'',
       inventoryInterestId: '',
       otherProject:'',

@@ -184,6 +184,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     mutationFn: (call: CallLog) => axiosInterceptor.post(`/calls/create/${currentLead.id}`, call),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`calls-${currentLead.id}`] });
+      queryClient.invalidateQueries({ queryKey: ["notificationData"] });
       setCallForm({
         date: new Date().toISOString().split('T')[0],
         outcome: '',
@@ -588,14 +589,22 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   const getActivities = (lead: any) => {
     const activities: any = [];
 
-    // 🆕 Lead Created
+    // دالة مساعدة لتجنب التكرار
+    const getUserName = (activityObject: any, fallback: string = 'Unknown User') => {
+      
+      return activityObject?.createdByUser?.name || activityObject?.createdBy?.name ||activityObject?.owner?.name ||fallback;
+    };
+
+    // Lead Created
     if (lead?.createdAt) {
       activities.push({
         id: `lead-created-${lead.id}`,
         type: "lead_created",
-        title: "Lead created",
-        description: `Lead was created At ${lead.createdAt || "system"}`,
-        date: parseDate(lead.createdAt), // ✅ parse هنا
+        title: "Lead Created",
+        description: `Lead was initially created in the system.`,
+        date: parseDate(lead.createdAt),
+        // افترض أن منشئ العميل هو الـ owner الخاص به
+        userName: getUserName(lead, 'System'),
         icon: <UserPlus size={18} />,
         color: "bg-gray-100 text-gray-600",
       });
@@ -606,9 +615,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       activities.push({
         id: call.id,
         type: "call",
-        title: "Phone call made",
-        description: call.notes?.trim() || "Discussed project details",
-        date: parseDate(call.date), // ✅ parse هنا
+        title: "Phone Call Made",
+        description: call.notes?.trim() || "Discussed project details.",
+        date: parseDate(call.date),
+        userName: getUserName(call), // استخراج اسم المستخدم من المكالمة
         icon: <Phone size={18} />,
         color: "bg-blue-100 text-blue-600",
       });
@@ -619,9 +629,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       activities.push({
         id: meeting.id,
         type: "meeting",
-        title: "Meeting scheduled",
-        description: meeting.notes?.trim() || "Meeting with client",
-        date: parseDate(meeting.date), // ✅
+        title: "Meeting Scheduled",
+        description: meeting.notes?.trim() || "Meeting with client.",
+        date: parseDate(meeting.date),
+        userName: getUserName(meeting), // استخراج اسم المستخدم من الاجتماع
         icon: <Calendar size={18} />,
         color: "bg-green-100 text-green-600",
       });
@@ -632,19 +643,19 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
       activities.push({
         id: `visit-${index}`,
         type: "visit",
-        title: "Site visit",
-        description: visit.notes?.trim() || "Client visited project location",
-        date: parseDate(visit.date), // ✅
+        title: "Site Visit",
+        description: visit.notes?.trim() || "Client visited project location.",
+        date: parseDate(visit.date),
+        userName: getUserName(visit), // استخراج اسم المستخدم من الزيارة
         icon: <Home size={18} />,
         color: "bg-purple-100 text-purple-600",
       });
     });
 
-    // ✅ Sort by date (newest first)
+    // Sort by date (newest first)
     return activities.sort(
       (a, b) =>
-        (b.date ? b.date.getTime() : 0) -
-        (a.date ? a.date.getTime() : 0)
+        (b.date ? b.date.getTime() : 0) - (a.date ? a.date.getTime() : 0)
     );
   };
 
@@ -1727,11 +1738,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                 {/* Vertical line */}
                 <div className="absolute top-0 left-4 w-0.5 h-full bg-gray-200"></div>
 
-                {getActivities(lead).map((activity) => (
-                  <div
-                    key={activity.id}
-                    className="relative flex items-start"
-                  >
+                {getActivities(lead).map((activity: any) => (
+                  <div key={activity.id} className="relative flex items-start">
                     {/* Icon */}
                     <div
                       className={`absolute -left-1 top-1 w-8 h-8 rounded-full flex items-center justify-center ${activity.color}`}
@@ -1739,7 +1747,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                       {activity.icon}
                     </div>
 
-                    {/* Content (with padding-left to push text away from icon) */}
+                    {/* Content */}
                     <div className="flex-1 pl-12">
                       <p className="text-sm font-semibold text-gray-900">
                         {activity.title}
@@ -1747,18 +1755,31 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
                       <p className="text-xs text-gray-500">
                         {activity.description}
                       </p>
-                    </div>
 
-                    {/* Date */}
-                    <div className="text-xs text-gray-400 whitespace-nowrap">
-                      {new Date(activity.date).toISOString().split("T")[0]}
+                      {/* --- START: NEW CODE --- */}
+                      {/* User and Date Info */}
+                      <div className="text-xs text-gray-400 mt-1 flex items-center">
+                        <span>
+                          {new Date(activity.date).toLocaleDateString('en-CA')} {/* 'en-CA' format is YYYY-MM-DD */}
+                        </span>
+                        {/* عرض اسم المستخدم فقط إذا كان موجودًا */}
+                        {activity.userName && (
+                          <>
+                            <span className="mx-1.5">&bull;</span>
+                            <span>by</span>
+                            <span className="font-medium text-gray-500 ml-1">
+                              {activity.userName}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      {/* --- END: NEW CODE --- */}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
-
 
 
 
@@ -2020,7 +2041,7 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
             <button
               onClick={() => {
                 if (newPhone.trim()) {
-                  // هنا تضيف الرقم الجديد لـ currentLead.contact
+
                   setCurrentLead({
                     ...currentLead,
                     contacts: [...(currentLead.contacts || []), newPhone],

@@ -141,7 +141,10 @@ const Reports: React.FC = () => {
 
 
 
-
+const sortedLeaderboardDatanew = useMemo(() => {
+    if (!userData) return [];
+    return [...userData].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
+  }, [userData]);
 
 
 
@@ -166,6 +169,7 @@ const Reports: React.FC = () => {
     if (!userData) return [];
     return [...userData].sort((a, b) => (b.totalScore || 0) - (a.totalScore || 0));
   }, [userData]);
+console.log(sortedLeaderboardData);
 
 
   const { data: allCalls = [] } = useQuery({ queryKey: ['allCalls'], queryFn: getAllCalls });
@@ -2130,7 +2134,7 @@ const Reports: React.FC = () => {
         <>
           {/* Agent Leaderboard */}
           <div className="mb-8">
-            <AgentLeaderboard data={sortedLeaderboardData} />
+            <AgentLeaderboard data={userData} />
           </div>
 
           {/* Sales Member Report View */}

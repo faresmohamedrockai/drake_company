@@ -17,6 +17,7 @@ interface Filters {
   lastVisitDate: string;
   createdAtStart?: string;
   createdAtEnd?: string;
+  isUntouched: boolean;
 }
 
 interface FilterPanelProps {
@@ -30,7 +31,7 @@ interface FilterPanelProps {
   t: (key: string) => string;
 }
 
-const FilterPanel: React.FC<FilterPanelProps> = React.memo(({ 
+const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
   filters,
   onFiltersChange,
   onClearFilters,
@@ -42,7 +43,7 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
 }) => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
-  const handleFilterChange = (key: keyof Filters, value: string) => {
+  const handleFilterChange = (key: keyof Filters, value: string | boolean) => {
     onFiltersChange({ ...filters, [key]: value });
   };
 
@@ -61,6 +62,8 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
       <h3 className="text-lg font-bold text-gray-900 mb-4">{t('advancedFilters')}</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+       
         <input
           type="text"
           value={filters.name}
@@ -148,8 +151,8 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
           aria-label={t('interest')}
         >
           <option value="">{t('All Projects')}</option>
-          {projects?.map((projects: Project) => (
-            <option key={projects.id} value={projects.id}>{projects.nameAr}</option>
+          {projects?.map((project: Project) => (
+            <option key={project.id} value={project.id}>{project.nameAr}</option>
           ))}
         </select>
 
@@ -201,7 +204,6 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
           ))}
         </select>
 
-        {/* Created date range - grouped */}
         <div className="sm:col-span-2">
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-gray-700">
@@ -239,7 +241,28 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
               />
             </div>
           </div>
+
+          
         </div>
+         <div className="sm:col-span-2">
+          <label htmlFor="isUntouchedCheckbox" className="flex items-center cursor-pointer w-fit">
+            <div className="relative">
+              <input
+                id="isUntouchedCheckbox"
+                type="checkbox"
+                className="sr-only"
+                checked={filters.isUntouched}
+                onChange={e => handleFilterChange('isUntouched', e.target.checked)}
+              />
+              <div className={`block w-10 h-6 rounded-full transition-colors ${filters.isUntouched ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${filters.isUntouched ? 'transform translate-x-full' : ''}`}></div>
+            </div>
+            <div className="ml-3 text-sm font-medium text-gray-700 select-none">
+              {t('showUntouchedOnly') || 'عرض العملاء الذين لم يتم لمسهم فقط'}
+            </div>
+          </label>
+        </div>
+
       </div>
 
       <div className="flex justify-between mt-6 gap-3">
@@ -250,9 +273,8 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
         >
           {t('clearFilters')}
         </button>
-        {/* Keeping an explicit apply is useful for UX parity with the modal */}
         <button
-          onClick={() => { /* no-op; filters apply instantly by design */ }}
+          onClick={() => { /* no-op */ }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors w-full sm:w-auto"
           aria-label={t('applyFilters')}
         >
@@ -266,5 +288,3 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
 FilterPanel.displayName = 'FilterPanel';
 
 export default FilterPanel;
-
-
