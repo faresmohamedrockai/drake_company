@@ -1017,7 +1017,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
   const dashboardCards = [
     { key: 'all', count: filteredLeads.length },
     { key: 'fresh_lead', count: filteredLeads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
-    { key: 'cold_call', count: filteredLeads.filter(lead => lead.source === 'Cold Call').length },
+    { key: 'cold_call', count: filteredLeads.filter(lead => lead.source === 'cold_call').length },
     { key: 'follow_up', count: filteredLeads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length },
     { key: 'scheduled_visit', count: filteredLeads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
     { key: 'open_deal', count: filteredLeads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length },

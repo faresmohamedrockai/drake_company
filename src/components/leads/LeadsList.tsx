@@ -529,7 +529,7 @@ const LeadsList: React.FC = React.memo(() => {
         (lead.nameAr || lead.nameEn || '') :
         (lead.nameEn || lead.nameAr || '');
 
-      if (filters.isUntouched && !lead.isUntouched) {
+      if (filters.isuntouched && !lead.isuntouched) {
         return false;
       }
       if (filters.name && !displayName.toLowerCase().includes(filters.name.toLowerCase())) {
@@ -598,9 +598,13 @@ const LeadsList: React.FC = React.memo(() => {
             (l.email && l.email === lead.email)
           ) !== idx
         );
+      } else if (activeStatusCard === 'Untouched') {
+        filtered = filtered.filter(lead => lead.isuntouched === true);
       } else if (activeStatusCard === 'cold_call') {
-        filtered = filtered.filter(lead => lead.source === 'Cold Call');
-      } else {
+        filtered = filtered.filter(lead => lead.source === 'cold_call');
+      } 
+      
+      else {
         filtered = filtered.filter(lead => lead.status === activeStatusCard);
       }
     } else if (activeCallOutcomeCard) {

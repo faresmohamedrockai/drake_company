@@ -55,10 +55,10 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
     { key: 'scheduled_visit', count: leads.filter(lead => lead.status === LeadStatus.SCHEDULED_VISIT).length },
     { key: 'all', count: leads.length },
     { key: 'duplicate', count: leads.filter((lead, idx, arr) => 
-      arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contacts && l.contacts.includes(lead.contact as any)) || (l.email && l.email === lead.email)) !== idx
-    ).length },
+      arr.findIndex(l => (l.contact && l.contact === lead.contact) || (l.contacts && l.contacts.includes(lead.contact as any)) || (l.email && l.email === lead.email)) !== idx ).length },
     { key: 'fresh_lead', count: leads.filter(lead => lead.status === LeadStatus.FRESH_LEAD).length },
-    { key: 'cold_call', count: leads.filter(lead => lead.source === 'Cold Call').length },
+    { key: 'cold_call', count: leads.filter(lead => lead.source === 'cold_call').length },
+    { key: 'Untouched', count: leads.filter(lead => lead.isuntouched === true).length },
     { key: 'follow_up', count: leads.filter(lead => lead.status === LeadStatus.FOLLOW_UP).length },
     { key: 'open_deal', count: leads.filter(lead => lead.status === LeadStatus.OPEN_DEAL).length },
     { key: 'closed_deal', count: leads.filter(lead => lead.status === LeadStatus.CLOSED_DEAL).length },
@@ -68,7 +68,6 @@ export const StatusCards: React.FC<StatusCardsProps> = React.memo(({
     { key: 'reservation', count: leads.filter(lead => lead.status === LeadStatus.RESERVATION).length },
   ], [leads, user?.id]);
 
-  // Always show these cards in the first row
   const compactCardKeys = [
     'all',
     'my_leads',

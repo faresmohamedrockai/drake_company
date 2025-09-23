@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getLeads, getMeetings, getUsers, getContracts, getAllCalls, getAllVisits, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus } from '../../queries/queries';
+import { getLeads, getMeetings, getUsers, getContracts, populateLeadsWithCallsAndVisits, getDashboardData, getUsersStatus } from '../../queries/queries';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -172,8 +172,8 @@ const sortedLeaderboardDatanew = useMemo(() => {
 console.log(sortedLeaderboardData);
 
 
-  const { data: allCalls = [] } = useQuery({ queryKey: ['allCalls'], queryFn: getAllCalls });
-  const { data: allVisits = [] } = useQuery({ queryKey: ['allVisits'], queryFn: getAllVisits });
+  // const { data: allCalls = [] } = useQuery({ queryKey: ['allCalls'], queryFn: getAllCalls });
+  // const { data: allVisits = [] } = useQuery({ queryKey: ['allVisits'], queryFn: getAllVisits });
   const { user: currentUser } = useAuth();
 
 
