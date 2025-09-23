@@ -181,6 +181,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   const queryClient = new QueryClient();
 
+  
   return (
     <BrowserRouter>
       <LanguageProvider>
