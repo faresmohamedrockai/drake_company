@@ -585,9 +585,10 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     return new Date(dateStr);
   };
 
-  // Helper to combine and sort activities
+  
   const getActivities = (lead: any) => {
     const activities: any = [];
+console.log(lead);
 
     // دالة مساعدة لتجنب التكرار
     const getUserName = (activityObject: any, fallback: string = 'Unknown User') => {
