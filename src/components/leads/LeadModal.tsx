@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { X, Phone, Calendar, Plus, DollarSign, MapPin, Clock, Bot, Home, UserPlus } from 'lucide-react';
+import { X, Phone, Calendar, Plus, DollarSign, MapPin, Clock, Bot, Home, UserPlus,Shuffle } from 'lucide-react';
 import { Lead, CallLog, VisitLog, Property, LeadStatus, Interest, Tier } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -588,79 +588,96 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
   };
 
 
-  const getActivities = (lead: any) => {
-    const activities: any = [];
+const getActivities = (lead: any) => {
+  const activities: any = [];
 
-
-    // دالة مساعدة لتجنب التكرار
-    const getUserName = (activityObject: any, fallback: string = 'Unknown User') => {
-
-      return activityObject?.createdByUser?.name || activityObject?.createdBy?.name || activityObject?.owner?.name || fallback;
-    };
-
-    // Lead Created
-    if (lead?.createdAt) {
-      activities.push({
-        id: `lead-created-${lead.id}`,
-        type: "lead_created",
-        title: "Lead Created",
-        description: `Lead was initially created in the system.`,
-        date: parseDate(lead.createdAt),
-        // افترض أن منشئ العميل هو الـ owner الخاص به
-        userName: getUserName(lead, 'System'),
-        icon: <UserPlus size={18} />,
-        color: "bg-gray-100 text-gray-600",
-      });
-    }
-
-    // Calls
-    lead?.calls?.forEach((call: any) => {
-      activities.push({
-        id: call.id,
-        type: "call",
-        title: "Phone Call Made",
-        description: call.notes?.trim() || "Discussed project details.",
-        date: parseDate(call.date),
-        userName: getUserName(call), // استخراج اسم المستخدم من المكالمة
-        icon: <Phone size={18} />,
-        color: "bg-blue-100 text-blue-600",
-      });
-    });
-
-    // Meetings
-    lead?.meetings?.forEach((meeting: any) => {
-      activities.push({
-        id: meeting.id,
-        type: "meeting",
-        title: "Meeting Scheduled",
-        description: meeting.notes?.trim() || "Meeting with client.",
-        date: parseDate(meeting.date),
-        userName: getUserName(meeting), // استخراج اسم المستخدم من الاجتماع
-        icon: <Calendar size={18} />,
-        color: "bg-green-100 text-green-600",
-      });
-    });
-
-    // Visits
-    lead?.visits?.forEach((visit: any, index: number) => {
-      activities.push({
-        id: `visit-${index}`,
-        type: "visit",
-        title: "Site Visit",
-        description: visit.notes?.trim() || "Client visited project location.",
-        date: parseDate(visit.date),
-        userName: getUserName(visit), // استخراج اسم المستخدم من الزيارة
-        icon: <Home size={18} />,
-        color: "bg-purple-100 text-purple-600",
-      });
-    });
-
-    // Sort by date (newest first)
-    return activities.sort(
-      (a, b) =>
-        (b.date ? b.date.getTime() : 0) - (a.date ? a.date.getTime() : 0)
+  // دالة مساعدة لتجنب التكرار
+  const getUserName = (activityObject: any, fallback: string = 'Unknown User') => {
+    return (
+      activityObject?.createdByUser?.name ||
+      activityObject?.createdBy?.name ||
+      activityObject?.owner?.name ||
+      fallback
     );
   };
+
+  // Lead Created
+  if (lead?.createdAt) {
+    activities.push({
+      id: `lead-created-${lead.id}`,
+      type: "lead_created",
+      title: "Lead Created",
+      description: `Lead was initially created in the system.`,
+      date: parseDate(lead.createdAt),
+      userName: getUserName(lead, "System"),
+      icon: <UserPlus size={18} />,
+      color: "bg-gray-100 text-gray-600",
+    });
+  }
+
+  // Calls
+  lead?.calls?.forEach((call: any) => {
+    activities.push({
+      id: call.id,
+      type: "call",
+      title: "Phone Call Made",
+      description: call.notes?.trim() || "Discussed project details.",
+      date: parseDate(call.date),
+      userName: getUserName(call),
+      icon: <Phone size={18} />,
+      color: "bg-blue-100 text-blue-600",
+    });
+  });
+
+  // Meetings
+  lead?.meetings?.forEach((meeting: any) => {
+    activities.push({
+      id: meeting.id,
+      type: "meeting",
+      title: "Meeting Scheduled",
+      description: meeting.notes?.trim() || "Meeting with client.",
+      date: parseDate(meeting.date),
+      userName: getUserName(meeting),
+      icon: <Calendar size={18} />,
+      color: "bg-green-100 text-green-600",
+    });
+  });
+
+  // Visits
+  lead?.visits?.forEach((visit: any, index: number) => {
+    activities.push({
+      id: `visit-${index}`,
+      type: "visit",
+      title: "Site Visit",
+      description: visit.notes?.trim() || "Client visited project location.",
+      date: parseDate(visit.date),
+      userName: getUserName(visit),
+      icon: <Home size={18} />,
+      color: "bg-purple-100 text-purple-600",
+    });
+  });
+
+  // Transfers
+  lead?.transfers?.forEach((transfer: any) => {
+    activities.push({
+      id: transfer.id,
+      type: "transfer",
+      title: "Lead Transferred",
+      description: `Lead transferred from ${transfer.fromAgent?.name || "Unknown"} to ${transfer.toAgent?.name || "Unknown"} (${transfer.transferType}).`,
+      date: parseDate(transfer.createdAt),
+      userName: transfer.fromAgent?.name || "System", // مين اللي عمل الـ transfer
+      icon: <Shuffle size={18} />, // من مكتبة lucide-react
+      color: "bg-orange-100 text-orange-600",
+    });
+  });
+
+  // Sort by date (newest first)
+  return activities.sort(
+    (a, b) =>
+      (b.date ? b.date.getTime() : 0) - (a.date ? a.date.getTime() : 0)
+  );
+};
+
 
 
 

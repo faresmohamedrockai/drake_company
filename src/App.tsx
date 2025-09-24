@@ -82,6 +82,7 @@ const AppContent: React.FC = () => {
     setIsModalOpen(false);
 
     const route = notification.notificationData?.route;
+    
     if (route) {
       const routesMap: Record<string, string> = {
         leads: "/leads",

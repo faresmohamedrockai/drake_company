@@ -152,45 +152,39 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
 }) => {
   const { t } = useTranslation('leads');
 
-  // Filter users based on current user's role
+ console.log(currentUser);
+ 
   const managers = users.filter(user => user.role === 'team_leader');
-  
-  // Get sales reps based on selected manager and current user's role
- const getSalesReps = () => {
+
+const getSalesReps = () => {
   if (currentUser.role === 'team_leader') {
-    // Team leader يشوف نفسه + السيلز + السيلز أدمين
+    // Team leader يشوف السيلز ريب المرتبطين بيه بس
     return users.filter(user =>
-      ['sales_rep', 'sales_admin', 'team_leader'].includes(user.role)
+      user.role === 'sales_rep' && user.teamLeaderId === currentUser.id
     );
   } 
   else if (currentUser.role === 'sales_admin') {
     if (selectedManager) {
-      // لو محدد مدير: يرجع أعضاء الفريق تحت المدير + المدير نفسه
       const teamMembers = users.filter(
         user =>
-          (user.role === 'sales_rep' || user.role === 'sales_admin'||user.role === 'team_leader' ) &&
-          user.teamLeaderId === selectedManager.id
+          user.role === 'sales_rep' && user.teamLeaderId === selectedManager.id
       );
-      return [selectedManager, ...teamMembers].filter(u => u.role !== 'admin');
+      return teamMembers;
     } else {
-      // يشوف نفسه + أي حد تاني sales_rep / sales_admin فقط
-      return users.filter(user =>
-        ['sales_rep', 'sales_admin'].includes(user.role)
-      );
+      return users.filter(user => user.role === 'sales_rep');
     }
   }
   else if (currentUser.role === 'admin') {
     if (selectedManager) {
+      
       const teamMembers = users.filter(
         user =>
-          (user.role === 'sales_rep' || user.role === 'sales_admin') &&
-          user.teamLeaderId === selectedManager.id
+          user.role === 'sales_rep' && user.teamLeader?.id === selectedManager.id
       );
-      return [selectedManager, ...teamMembers];
+      return teamMembers;
     } else {
-      return users.filter(user =>
-        ['sales_rep', 'sales_admin'].includes(user.role)
-      );
+      
+      return users.filter(user => user.role === 'sales_rep');
     }
   }
 
@@ -199,9 +193,10 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
 };
 
 
+
   const salesReps = getSalesReps();
 
-  // Only show filters for admin, sales_admin, or team_leader
+
   if (!['admin', 'sales_admin', 'team_leader'].includes(currentUser.role)) {
     return null;
   }

@@ -891,7 +891,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
     }
     
     const callCompletionRate = totalCalls > 0 ? Math.round((completedCalls / totalCalls) * 100) : 0;
-    console.log(completedCalls);
+ 
     
     // Calculate calls to meetings rate properly
     // We need to count actual calls that led to meetings, not leads
@@ -1193,7 +1193,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
 
       {/* Extra space */}
       <div className="mb-10" />
-
+   {/* Conversion Rates & Metrics */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        <ConversionChart conversionRates={conversionRates} t={t} />
+        <ConversionMetrics 
+          conversionRates={conversionRates} 
+          totalProspects={totalProspects} 
+          activeLeads={activeLeads} 
+          t={t} 
+        />
+      </div>
       {/* Tasks and Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         {/* Tasks Card */}
@@ -1208,16 +1217,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setCurrentView }) => {
         <RecentActivity logs={logs} t={t} />
       </div>
 
-      {/* Conversion Rates & Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <ConversionChart conversionRates={conversionRates} t={t} />
-        <ConversionMetrics 
-          conversionRates={conversionRates} 
-          totalProspects={totalProspects} 
-          activeLeads={activeLeads} 
-          t={t} 
-        />
-      </div>
+   
     </motion.div>
   );
 };
