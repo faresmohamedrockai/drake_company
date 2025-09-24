@@ -158,39 +158,48 @@ const UserFilterSelect: React.FC<UserFilterSelectProps> = ({
 
 const getSalesReps = () => {
   if (currentUser.role === 'team_leader') {
-    // Team leader يشوف السيلز ريب المرتبطين بيه بس
-    return users.filter(user =>
-      user.role === 'sales_rep' && user.teamLeaderId === currentUser.id
+    // Team leader يشوف نفسه + السيلز ريب المرتبطين بيه
+    return users.filter(
+      user =>
+        user.id === currentUser.id ||
+        (user.role === 'sales_rep' && user.teamLeader.id === currentUser.id)
     );
   } 
   else if (currentUser.role === 'sales_admin') {
     if (selectedManager) {
-      const teamMembers = users.filter(
+      // التيم ليدر المختار + السيلز ريب بتوعه
+      return users.filter(
         user =>
-          user.role === 'sales_rep' && user.teamLeaderId === selectedManager.id
+          user.id === selectedManager.id ||
+          (user.role === 'sales_rep' && user.teamLeader.id  === selectedManager.id)
       );
-      return teamMembers;
     } else {
-      return users.filter(user => user.role === 'sales_rep');
+      return users.filter(user => user.role === 'sales_rep' || user.role === 'team_leader');
     }
   }
   else if (currentUser.role === 'admin') {
     if (selectedManager) {
-      
-      const teamMembers = users.filter(
+      // admin يختار teamLeader -> يظهره + السيلز ريب بتوعه
+      return users.filter(
         user =>
-          user.role === 'sales_rep' && user.teamLeader?.id === selectedManager.id
+          user.id === selectedManager.id ||
+          (user.role === 'sales_rep' && user.teamLeader.id  === selectedManager.id)
       );
-      return teamMembers;
     } else {
-      
-      return users.filter(user => user.role === 'sales_rep');
+      // admin يشوف الكل: sales_rep + team_leader + sales_admin
+      return users.filter(
+        user =>
+          user.role === 'sales_rep' ||
+          user.role === 'team_leader' ||
+          user.role === 'sales_admin'
+      );
     }
   }
 
   // باقي الحالات: يرجّع السيلز فقط
   return users.filter(user => user.role === 'sales_rep');
 };
+
 
 
 
