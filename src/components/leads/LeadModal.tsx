@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { X, Phone, Calendar, Plus, DollarSign, MapPin, Clock, Bot, Home, UserPlus,Shuffle } from 'lucide-react';
+import { X, Phone, Calendar, Plus, DollarSign, MapPin, Clock, Bot, Home, UserPlus,Shuffle, FileText } from 'lucide-react';
 import { Lead, CallLog, VisitLog, Property, LeadStatus, Interest, Tier } from '../../types';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -454,15 +454,17 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
 
   const handleAddNote = () => {
-    if (newNote.trim()) {
-      setIsUpdate(true);
-      setNotes([
-        ...notes,
-        newNote
-      ]);
-      setNewNote('');
-    }
-  };
+  if (newNote.trim()) {
+    setIsUpdate(true);
+    const timestamp = new Date().toISOString();
+    setNotes([
+      ...notes,
+      `${newNote} - ${timestamp}`
+    ]);
+    setNewNote('');
+  }
+};
+
 
 
   const [loading, setLoading] = useState(false)
@@ -541,21 +543,36 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     }
   }, [notes]);
 
-  const handleEditNote = (index: number) => {
-    setEditingNoteIndex(index);
-    setEditingNoteValue(notes[index]);
-  };
+const handleSaveEditNote = () => {
+  if (editingNoteIndex !== null && editingNoteValue.trim()) {
+    // نفصل القديم علشان ناخد التاريخ
+    const oldNote = notes[editingNoteIndex];
+    const parts = oldNote.split(" - ");
+    const oldDate = parts.length > 1 ? parts[1] : new Date().toISOString();
 
-  const handleSaveEditNote = () => {
-    if (editingNoteIndex !== null && editingNoteValue.trim()) {
-      const updatedNotes = [...notes];
-      updatedNotes[editingNoteIndex] = editingNoteValue;
-      setNotes(updatedNotes);
-      setEditingNoteIndex(null);
-      setEditingNoteValue('');
-      setIsUpdate(true);
-    }
-  };
+    const updatedNote = `${editingNoteValue} - ${oldDate}`;
+
+    const updatedNotes = [...notes];
+    updatedNotes[editingNoteIndex] = updatedNote;
+
+    setNotes(updatedNotes);
+    setEditingNoteIndex(null);
+    setEditingNoteValue("");
+    setIsUpdate(true);
+  }
+};
+
+
+  // const handleSaveEditNote = () => {
+  //   if (editingNoteIndex !== null && editingNoteValue.trim()) {
+  //     const updatedNotes = [...notes];
+  //     updatedNotes[editingNoteIndex] = editingNoteValue;
+  //     setNotes(updatedNotes);
+  //     setEditingNoteIndex(null);
+  //     setEditingNoteValue('');
+  //     setIsUpdate(true);
+  //   }
+  // };
 
 
 
@@ -589,9 +606,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
 
 
 const getActivities = (lead: any) => {
-  const activities: any = [];
+  const activities: any[] = [];
 
-  // دالة مساعدة لتجنب التكرار
   const getUserName = (activityObject: any, fallback: string = 'Unknown User') => {
     return (
       activityObject?.createdByUser?.name ||
@@ -601,82 +617,164 @@ const getActivities = (lead: any) => {
     );
   };
 
-  // Lead Created
+  const toDate = (v: any): Date | null => {
+    if (!v) return null;
+    if (v instanceof Date) {
+      return isNaN(v.getTime()) ? null : v;
+    }
+    try {
+      const parsed = typeof parseDate === 'function' ? parseDate(v) : new Date(v);
+      if (parsed instanceof Date && !isNaN(parsed.getTime())) return parsed;
+    } catch {}
+    const d = new Date(String(v));
+    return isNaN(d.getTime()) ? null : d;
+  };
+
   if (lead?.createdAt) {
     activities.push({
       id: `lead-created-${lead.id}`,
       type: "lead_created",
       title: "Lead Created",
       description: `Lead was initially created in the system.`,
-      date: parseDate(lead.createdAt),
+      date: toDate(lead.createdAt),
       userName: getUserName(lead, "System"),
       icon: <UserPlus size={18} />,
       color: "bg-gray-100 text-gray-600",
+      isLeadCreated: true,
     });
   }
 
-  // Calls
   lead?.calls?.forEach((call: any) => {
     activities.push({
       id: call.id,
       type: "call",
       title: "Phone Call Made",
       description: call.notes?.trim() || "Discussed project details.",
-      date: parseDate(call.date),
+      date: toDate(call.date),
       userName: getUserName(call),
       icon: <Phone size={18} />,
       color: "bg-blue-100 text-blue-600",
     });
   });
 
-  // Meetings
   lead?.meetings?.forEach((meeting: any) => {
     activities.push({
       id: meeting.id,
       type: "meeting",
       title: "Meeting Scheduled",
       description: meeting.notes?.trim() || "Meeting with client.",
-      date: parseDate(meeting.date),
+      date: toDate(meeting.date),
       userName: getUserName(meeting),
       icon: <Calendar size={18} />,
       color: "bg-green-100 text-green-600",
     });
   });
 
-  // Visits
   lead?.visits?.forEach((visit: any, index: number) => {
     activities.push({
       id: `visit-${index}`,
       type: "visit",
       title: "Site Visit",
       description: visit.notes?.trim() || "Client visited project location.",
-      date: parseDate(visit.date),
+      date: toDate(visit.date),
       userName: getUserName(visit),
       icon: <Home size={18} />,
       color: "bg-purple-100 text-purple-600",
     });
   });
 
-  // Transfers
   lead?.transfers?.forEach((transfer: any) => {
     activities.push({
       id: transfer.id,
       type: "transfer",
       title: "Lead Transferred",
       description: `Lead transferred from ${transfer.fromAgent?.name || "Unknown"} to ${transfer.toAgent?.name || "Unknown"} (${transfer.transferType}).`,
-      date: parseDate(transfer.createdAt),
-      userName: transfer.fromAgent?.name || "System", // مين اللي عمل الـ transfer
-      icon: <Shuffle size={18} />, // من مكتبة lucide-react
+      date: toDate(transfer.createdAt),
+      userName: transfer.fromAgent?.name || "System",
+      icon: <Shuffle size={18} />,
       color: "bg-orange-100 text-orange-600",
     });
   });
 
-  // Sort by date (newest first)
-  return activities.sort(
-    (a, b) =>
-      (b.date ? b.date.getTime() : 0) - (a.date ? a.date.getTime() : 0)
-  );
+  lead?.notes?.forEach((note: any, index: number) => {
+    let text = '';
+    let createdAtRaw: any = null;
+    let updatedAtRaw: any = null;
+    let noteObj: any = null;
+
+    if (typeof note === 'string') {
+      try {
+        const parsed = JSON.parse(note);
+        if (parsed && typeof parsed === 'object') noteObj = parsed;
+      } catch {}
+      if (noteObj) {
+        text = noteObj.text ?? '';
+        createdAtRaw = noteObj.createdAt ?? noteObj.date ?? null;
+        updatedAtRaw = noteObj.updatedAt ?? null;
+      } else {
+        const sep = ' - ';
+        const lastSep = note.lastIndexOf(sep);
+        if (lastSep !== -1) {
+          const possibleDate = note.slice(lastSep + sep.length).trim();
+          const dateCheck = toDate(possibleDate);
+          if (dateCheck) {
+            text = note.slice(0, lastSep);
+            createdAtRaw = possibleDate;
+          } else {
+            text = note;
+          }
+        } else {
+          text = note;
+        }
+      }
+    } else if (typeof note === 'object') {
+      noteObj = note;
+      text = noteObj.text ?? noteObj.note ?? '';
+      createdAtRaw = noteObj.createdAt ?? noteObj.date ?? null;
+      updatedAtRaw = noteObj.updatedAt ?? null;
+    }
+
+    const date = toDate(updatedAtRaw ?? createdAtRaw);
+
+    activities.push({
+      id: `note-${index}`,
+      type: "note",
+      title: (updatedAtRaw && String(updatedAtRaw) !== String(createdAtRaw)) ? "Note Edited" : "Note Added",
+      description: (text ?? '').trim() || "No content.",
+      date,
+      userName: getUserName(noteObj ?? lead, "System"),
+      icon: <FileText size={18} />,
+      color: "bg-yellow-100 text-yellow-600",
+    });
+  });
+
+  return activities.sort((a, b) => {
+    const aTime = a.date ? a.date.getTime() : 0;
+    const bTime = b.date ? b.date.getTime() : 0;
+
+    if (
+      a.isLeadCreated &&
+      b.date &&
+      a.date &&
+      a.date.toDateString() === b.date.toDateString()
+    ) {
+      return 1;
+    }
+    if (
+      b.isLeadCreated &&
+      a.date &&
+      b.date &&
+      a.date.toDateString() === b.date.toDateString()
+    ) {
+      return -1;
+    }
+
+    return bTime - aTime;
+  });
 };
+
+
+
 
 
 
@@ -1569,87 +1667,109 @@ const getActivities = (lead: any) => {
           )}
 
 
-          {activeTab === 'notes' && (
-            <div>
-              <div className="mb-4 sm:mb-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4 sm:mb-6">{t('notes')}</h3>
-                <div className="mb-4 sm:mb-6">
-                  <textarea
-                    value={newNote}
-                    onChange={(e) => setNewNote(e.target.value)}
-                    placeholder={t('addNotePlaceholder')}
-                    className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
-                    rows={3}
-                  />
-                  <button
-                    onClick={handleAddNote}
-                    className="mt-2 bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base"
-                  >
-                    {isUpdatingLead ? <div className="w-6 h-6 sm:w-7 sm:h-7 border-2 border-white border-t-transparent rounded-full animate-spin" role="status"></div> : t('addNote')}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-6">
-                {notes && notes.length > 0 &&
-                  notes.map((note, index) => (
-                    <div key={index} className="bg-gray-50 p-4 rounded-lg flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                      {editingNoteIndex === index ? (
-                        <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
-                          <textarea
-                            value={editingNoteValue}
-                            onChange={(e) => setEditingNoteValue(e.target.value)}
-                            className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            rows={2}
-                          />
-                          <div className="flex gap-2 mt-2 md:mt-0">
-                            <button
-                              onClick={handleSaveEditNote}
-                              className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
-                              disabled={isUpdatingLead}
-                            >
-                              {t('save')}
-                            </button>
-                            <button
-                              onClick={handleCancelEditNote}
-                              className="bg-gray-300 text-gray-800 px-3 py-1 rounded hover:bg-gray-400"
-                              disabled={isUpdatingLead}
-                            >
-                              {t('cancel')}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-
-                          <p className="text-sm text-gray-900 mb-2 flex-1">{note}</p>
-                          {
-                            user?.role === "admin" || "sales_admin" ? (<div className="flex gap-2">
-                              <button
-                                onClick={() => handleEditNote(index)}
-                                className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
-                                disabled={isUpdatingLead}
-                              >
-                                {t('edit')}
-                              </button>
-                              <button
-                                onClick={() => handleDeleteNote(index)}
-                                className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-                                disabled={isUpdatingLead}
-                              >
-                                {t('delete')}
-                              </button>
-                            </div>) : null
-                          }
-                        </>
-                      )}
-                    </div>
-                  )).reverse()}
-                {notes && notes.length === 0 && (
-                  <p className="text-gray-500 text-center py-4">{String(t('noNotesAdded') || 'No notes added')}</p>
-                )}
-              </div>
-            </div>
+{activeTab === 'notes' && (
+  <div>
+    {/* إضافة نوت جديدة */}
+    <div className="mb-6">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('notes')}</h3>
+      <div>
+        <textarea
+          value={newNote}
+          onChange={(e) => setNewNote(e.target.value)}
+          placeholder={t('addNotePlaceholder')}
+          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base"
+          rows={3}
+        />
+        <button
+          onClick={handleAddNote}
+          disabled={isUpdatingLead || !newNote.trim()}
+          className="mt-2 flex items-center justify-center bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+        >
+          {isUpdatingLead ? (
+            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            t('addNote')
           )}
+        </button>
+      </div>
+    </div>
+
+    {/* عرض النوتس */}
+    <div className="space-y-4">
+      {notes && notes.length > 0 ? (
+        [...notes].reverse().map((note, index) => {
+          const [text, createdAt] = note.split(' - ');
+          return (
+            <div
+              key={index}
+              className="bg-gray-50 p-4 rounded-lg shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+            >
+              {editingNoteIndex === index ? (
+                <div className="flex-1 flex flex-col md:flex-row md:items-center gap-2">
+                  <textarea
+                    value={editingNoteValue}
+                    onChange={(e) => setEditingNoteValue(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    rows={2}
+                  />
+                  <div className="flex gap-2 mt-2 md:mt-0">
+                    <button
+                      onClick={handleSaveEditNote}
+                      disabled={isUpdatingLead}
+                      className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('save')}
+                    </button>
+                    <button
+                      onClick={handleCancelEditNote}
+                      disabled={isUpdatingLead}
+                      className="bg-gray-300 text-gray-800 px-3 py-1 rounded hover:bg-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('cancel')}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900 mb-1 break-words">{text}</p>
+                    <p className="text-xs text-gray-500">
+                      {createdAt ? new Date(createdAt).toLocaleString() : ''}
+                    </p>
+                  </div>
+                  {(user?.role === 'admin' || user?.role === 'sales_admin') && (
+                    <div className="flex gap-2 shrink-0">
+                      <button
+                        onClick={() => handleEditNote(index)}
+                        disabled={isUpdatingLead}
+                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {t('edit')}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteNote(index)}
+                        disabled={isUpdatingLead}
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {t('delete')}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })
+      ) : (
+        <p className="text-gray-500 text-center py-4">
+          {String(t('noNotesAdded') || 'No notes added')}
+        </p>
+      )}
+    </div>
+  </div>
+)}
+
+
 
 
 
