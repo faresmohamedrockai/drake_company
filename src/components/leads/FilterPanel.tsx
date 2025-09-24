@@ -17,7 +17,7 @@ interface Filters {
   lastVisitDate: string;
   createdAtStart?: string;
   createdAtEnd?: string;
-  isUntouched: boolean;
+  isuntouched: boolean;
 }
 
 interface FilterPanelProps {
@@ -251,11 +251,11 @@ const FilterPanel: React.FC<FilterPanelProps> = React.memo(({
                 id="isUntouchedCheckbox"
                 type="checkbox"
                 className="sr-only"
-                checked={filters.isUntouched}
-                onChange={e => handleFilterChange('isUntouched', e.target.checked)}
+                checked={filters.isuntouched}
+                onChange={e => handleFilterChange('isuntouched', e.target.checked)}
               />
-              <div className={`block w-10 h-6 rounded-full transition-colors ${filters.isUntouched ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-              <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${filters.isUntouched ? 'transform translate-x-full' : ''}`}></div>
+              <div className={`block w-10 h-6 rounded-full transition-colors ${filters.isuntouched ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+              <div className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform ${filters.isuntouched ? 'transform translate-x-full' : ''}`}></div>
             </div>
             <div className="ml-3 text-sm font-medium text-gray-700 select-none">
               {t('showUntouchedOnly') || 'عرض العملاء الذين لم يتم لمسهم فقط'}
