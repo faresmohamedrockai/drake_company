@@ -436,6 +436,8 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     e.preventDefault();
     const newVisit = {
       ...visitForm,
+      createdById: user?.id
+      ,
       createdBy: user?.name || '',
       leadId: lead.id! // add required leadId
     };
@@ -585,15 +587,15 @@ const LeadModal: React.FC<LeadModalProps> = ({ lead, isOpen, onClose }) => {
     return new Date(dateStr);
   };
 
-  
+
   const getActivities = (lead: any) => {
     const activities: any = [];
-console.log(lead);
+
 
     // دالة مساعدة لتجنب التكرار
     const getUserName = (activityObject: any, fallback: string = 'Unknown User') => {
-      
-      return activityObject?.createdByUser?.name || activityObject?.createdBy?.name ||activityObject?.owner?.name ||fallback;
+
+      return activityObject?.createdByUser?.name || activityObject?.createdBy?.name || activityObject?.owner?.name || fallback;
     };
 
     // Lead Created
